@@ -14,13 +14,13 @@ return array(
 	 * Google OAuth Client ID
 	 * Lấy từ Google Cloud Console
 	 */
-	'client_id' => '474636792697-0arujfll4d9h05mr8hbt73hfotb7ckjv.apps.googleusercontent.com',
+	'client_id' => '',
 	
 	/**
 	 * Google OAuth Client Secret
 	 * Lấy từ Google Cloud Console
 	 */
-	'client_secret' => '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',
+	'client_secret' => '',
 	
 	/**
 	 * Redirect URI sau khi xác thực Google
