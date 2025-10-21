@@ -1,41 +1,28 @@
 <?php
 
-/**
- * Migration: Create admins table
- * 
- * @package    App
- * @subpackage Migration
- */
-class Migration_Create_Admins_Table
+namespace Fuel\Migrations;
+
+class Create_admins_table
 {
-	/**
-	 * Up migration
-	 * 
-	 * @return void
-	 */
 	public function up()
 	{
-		\DB::query("CREATE TABLE IF NOT EXISTS admins (
-			id INT AUTO_INCREMENT PRIMARY KEY,
-			username VARCHAR(50) NOT NULL UNIQUE,
-			email VARCHAR(100) NOT NULL UNIQUE,
-			password VARCHAR(255) NOT NULL,
-			full_name VARCHAR(100) NULL,
-			is_active TINYINT(1) DEFAULT 1,
-			last_login DATETIME NULL,
-			google_id VARCHAR(255) NULL,
-			created_at DATETIME NOT NULL,
-			updated_at DATETIME NOT NULL
-		)")->execute();
+		\DBUtil::create_table('admins', array(
+			'id' => array('type' => 'int', 'constraint' => 11, 'auto_increment' => true, 'unsigned' => true),
+			'username' => array('type' => 'varchar', 'constraint' => 50),
+			'email' => array('type' => 'varchar', 'constraint' => 100),
+			'password' => array('type' => 'varchar', 'constraint' => 255),
+			'full_name' => array('type' => 'varchar', 'constraint' => 100, 'null' => true),
+			'is_active' => array('type' => 'tinyint', 'constraint' => 1, 'default' => 1),
+			'last_login' => array('type' => 'datetime', 'null' => true),
+			'google_id' => array('type' => 'varchar', 'constraint' => 255, 'null' => true),
+			'created_at' => array('type' => 'datetime'),
+			'updated_at' => array('type' => 'datetime'),
+			'deleted_at' => array('type' => 'datetime', 'null' => true),
+		), array('id'));
 	}
 
-	/**
-	 * Down migration
-	 * 
-	 * @return void
-	 */
 	public function down()
 	{
-		\DB::query("DROP TABLE IF EXISTS admins")->execute();
+		\DBUtil::drop_table('admins');
 	}
 }

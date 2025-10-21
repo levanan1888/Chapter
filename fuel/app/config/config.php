@@ -309,6 +309,10 @@ return array(
 			'Fuel\\Core\\ViewModel',
 			'Closure',
 			'Model_Admin',
+			'Model_Author',
+			'Model_Story',
+			'Model_Category',
+			'Model_Chapter',
 		),
 	),
 
