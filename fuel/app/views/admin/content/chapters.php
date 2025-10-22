@@ -60,10 +60,11 @@
 									<strong><?php echo htmlspecialchars($chapter->title); ?></strong>
 								</td>
 								<td>
-									<?php 
-									$images = json_decode($chapter->images, true);
-									$image_count = is_array($images) ? count($images) : 0;
-									?>
+                                    <?php 
+                                    // Use model accessor to avoid type issues
+                                    $images = method_exists($chapter, 'get_images') ? $chapter->get_images() : array();
+                                    $image_count = is_array($images) ? count($images) : 0;
+                                    ?>
 									<span class="badge bg-info"><?php echo $image_count; ?> ảnh</span>
 								</td>
 								<td>

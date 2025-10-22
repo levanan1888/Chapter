@@ -35,6 +35,7 @@ class Model_Chapter extends \Model
 		'title',
 		'chapter_number',
 		'images',
+        'background_image',
 		'views',
 		'created_at',
 		'updated_at',
@@ -63,6 +64,7 @@ class Model_Chapter extends \Model
 	public $title;
 	public $chapter_number;
 	public $images;
+    public $background_image;
 	public $views;
 	public $created_at;
 	public $updated_at;
@@ -74,30 +76,56 @@ class Model_Chapter extends \Model
 	 * @param int $id ID của chapter
 	 * @return Model_Chapter|null
 	 */
-	public static function find($id)
+    public static function find($id)
 	{
 		try {
-			$query = \DB::query("SELECT * FROM chapters WHERE id = :id AND is_active = :is_active");
-			$result = $query->param('id', $id)->param('is_active', 1)->execute();
+            // Legacy find that filtered by is_active (may not exist). Keep for BC but prefer find_admin.
+            $query = \DB::query("SELECT * FROM chapters WHERE id = :id");
+            $result = $query->param('id', $id)->execute();
 
-			if ($result->count() > 0) {
-				$data = $result->current();
-				$chapter = new self();
-				foreach ($data as $key => $value) {
-					if ($key === 'images') {
-						$chapter->$key = json_decode($value, true);
-					} else {
-						$chapter->$key = $value;
-					}
-				}
-				return $chapter;
-			}
+            if ($result->count() > 0) {
+                $data = $result->current();
+                $chapter = new self();
+                foreach ($data as $key => $value) {
+                    // Store raw DB value; consumers should call get_images() to decode
+                    $chapter->$key = $value;
+                }
+                return $chapter;
+            }
 
 			return null;
 		} catch (\Exception $e) {
 			return null;
 		}
 	}
+
+    /**
+     * Admin: Find chapter by ID without status filtering
+     *
+     * @param int $id
+     * @return Model_Chapter|null
+     */
+    public static function find_admin($id)
+    {
+        try {
+            $query = \DB::query("SELECT * FROM chapters WHERE id = :id");
+            $result = $query->param('id', $id)->execute();
+
+            if ($result->count() > 0) {
+                $data = $result->current();
+                $chapter = new self();
+                foreach ($data as $key => $value) {
+                    $chapter->$key = $value;
+                }
+                return $chapter;
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            \Log::error('Model_Chapter::find_admin error: ' . $e->getMessage());
+            return null;
+        }
+    }
 
 	/**
 	 * Tìm chapter theo story_id và chapter_number
@@ -115,18 +143,14 @@ class Model_Chapter extends \Model
 							->param('is_active', 1)
 							->execute();
 
-			if ($result->count() > 0) {
-				$data = $result->current();
-				$chapter = new self();
-				foreach ($data as $key => $value) {
-					if ($key === 'images') {
-						$chapter->$key = json_decode($value, true);
-					} else {
-						$chapter->$key = $value;
-					}
-				}
-				return $chapter;
-			}
+            if ($result->count() > 0) {
+                $data = $result->current();
+                $chapter = new self();
+                foreach ($data as $key => $value) {
+                    $chapter->$key = $value;
+                }
+                return $chapter;
+            }
 
 			return null;
 		} catch (\Exception $e) {
@@ -146,18 +170,14 @@ class Model_Chapter extends \Model
 			$query = \DB::query("SELECT * FROM chapters WHERE slug = :slug AND is_active = :is_active");
 			$result = $query->param('slug', $slug)->param('is_active', 1)->execute();
 
-			if ($result->count() > 0) {
-				$data = $result->current();
-				$chapter = new self();
-				foreach ($data as $key => $value) {
-					if ($key === 'images') {
-						$chapter->$key = json_decode($value, true);
-					} else {
-						$chapter->$key = $value;
-					}
-				}
-				return $chapter;
-			}
+            if ($result->count() > 0) {
+                $data = $result->current();
+                $chapter = new self();
+                foreach ($data as $key => $value) {
+                    $chapter->$key = $value;
+                }
+                return $chapter;
+            }
 
 			return null;
 		} catch (\Exception $e) {
@@ -176,6 +196,8 @@ class Model_Chapter extends \Model
 	public static function get_chapters_by_story($story_id, $limit = null, $offset = 0)
 	{
 		try {
+			// Original method filtered by is_active, which may not exist depending on schema.
+			// Keep existing behavior but add guard logs to aid debugging.
 			$sql = "SELECT * FROM chapters WHERE story_id = :story_id AND is_active = :is_active ORDER BY chapter_number ASC";
 			if ($limit) {
 				$sql .= " LIMIT :limit OFFSET :offset";
@@ -187,9 +209,63 @@ class Model_Chapter extends \Model
 				$query->param('limit', $limit)->param('offset', $offset);
 			}
 			
-			$results = $query->execute();
+            $results = $query->execute();
+			\Log::info('Model_Chapter::get_chapters_by_story executed', array(
+				'sql' => $sql,
+				'story_id' => $story_id,
+				'limit' => $limit,
+				'offset' => $offset,
+				'row_count' => $results->count()
+			));
 			$chapters = array();
 
+            foreach ($results as $result) {
+                $chapter = new self();
+                foreach ($result as $key => $value) {
+                    $chapter->$key = $value;
+                }
+                $chapters[] = $chapter;
+            }
+
+			return $chapters;
+		} catch (\Exception $e) {
+			\Log::error('Model_Chapter::get_chapters_by_story error: ' . $e->getMessage());
+			return array();
+		}
+	}
+
+	/**
+	 * Admin: Lấy danh sách chapters của story (bỏ qua trạng thái/is_active)
+	 * 
+	 * @param int $story_id
+	 * @param int|null $limit
+	 * @param int $offset
+	 * @return array
+	 */
+	public static function get_chapters_by_story_admin($story_id, $limit = null, $offset = 0)
+	{
+		try {
+			$sql = "SELECT * FROM chapters WHERE story_id = :story_id ORDER BY chapter_number ASC";
+			if ($limit) {
+				$sql .= " LIMIT :limit OFFSET :offset";
+			}
+
+			$query = \DB::query($sql);
+			$query->param('story_id', $story_id);
+			if ($limit) {
+				$query->param('limit', $limit)->param('offset', $offset);
+			}
+
+            $results = $query->execute();
+			\Log::info('Model_Chapter::get_chapters_by_story_admin executed', array(
+				'sql' => $sql,
+				'story_id' => $story_id,
+				'limit' => $limit,
+				'offset' => $offset,
+				'row_count' => $results->count()
+			));
+
+			$chapters = array();
 			foreach ($results as $result) {
 				$chapter = new self();
 				foreach ($result as $key => $value) {
@@ -204,6 +280,7 @@ class Model_Chapter extends \Model
 
 			return $chapters;
 		} catch (\Exception $e) {
+			\Log::error('Model_Chapter::get_chapters_by_story_admin error: ' . $e->getMessage());
 			return array();
 		}
 	}
@@ -222,18 +299,14 @@ class Model_Chapter extends \Model
 							->param('is_active', 1)
 							->execute();
 
-			if ($result->count() > 0) {
-				$data = $result->current();
-				$chapter = new self();
-				foreach ($data as $key => $value) {
-					if ($key === 'images') {
-						$chapter->$key = json_decode($value, true);
-					} else {
-						$chapter->$key = $value;
-					}
-				}
-				return $chapter;
-			}
+            if ($result->count() > 0) {
+                $data = $result->current();
+                $chapter = new self();
+                foreach ($data as $key => $value) {
+                    $chapter->$key = $value;
+                }
+                return $chapter;
+            }
 
 			return null;
 		} catch (\Exception $e) {
@@ -255,18 +328,14 @@ class Model_Chapter extends \Model
 							->param('is_active', 1)
 							->execute();
 
-			if ($result->count() > 0) {
-				$data = $result->current();
-				$chapter = new self();
-				foreach ($data as $key => $value) {
-					if ($key === 'images') {
-						$chapter->$key = json_decode($value, true);
-					} else {
-						$chapter->$key = $value;
-					}
-				}
-				return $chapter;
-			}
+            if ($result->count() > 0) {
+                $data = $result->current();
+                $chapter = new self();
+                foreach ($data as $key => $value) {
+                    $chapter->$key = $value;
+                }
+                return $chapter;
+            }
 
 			return null;
 		} catch (\Exception $e) {
@@ -285,8 +354,28 @@ class Model_Chapter extends \Model
 		try {
 			$query = \DB::query("SELECT COUNT(*) as total FROM chapters WHERE story_id = :story_id AND is_active = :is_active");
 			$result = $query->param('story_id', $story_id)->param('is_active', 1)->execute();
-			return (int) $result->current()['total'];
+			$val = (int) $result->current()['total'];
+			\Log::info('Model_Chapter::count_by_story', array('story_id' => $story_id, 'count' => $val));
+			return $val;
 		} catch (\Exception $e) {
+			\Log::error('Model_Chapter::count_by_story error: ' . $e->getMessage());
+			return 0;
+		}
+	}
+
+	/**
+	 * Admin: Đếm chapters của story (bỏ qua trạng thái)
+	 */
+	public static function count_by_story_admin($story_id)
+	{
+		try {
+			$query = \DB::query("SELECT COUNT(*) as total FROM chapters WHERE story_id = :story_id");
+			$result = $query->param('story_id', $story_id)->execute();
+			$val = (int) $result->current()['total'];
+			\Log::info('Model_Chapter::count_by_story_admin', array('story_id' => $story_id, 'count' => $val));
+			return $val;
+		} catch (\Exception $e) {
+			\Log::error('Model_Chapter::count_by_story_admin error: ' . $e->getMessage());
 			return 0;
 		}
 	}
@@ -321,27 +410,21 @@ class Model_Chapter extends \Model
 				return null;
 			}
 
-			// Tạo slug từ title nếu chưa có
-			if (empty($data['slug'])) {
-				$data['slug'] = self::create_slug($data['title']);
-			}
-
 			// Đặt giá trị mặc định
 			$images = isset($data['images']) ? json_encode($data['images']) : json_encode(array());
-			$view_count = isset($data['view_count']) ? $data['view_count'] : 0;
-			$is_active = isset($data['is_active']) ? $data['is_active'] : 1;
+            $background_image = isset($data['background_image']) ? $data['background_image'] : null;
+            $views = isset($data['views']) ? (int) $data['views'] : 0;
 			$created_at = date('Y-m-d H:i:s');
 			$updated_at = date('Y-m-d H:i:s');
 
 			// Thêm vào database với Raw SQL
-			$query = \DB::query("INSERT INTO chapters (story_id, title, slug, chapter_number, images, view_count, is_active, created_at, updated_at) VALUES (:story_id, :title, :slug, :chapter_number, :images, :view_count, :is_active, :created_at, :updated_at)");
+            $query = \DB::query("INSERT INTO chapters (story_id, title, chapter_number, images, background_image, views, created_at, updated_at) VALUES (:story_id, :title, :chapter_number, :images, :background_image, :views, :created_at, :updated_at)");
 			$result = $query->param('story_id', $data['story_id'])
 							->param('title', $data['title'])
-							->param('slug', $data['slug'])
 							->param('chapter_number', $data['chapter_number'])
 							->param('images', $images)
-							->param('view_count', $view_count)
-							->param('is_active', $is_active)
+                            ->param('background_image', $background_image)
+                            ->param('views', $views)
 							->param('created_at', $created_at)
 							->param('updated_at', $updated_at)
 							->execute();
@@ -351,11 +434,10 @@ class Model_Chapter extends \Model
 				$chapter->id = $result[0];
 				$chapter->story_id = $data['story_id'];
 				$chapter->title = $data['title'];
-				$chapter->slug = $data['slug'];
 				$chapter->chapter_number = $data['chapter_number'];
 				$chapter->images = isset($data['images']) ? $data['images'] : array();
-				$chapter->view_count = $view_count;
-				$chapter->is_active = $is_active;
+                $chapter->background_image = $background_image;
+                $chapter->views = $views;
 				$chapter->created_at = $created_at;
 				$chapter->updated_at = $updated_at;
 				return $chapter;
@@ -385,10 +467,6 @@ class Model_Chapter extends \Model
 				$set_parts[] = 'title = :title';
 				$params['title'] = $data['title'];
 			}
-			if (isset($data['slug'])) {
-				$set_parts[] = 'slug = :slug';
-				$params['slug'] = $data['slug'];
-			}
 			if (isset($data['chapter_number'])) {
 				$set_parts[] = 'chapter_number = :chapter_number';
 				$params['chapter_number'] = $data['chapter_number'];
@@ -397,10 +475,14 @@ class Model_Chapter extends \Model
 				$set_parts[] = 'images = :images';
 				$params['images'] = json_encode($data['images']);
 			}
-			if (isset($data['is_active'])) {
-				$set_parts[] = 'is_active = :is_active';
-				$params['is_active'] = $data['is_active'];
-			}
+            if (array_key_exists('background_image', $data)) {
+                $set_parts[] = 'background_image = :background_image';
+                $params['background_image'] = $data['background_image'];
+            }
+            if (isset($data['views'])) {
+                $set_parts[] = 'views = :views';
+                $params['views'] = (int) $data['views'];
+            }
 
 			if (empty($set_parts)) {
 				return false;
@@ -438,27 +520,160 @@ class Model_Chapter extends \Model
 	 * 
 	 * @return bool
 	 */
-	public function soft_delete()
+    public function soft_delete()
 	{
 		try {
-			$updated_at = date('Y-m-d H:i:s');
-			
-			$query = \DB::query("UPDATE chapters SET is_active = :is_active, updated_at = :updated_at WHERE id = :id");
-			$result = $query->param('is_active', 0)
-							->param('updated_at', $updated_at)
-							->param('id', $this->id)
-							->execute();
-				
-			if ($result) {
-				$this->is_active = 0;
-				$this->updated_at = $updated_at;
-				return true;
-			}
+            $updated_at = date('Y-m-d H:i:s');
+            $deleted_at = $updated_at;
+
+            $query = \DB::query("UPDATE chapters SET deleted_at = :deleted_at, updated_at = :updated_at WHERE id = :id");
+            $result = $query->param('deleted_at', $deleted_at)
+                            ->param('updated_at', $updated_at)
+                            ->param('id', $this->id)
+                            ->execute();
+
+            if ($result) {
+                $this->deleted_at = $deleted_at;
+                $this->updated_at = $updated_at;
+                return true;
+            }
 			return false;
 		} catch (\Exception $e) {
 			return false;
 		}
 	}
+
+    /**
+     * Restore a soft-deleted chapter
+     */
+    public function restore()
+    {
+        try {
+            $updated_at = date('Y-m-d H:i:s');
+            $query = \DB::query("UPDATE chapters SET deleted_at = NULL, updated_at = :updated_at WHERE id = :id");
+            $result = $query->param('updated_at', $updated_at)
+                            ->param('id', $this->id)
+                            ->execute();
+
+            if ($result) {
+                $this->deleted_at = null;
+                $this->updated_at = $updated_at;
+                return true;
+            }
+            return false;
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Permanently delete chapter
+     */
+    public function force_delete()
+    {
+        try {
+            $query = \DB::query("DELETE FROM chapters WHERE id = :id");
+            $result = $query->param('id', $this->id)->execute();
+            return (bool) $result;
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Admin: list chapters with filters
+     */
+    public static function get_chapters_by_story_admin_with_filter($story_id, $limit, $offset, $search = '', $status = 'all', $sort = 'created_at_desc')
+    {
+        try {
+            $where = array('story_id = :story_id');
+            $params = array('story_id' => $story_id);
+
+            if (!empty($search)) {
+                $where[] = 'title LIKE :search';
+                $params['search'] = '%' . $search . '%';
+            }
+
+            if ($status === 'active') {
+                $where[] = 'deleted_at IS NULL';
+            } elseif ($status === 'deleted') {
+                $where[] = 'deleted_at IS NOT NULL';
+            }
+
+            $order = 'created_at DESC';
+            switch ($sort) {
+                case 'created_at_asc':
+                    $order = 'created_at ASC';
+                    break;
+                case 'chapter_number_asc':
+                    $order = 'chapter_number ASC';
+                    break;
+                case 'chapter_number_desc':
+                    $order = 'chapter_number DESC';
+                    break;
+                case 'updated_at_desc':
+                    $order = 'updated_at DESC';
+                    break;
+            }
+
+            $limitInt = (int) $limit;
+            $offsetInt = (int) $offset;
+            $sql = 'SELECT * FROM chapters WHERE ' . implode(' AND ', $where) . ' ORDER BY ' . $order . ' LIMIT ' . $limitInt . ' OFFSET ' . $offsetInt;
+
+            $query = \DB::query($sql);
+            foreach ($params as $k => $v) {
+                $query->param($k, $v);
+            }
+            $results = $query->execute();
+            \Log::info('Model_Chapter::get_chapters_by_story_admin_with_filter', array(
+                'sql' => $sql,
+                'params' => $params,
+                'row_count' => $results->count()
+            ));
+            $chapters = array();
+            foreach ($results as $row) {
+                $chapter = new self();
+                foreach ($row as $k => $v) {
+                    $chapter->$k = $v;
+                }
+                $chapters[] = $chapter;
+            }
+            return $chapters;
+        } catch (\Exception $e) {
+            \Log::error('Model_Chapter::get_chapters_by_story_admin_with_filter error: ' . $e->getMessage());
+            return array();
+        }
+    }
+
+    public static function count_by_story_admin_with_filter($story_id, $search = '', $status = 'all')
+    {
+        try {
+            $where = array('story_id = :story_id');
+            $params = array('story_id' => $story_id);
+
+            if (!empty($search)) {
+                $where[] = 'title LIKE :search';
+                $params['search'] = '%' . $search . '%';
+            }
+            if ($status === 'active') {
+                $where[] = 'deleted_at IS NULL';
+            } elseif ($status === 'deleted') {
+                $where[] = 'deleted_at IS NOT NULL';
+            }
+
+            $sql = 'SELECT COUNT(*) as total FROM chapters WHERE ' . implode(' AND ', $where);
+            $query = \DB::query($sql);
+            foreach ($params as $k => $v) {
+                $query->param($k, $v);
+            }
+            $result = $query->execute();
+            \Log::info('Model_Chapter::count_by_story_admin_with_filter', array('sql' => $sql, 'params' => $params, 'total' => $result->current()['total']));
+            return (int) $result->current()['total'];
+        } catch (\Exception $e) {
+            \Log::error('Model_Chapter::count_by_story_admin_with_filter error: ' . $e->getMessage());
+            return 0;
+        }
+    }
 
 	/**
 	 * Tăng view count
@@ -470,13 +685,13 @@ class Model_Chapter extends \Model
 		try {
 			$updated_at = date('Y-m-d H:i:s');
 			
-			$query = \DB::query("UPDATE chapters SET view_count = view_count + 1, updated_at = :updated_at WHERE id = :id");
+            $query = \DB::query("UPDATE chapters SET views = views + 1, updated_at = :updated_at WHERE id = :id");
 			$result = $query->param('updated_at', $updated_at)
 							->param('id', $this->id)
 							->execute();
 				
 			if ($result) {
-				$this->view_count++;
+                $this->views++;
 				$this->updated_at = $updated_at;
 				return true;
 			}
@@ -551,10 +766,19 @@ class Model_Chapter extends \Model
 	 */
 	public function get_images()
 	{
-		if (is_string($this->images)) {
-			return json_decode($this->images, true);
-		}
-		return $this->images ?: array();
+        // images can be stored as JSON string (DB) or already-decoded array (runtime)
+        if (is_array($this->images)) {
+            return $this->images;
+        }
+
+        if (is_string($this->images) && $this->images !== '') {
+            $decoded = json_decode($this->images, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                return $decoded;
+            }
+        }
+
+        return array();
 	}
 
 	/**

@@ -11,7 +11,8 @@ class Create_chapters_table
 			'story_id' => array('type' => 'int', 'constraint' => 11, 'unsigned' => true),
 			'title' => array('type' => 'varchar', 'constraint' => 255),
 			'chapter_number' => array('type' => 'int', 'constraint' => 11),
-			'images' => array('type' => 'text'), // JSON encoded array of image paths
+            'images' => array('type' => 'text'), // JSON encoded array of image paths
+            'background_image' => array('type' => 'varchar', 'constraint' => 255, 'null' => true),
 			'views' => array('type' => 'int', 'constraint' => 11, 'default' => 0),
 			'created_at' => array('type' => 'datetime'),
 			'updated_at' => array('type' => 'datetime'),

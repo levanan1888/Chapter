@@ -98,6 +98,8 @@
 						<div class="form-text">Hỗ trợ: JPG, PNG, GIF (tối đa 2MB)</div>
 					</div>
 
+					<!-- Bỏ phần ảnh chương đầu tiên theo yêu cầu -->
+
 					<div class="mb-3">
 						<label class="form-label">Tùy chọn</label>
 						<div class="form-check">
@@ -125,6 +127,8 @@
 				</div>
 			</div>
 
+			<!-- Bỏ preview ảnh chương đầu tiên và hidden order theo yêu cầu -->
+
 			<div class="d-flex justify-content-end gap-2">
 				<a href="<?php echo Uri::base(); ?>admin/stories" class="btn btn-secondary">
 					<i class="fas fa-times me-2"></i>Hủy
@@ -137,4 +141,4 @@
 	</div>
 </div>
 
-<!-- Đã bỏ toàn bộ styles/scripts quản lý ảnh chương đầu tiên -->
+<!-- Bỏ toàn bộ script/style preview ảnh chương đầu tiên -->

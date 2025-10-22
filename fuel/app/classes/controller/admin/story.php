@@ -154,15 +154,16 @@ class Controller_Admin_Story extends Controller_Admin_Base
 
 					// Upload ảnh chương đầu tiên
 					$chapter_images = array();
+					$image_order = Input::post('image_order', '');
 					if (isset($_FILES['chapter_images']) && !empty($_FILES['chapter_images']['name'][0])) {
-						$chapter_images = $this->process_chapter_images($_FILES['chapter_images'], $new_story->id);
+						$chapter_images = $this->process_chapter_images($_FILES['chapter_images'], $new_story->id, $image_order);
 						if (!empty($chapter_images)) {
 							// Tạo chương đầu tiên với ảnh đã upload
 							$chapter_data = array(
 								'story_id' => $new_story->id,
 								'title' => 'Chapter 1',
 								'chapter_number' => 1,
-								'images' => json_encode($chapter_images),
+								'images' => $chapter_images,
 								'views' => 0,
 							);
 							Model_Chapter::create_chapter($chapter_data);
@@ -812,9 +813,10 @@ class Controller_Admin_Story extends Controller_Admin_Base
 	 * 
 	 * @param array $files $_FILES['chapter_images']
 	 * @param int $story_id ID của truyện
+	 * @param string $image_order JSON string của thứ tự ảnh (optional)
 	 * @return array Mảng đường dẫn ảnh
 	 */
-	private function process_chapter_images($files, $story_id)
+	private function process_chapter_images($files, $story_id, $image_order = '')
 	{
 		$uploaded_images = array();
 
@@ -825,10 +827,11 @@ class Controller_Admin_Story extends Controller_Admin_Base
 				mkdir($upload_dir, 0777, true);
 			}
 
-			$allowed_types = array('image/jpeg', 'image/png', 'image/gif');
+			$allowed_types = array('image/jpeg', 'image/png', 'image/gif', 'image/webp');
 
 			// Xử lý multiple files
 			$file_count = count($files['name']);
+			$temp_images = array();
 			
 			for ($i = 0; $i < $file_count; $i++) {
 				if ($files['error'][$i] == 0) {
@@ -849,9 +852,27 @@ class Controller_Admin_Story extends Controller_Admin_Base
 
 					// Move uploaded file
 					if (move_uploaded_file($files['tmp_name'][$i], $filepath)) {
-						$uploaded_images[] = 'uploads/chapters/story_' . $story_id . '/' . $filename;
+						$temp_images[$i] = 'uploads/chapters/story_' . $story_id . '/' . $filename;
 					}
 				}
+			}
+
+			// Sắp xếp theo thứ tự nếu có
+			if (!empty($image_order)) {
+				$order_array = json_decode($image_order, true);
+				if (is_array($order_array)) {
+					foreach ($order_array as $index) {
+						if (isset($temp_images[$index])) {
+							$uploaded_images[] = $temp_images[$index];
+						}
+					}
+				} else {
+					// Nếu không có thứ tự, sử dụng thứ tự mặc định
+					$uploaded_images = array_values($temp_images);
+				}
+			} else {
+				// Nếu không có thứ tự, sử dụng thứ tự mặc định
+				$uploaded_images = array_values($temp_images);
 			}
 
 			return $uploaded_images;

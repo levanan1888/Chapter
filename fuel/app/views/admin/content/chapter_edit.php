@@ -40,12 +40,95 @@
 
 				<div class="col-md-6">
 					<div class="mb-3">
-						<label for="images" class="form-label">Ảnh chương mới</label>
-						<input type="file" class="form-control" id="images" name="images[]" 
-							   accept="image/*" multiple>
-						<div class="form-text">Chọn nhiều ảnh (JPG, PNG, GIF - tối đa 2MB mỗi ảnh)</div>
+						<label class="form-label">Ảnh chương mới</label>
+						<div class="image-upload-container">
+							<div class="row" id="image-upload-grid">
+								<!-- Images will be added here -->
+							</div>
+							<button type="button" class="btn btn-outline-primary mt-3" id="add-image-btn">
+								<i class="fas fa-plus me-2"></i>Thêm ảnh
+							</button>
+						</div>
+						<div class="form-text">Chọn ảnh (JPG, PNG, GIF - tối đa 2MB mỗi ảnh)</div>
 					</div>
 				</div>
+			</div>
+
+			<!-- Current Images Section -->
+            <?php if (isset($chapter)): ?>
+			<div class="row mb-4">
+				<div class="col-12">
+					<div class="card">
+						<div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-images me-2"></i>Ảnh hiện tại
+                                <?php $curr_images = method_exists($chapter, 'get_images') ? $chapter->get_images() : array(); ?>
+                                <span class="badge bg-info ms-2"><?php echo is_array($curr_images) ? count($curr_images) : 0; ?></span>
+                            </h6>
+						</div>
+						<div class="card-body">
+                            <div class="row">
+                                <?php foreach ($curr_images as $index => $image): ?>
+								<div class="col-lg-3 col-md-4 col-sm-6 mb-3">
+									<div class="card">
+										<img src="<?php echo Uri::base() . $image; ?>" class="card-img-top" 
+											 style="height: 150px; object-fit: cover;" alt="Page <?php echo $index + 1; ?>">
+										<div class="card-body p-2">
+											<div class="d-flex justify-content-between align-items-center">
+												<small class="text-muted">Trang <?php echo $index + 1; ?></small>
+												<div>
+													<button type="button" class="btn btn-sm btn-outline-info me-2 view-full-btn" 
+															title="Xem full size" data-image-src="<?php echo Uri::base() . $image; ?>">
+														<i class="fas fa-expand"></i>
+													</button>
+													<a href="<?php echo Uri::base(); ?>admin/chapters/delete-image/<?php echo $chapter->id; ?>/<?php echo $index; ?>" 
+													   class="btn btn-sm btn-outline-danger" 
+													   onclick="return confirm('Bạn có chắc chắn muốn xóa ảnh này?')">
+														<i class="fas fa-trash"></i>
+													</a>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+								<?php endforeach; ?>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<?php endif; ?>
+
+			<!-- New Image Preview Section -->
+			<div class="row" id="image-preview-section" style="display: none;">
+				<div class="col-12">
+					<div class="card">
+						<div class="card-header">
+							<h6 class="mb-0">
+								<i class="fas fa-plus me-2"></i>Preview ảnh mới
+								<span class="badge bg-primary ms-2" id="image-count">0</span>
+							</h6>
+						</div>
+						<div class="card-body">
+							<div class="row" id="image-preview-container">
+								<!-- Preview images will be inserted here -->
+							</div>
+							<div class="mt-3">
+								<small class="text-muted">
+									<i class="fas fa-info-circle me-1"></i>
+									Bạn có thể kéo thả để sắp xếp thứ tự ảnh. Thứ tự này sẽ được lưu khi cập nhật chương.
+								</small>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Hidden inputs for form submission -->
+			<div id="hidden-inputs-container">
+				<!-- Hidden file inputs will be added here -->
+			</div>
+			<input type="hidden" id="image-order" name="image_order" value="">
 			</div>
 
 			<div class="d-flex justify-content-end gap-2">
@@ -61,3 +144,335 @@
 		</form>
 	</div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const addImageBtn = document.getElementById('add-image-btn');
+    const imageUploadGrid = document.getElementById('image-upload-grid');
+    const hiddenInputsContainer = document.getElementById('hidden-inputs-container');
+    const imageOrderInput = document.getElementById('image-order');
+    
+    let imageCounter = 0;
+    let selectedImages = [];
+
+    // Add image button click
+    addImageBtn.addEventListener('click', function() {
+        addImageSlot();
+    });
+
+    function addImageSlot() {
+        const imageId = `image_${imageCounter}`;
+        imageCounter++;
+
+        const col = document.createElement('div');
+        col.className = 'col-lg-4 col-md-6 col-sm-12 mb-3';
+        col.id = `image-slot-${imageId}`;
+        
+        col.innerHTML = `
+            <div class="card image-upload-slot" style="min-height: 300px;">
+                <div class="card-body d-flex flex-column justify-content-center align-items-center text-center p-4">
+                    <div class="image-preview-container" style="display: none;">
+                        <img class="img-fluid rounded" style="max-height: 250px; width: 100%; object-fit: contain;" alt="Preview">
+                    </div>
+                    <div class="image-placeholder">
+                        <i class="fas fa-image fa-3x text-muted mb-3"></i>
+                        <p class="text-muted mb-3">Nhấn để chọn ảnh</p>
+                        <input type="file" class="d-none" accept="image/*" data-image-id="${imageId}">
+                        <button type="button" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-upload me-2"></i>Chọn ảnh
+                        </button>
+                    </div>
+                    <div class="image-actions mt-3" style="display: none;">
+                        <div class="d-flex justify-content-between align-items-center w-100">
+                            <small class="text-muted">Trang <span class="page-number">1</span></small>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary move-up-btn" title="Di chuyển lên">
+                                    <i class="fas fa-arrow-up"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary move-down-btn" title="Di chuyển xuống">
+                                    <i class="fas fa-arrow-down"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-info view-full-btn" title="Xem full size">
+                                    <i class="fas fa-expand"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-image-btn" title="Xóa ảnh">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        imageUploadGrid.appendChild(col);
+        setupImageSlot(col, imageId);
+    }
+
+    function setupImageSlot(slot, imageId) {
+        const fileInput = slot.querySelector('input[type="file"]');
+        const placeholder = slot.querySelector('.image-placeholder');
+        const previewContainer = slot.querySelector('.image-preview-container');
+        const previewImg = slot.querySelector('img');
+        const actions = slot.querySelector('.image-actions');
+        const chooseBtn = slot.querySelector('button');
+        const viewFullBtn = slot.querySelector('.view-full-btn');
+        const moveUpBtn = slot.querySelector('.move-up-btn');
+        const moveDownBtn = slot.querySelector('.move-down-btn');
+        const removeBtn = slot.querySelector('.remove-image-btn');
+        const pageNumber = slot.querySelector('.page-number');
+
+        // Click to choose image
+        chooseBtn.addEventListener('click', () => fileInput.click());
+        slot.addEventListener('click', (e) => {
+            if (e.target === slot || e.target === placeholder) {
+                fileInput.click();
+            }
+        });
+
+        // File input change
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                if (file.size > 2 * 1024 * 1024) {
+                    alert('Kích thước ảnh không được vượt quá 2MB');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImg.src = e.target.result;
+                    placeholder.style.display = 'none';
+                    previewContainer.style.display = 'block';
+                    actions.style.display = 'block';
+                    
+                    // Add has-image class
+                    slot.classList.add('has-image');
+                    
+                    // Update page number
+                    const currentImages = document.querySelectorAll('.image-upload-slot .image-preview-container[style*="block"]');
+                    pageNumber.textContent = currentImages.length;
+                    
+                    // Store image data
+                    selectedImages.push({
+                        id: imageId,
+                        file: file,
+                        preview: e.target.result
+                    });
+                    
+                    updateImageOrder();
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // View full size
+        viewFullBtn.addEventListener('click', function() {
+            showImageModal(previewImg.src);
+        });
+
+        // Remove image
+        removeBtn.addEventListener('click', function() {
+            slot.remove();
+            selectedImages = selectedImages.filter(img => img.id !== imageId);
+            updatePageNumbers();
+            updateImageOrder();
+        });
+
+        // Move up
+        moveUpBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const col = slot.closest('.col-lg-4, .col-md-6, .col-sm-12');
+            if (col && col.previousElementSibling) {
+                col.parentNode.insertBefore(col, col.previousElementSibling);
+                updatePageNumbers();
+                updateImageOrder();
+            }
+        });
+
+        // Move down
+        moveDownBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const col = slot.closest('.col-lg-4, .col-md-6, .col-sm-12');
+            if (col && col.nextElementSibling) {
+                col.parentNode.insertBefore(col.nextElementSibling, col);
+                updatePageNumbers();
+                updateImageOrder();
+            }
+        });
+    }
+
+    function updatePageNumbers() {
+        const visibleSlots = document.querySelectorAll('.image-upload-slot .image-preview-container[style*="block"]');
+        visibleSlots.forEach((slot, index) => {
+            const pageNumber = slot.closest('.image-upload-slot').querySelector('.page-number');
+            if (pageNumber) {
+                pageNumber.textContent = index + 1;
+            }
+        });
+    }
+
+    function updateImageOrder() {
+        const visibleSlots = document.querySelectorAll('.image-upload-slot .image-preview-container[style*="block"]');
+        const order = [];
+        visibleSlots.forEach(slot => {
+            const fileInput = slot.closest('.image-upload-slot').querySelector('input[type="file"]');
+            const imageId = fileInput.dataset.imageId;
+            order.push(imageId);
+        });
+        imageOrderInput.value = JSON.stringify(order);
+        
+        // Update hidden inputs for form submission
+        updateHiddenInputs();
+    }
+
+    function updateHiddenInputs() {
+        // Clear existing hidden inputs
+        hiddenInputsContainer.innerHTML = '';
+        
+        // Create hidden inputs for each selected image
+        selectedImages.forEach((imageData, index) => {
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'images[]';
+            hiddenInput.value = imageData.file.name;
+            hiddenInputsContainer.appendChild(hiddenInput);
+        });
+    }
+
+    function showImageModal(imageSrc) {
+        // Create modal
+        const modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.innerHTML = `
+            <div class="modal-dialog modal-xl modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Xem ảnh</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <img src="${imageSrc}" class="img-fluid" style="max-height: 80vh;">
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+        
+        modal.addEventListener('hidden.bs.modal', function() {
+            modal.remove();
+        });
+    }
+
+    // Setup view full buttons for existing images
+    document.querySelectorAll('.view-full-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const imageSrc = this.dataset.imageSrc;
+            showImageModal(imageSrc);
+        });
+    });
+
+    // Handle form submission
+    document.querySelector('form').addEventListener('submit', function(e) {
+        // Create FormData and append files
+        const formData = new FormData(this);
+        
+        // Remove existing file inputs
+        const existingFileInputs = this.querySelectorAll('input[type="file"]');
+        existingFileInputs.forEach(input => input.remove());
+        
+        // Add files in correct order
+        const order = JSON.parse(imageOrderInput.value || '[]');
+        order.forEach(imageId => {
+            const slot = document.getElementById(`image-slot-${imageId}`);
+            if (slot) {
+                const fileInput = slot.querySelector('input[type="file"]');
+                if (fileInput && fileInput.files[0]) {
+                    formData.append('images[]', fileInput.files[0]);
+                }
+            }
+        });
+        
+        // Submit form with FormData
+        e.preventDefault();
+        
+        // Create new form submission
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', this.action, true);
+        
+        xhr.onload = function() {
+            if (xhr.status === 200) {
+                // Handle success
+                window.location.href = window.location.href.replace('/edit/', '/');
+            } else {
+                // Handle error
+                alert('Có lỗi xảy ra khi cập nhật chương');
+            }
+        };
+        
+        xhr.send(formData);
+    });
+});
+</script>
+
+<style>
+.image-upload-slot {
+    border: 2px dashed #dee2e6;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.image-upload-slot:hover {
+    border-color: #007bff;
+    background-color: rgba(0,123,255,0.05);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.image-upload-slot.has-image {
+    border-color: #28a745;
+    border-style: solid;
+}
+
+.image-upload-slot .image-placeholder {
+    transition: all 0.3s ease;
+}
+
+.image-upload-slot:hover .image-placeholder {
+    color: #007bff;
+}
+
+.image-upload-slot .image-preview-container img {
+    transition: all 0.3s ease;
+}
+
+.image-upload-slot:hover .image-preview-container img {
+    transform: scale(1.02);
+}
+
+.image-actions {
+    transition: all 0.3s ease;
+}
+
+#add-image-btn {
+    transition: all 0.3s ease;
+}
+
+#add-image-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,123,255,0.3);
+}
+
+.modal-xl {
+    max-width: 95vw;
+}
+
+@media (max-width: 768px) {
+    .image-upload-slot {
+        min-height: 250px;
+    }
+}
+</style>
