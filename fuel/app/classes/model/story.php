@@ -40,7 +40,9 @@ class Model_Story extends \Model
 		'views',
 		'is_featured',
 		'is_hot',
+		'is_visible',
 		'author_name',
+		'categories',
 		'created_at',
 		'updated_at',
 		'deleted_at',
@@ -59,7 +61,9 @@ class Model_Story extends \Model
 	public $views;
 	public $is_featured;
 	public $is_hot;
-public $author_name;
+	public $is_visible;
+	public $author_name;
+	public $categories;
 	public $created_at;
 	public $updated_at;
 	public $deleted_at;
@@ -140,7 +144,7 @@ public $author_name;
             $sql = "SELECT s.*, a.name AS author_name
                     FROM stories s
                     LEFT JOIN authors a ON s.author_id = a.id
-                    WHERE s.deleted_at IS NULL
+                    WHERE s.deleted_at IS NULL AND s.is_visible = 1
                     ORDER BY s." . $order_by . " " . $order_direction;
 
             if ($limit !== null) {
@@ -194,7 +198,7 @@ public $author_name;
 		try {
 			$sql = "SELECT s.*, a.name as author_name FROM stories s 
 					INNER JOIN authors a ON s.author_id = a.id 
-					WHERE s.deleted_at IS NULL AND s.is_hot = :is_hot 
+					WHERE s.deleted_at IS NULL AND s.is_hot = :is_hot AND s.is_visible = 1 
 					ORDER BY s.views DESC, s.created_at DESC LIMIT :limit";
 			
 			$query = \DB::query($sql);
@@ -244,7 +248,7 @@ public $author_name;
 		try {
 			$sql = "SELECT s.*, a.name as author_name FROM stories s 
 					INNER JOIN authors a ON s.author_id = a.id 
-					WHERE s.deleted_at IS NULL AND (s.title LIKE :keyword OR a.name LIKE :keyword) 
+					WHERE s.deleted_at IS NULL AND s.is_visible = 1 AND (s.title LIKE :keyword OR a.name LIKE :keyword) 
 					ORDER BY s.created_at DESC";
 			if ($limit) {
 				$sql .= " LIMIT :limit OFFSET :offset";
@@ -290,7 +294,7 @@ public $author_name;
 			$sql = "SELECT s.*, a.name as author_name FROM stories s 
 					INNER JOIN authors a ON s.author_id = a.id 
 					INNER JOIN story_categories sc ON s.id = sc.story_id 
-					WHERE s.deleted_at IS NULL AND sc.category_id = :category_id 
+					WHERE s.deleted_at IS NULL AND s.is_visible = 1 AND sc.category_id = :category_id 
 					ORDER BY s.created_at DESC";
 			if ($limit) {
 				$sql .= " LIMIT :limit OFFSET :offset";
@@ -335,7 +339,7 @@ public $author_name;
 		try {
 			$sql = "SELECT s.*, a.name as author_name FROM stories s 
 					INNER JOIN authors a ON s.author_id = a.id 
-					WHERE s.deleted_at IS NULL AND s.author_id = :author_id 
+					WHERE s.deleted_at IS NULL AND s.is_visible = 1 AND s.author_id = :author_id 
 					ORDER BY s.created_at DESC";
 			if ($limit) {
 				$sql .= " LIMIT :limit OFFSET :offset";
@@ -412,11 +416,12 @@ public $author_name;
 			$views = isset($data['views']) ? $data['views'] : 0;
 			$is_featured = isset($data['is_featured']) ? $data['is_featured'] : 0;
 			$is_hot = isset($data['is_hot']) ? $data['is_hot'] : 0;
+			$is_visible = isset($data['is_visible']) ? $data['is_visible'] : 1;
 			$created_at = date('Y-m-d H:i:s');
 			$updated_at = date('Y-m-d H:i:s');
 
 			// Thêm vào database với Raw SQL
-			$query = \DB::query("INSERT INTO stories (title, slug, description, cover_image, author_id, status, views, is_featured, is_hot, created_at, updated_at) VALUES (:title, :slug, :description, :cover_image, :author_id, :status, :views, :is_featured, :is_hot, :created_at, :updated_at)");
+			$query = \DB::query("INSERT INTO stories (title, slug, description, cover_image, author_id, status, views, is_featured, is_hot, is_visible, created_at, updated_at) VALUES (:title, :slug, :description, :cover_image, :author_id, :status, :views, :is_featured, :is_hot, :is_visible, :created_at, :updated_at)");
 			$result = $query->param('title', $data['title'])
 							->param('slug', $data['slug'])
 							->param('description', $description)
@@ -426,6 +431,7 @@ public $author_name;
 							->param('views', $views)
 							->param('is_featured', $is_featured)
 							->param('is_hot', $is_hot)
+							->param('is_visible', $is_visible)
 							->param('created_at', $created_at)
 							->param('updated_at', $updated_at)
 							->execute();
@@ -442,6 +448,7 @@ public $author_name;
 				$story->views = $views;
 				$story->is_featured = $is_featured;
 				$story->is_hot = $is_hot;
+				$story->is_visible = $is_visible;
 				$story->created_at = $created_at;
 				$story->updated_at = $updated_at;
 				return $story;
@@ -499,6 +506,10 @@ public $author_name;
 				$set_parts[] = 'is_hot = :is_hot';
 				$params['is_hot'] = $data['is_hot'];
 			}
+			if (isset($data['is_visible'])) {
+				$set_parts[] = 'is_visible = :is_visible';
+				$params['is_visible'] = $data['is_visible'];
+			}
 
 			if (empty($set_parts)) {
 				return false;
@@ -544,13 +555,14 @@ public $author_name;
 							->param('id', $this->id)
 							->execute();
 				
-			if ($result) {
+			if ($result !== false) {
 				$this->deleted_at = $deleted_at;
 				$this->updated_at = $updated_at;
 				return true;
 			}
 			return false;
 		} catch (\Exception $e) {
+			\Log::error('Error soft deleting story: ' . $e->getMessage());
 			return false;
 		}
 	}
@@ -757,16 +769,14 @@ public $author_name;
 	public function add_category($category_id)
 	{
 		try {
-			$created_at = date('Y-m-d H:i:s');
-			
-			$query = \DB::query("INSERT INTO story_categories (story_id, category_id, created_at) VALUES (:story_id, :category_id, :created_at)");
+			$query = \DB::query("INSERT INTO story_categories (story_id, category_id) VALUES (:story_id, :category_id)");
 			$result = $query->param('story_id', $this->id)
 							->param('category_id', $category_id)
-							->param('created_at', $created_at)
 							->execute();
 			
 			return (bool) $result;
 		} catch (\Exception $e) {
+			\Log::error('Add category failed: ' . $e->getMessage());
 			return false;
 		}
 	}
@@ -784,6 +794,481 @@ public $author_name;
 			return (bool) $result;
 		} catch (\Exception $e) {
 			return false;
+		}
+	}
+
+	/**
+	 * Lấy danh sách truyện với filter
+	 * 
+	 * @param int $limit
+	 * @param int $offset
+	 * @param string $search
+	 * @param int $category_id
+	 * @param string $status
+	 * @param string $sort
+	 * @return array
+	 */
+	public static function get_stories_with_filter($limit = null, $offset = 0, $search = '', $category_id = null, $status = '', $sort = 'created_at_desc')
+	{
+		try {
+			// Base query
+			$sql = "SELECT s.*, a.name AS author_name
+					FROM stories s
+					LEFT JOIN authors a ON s.author_id = a.id";
+			
+			// Add category join only if filtering by category
+			if (!empty($category_id)) {
+				$sql .= " INNER JOIN story_categories sc ON s.id = sc.story_id";
+			}
+			
+			$sql .= " WHERE s.deleted_at IS NULL";
+			$params = array();
+			
+			// Tìm kiếm theo tên truyện hoặc tác giả
+			if (!empty($search)) {
+				$sql .= " AND (s.title LIKE :search OR a.name LIKE :search)";
+				$params['search'] = '%' . $search . '%';
+			}
+			
+			// Lọc theo danh mục
+			if (!empty($category_id)) {
+				$sql .= " AND sc.category_id = :category_id";
+				$params['category_id'] = $category_id;
+			}
+			
+			// Lọc theo trạng thái
+			if (!empty($status)) {
+				$sql .= " AND s.status = :status";
+				$params['status'] = $status;
+			}
+			
+			// Sắp xếp
+			switch ($sort) {
+				case 'created_at_asc':
+					$sql .= " ORDER BY s.created_at ASC";
+					break;
+				case 'title_asc':
+					$sql .= " ORDER BY s.title ASC";
+					break;
+				case 'title_desc':
+					$sql .= " ORDER BY s.title DESC";
+					break;
+				case 'views_desc':
+					$sql .= " ORDER BY s.views DESC";
+					break;
+				default:
+					$sql .= " ORDER BY s.created_at DESC";
+					break;
+			}
+			
+			if ($limit) {
+				$sql .= " LIMIT " . (int) $limit . " OFFSET " . (int) $offset;
+			}
+			
+			$query = \DB::query($sql);
+			foreach ($params as $key => $value) {
+				$query->param($key, $value);
+			}
+			$results = $query->execute();
+			
+			$stories = array();
+			foreach ($results as $result) {
+				$story = new self();
+				foreach ($result as $key => $value) {
+					if (!is_string($key)) {
+						continue;
+					}
+					$story->$key = $value;
+				}
+				
+				// Lấy categories cho story
+				$story->categories = array();
+				$categories = $story->get_categories();
+				foreach ($categories as $category) {
+					$story->categories[] = $category->name;
+				}
+				
+				$stories[] = $story;
+			}
+			return $stories;
+		} catch (\Exception $e) {
+			\Log::error('get_stories_with_filter failed: ' . $e->getMessage());
+			return array();
+		}
+	}
+
+	/**
+	 * Đếm số truyện với filter
+	 * 
+	 * @param string $search
+	 * @param int $category_id
+	 * @param string $status
+	 * @return int
+	 */
+	public static function count_stories_with_filter($search = '', $category_id = null, $status = '')
+	{
+		try {
+			// Base query
+			$sql = "SELECT COUNT(DISTINCT s.id) as total
+					FROM stories s
+					LEFT JOIN authors a ON s.author_id = a.id";
+			
+			// Add category join only if filtering by category
+			if (!empty($category_id)) {
+				$sql .= " INNER JOIN story_categories sc ON s.id = sc.story_id";
+			}
+			
+			$sql .= " WHERE s.deleted_at IS NULL";
+			$params = array();
+			
+			if (!empty($search)) {
+				$sql .= " AND (s.title LIKE :search OR a.name LIKE :search)";
+				$params['search'] = '%' . $search . '%';
+			}
+			
+			if (!empty($category_id)) {
+				$sql .= " AND sc.category_id = :category_id";
+				$params['category_id'] = $category_id;
+			}
+			
+			if (!empty($status)) {
+				$sql .= " AND s.status = :status";
+				$params['status'] = $status;
+			}
+			
+			$query = \DB::query($sql);
+			foreach ($params as $key => $value) {
+				$query->param($key, $value);
+			}
+			$result = $query->execute();
+			return (int) $result->current()['total'];
+		} catch (\Exception $e) {
+			return 0;
+		}
+	}
+
+	/**
+	 * Lấy danh sách truyện đã xóa
+	 * 
+	 * @param int $limit
+	 * @param int $offset
+	 * @param string $search
+	 * @param string $sort
+	 * @return array
+	 */
+	public static function get_deleted_stories($limit = null, $offset = 0, $search = '', $sort = 'deleted_at_desc')
+	{
+		try {
+			$sql = "SELECT s.*, a.name as author_name FROM stories s 
+					LEFT JOIN authors a ON s.author_id = a.id 
+					WHERE s.deleted_at IS NOT NULL";
+			$params = array();
+			
+			// Tìm kiếm theo tên truyện hoặc tác giả
+			if (!empty($search)) {
+				$sql .= " AND (s.title LIKE :search OR a.name LIKE :search)";
+				$params['search'] = '%' . $search . '%';
+			}
+			
+			// Sắp xếp
+			switch ($sort) {
+				case 'deleted_at_asc':
+					$sql .= " ORDER BY s.deleted_at ASC";
+					break;
+				case 'title_asc':
+					$sql .= " ORDER BY s.title ASC";
+					break;
+				case 'title_desc':
+					$sql .= " ORDER BY s.title DESC";
+					break;
+				case 'created_at_desc':
+					$sql .= " ORDER BY s.created_at DESC";
+					break;
+				default:
+					$sql .= " ORDER BY s.deleted_at DESC";
+					break;
+			}
+			
+			if ($limit) {
+				$sql .= " LIMIT " . (int) $limit . " OFFSET " . (int) $offset;
+			}
+			
+			$query = \DB::query($sql);
+			foreach ($params as $key => $value) {
+				$query->param($key, $value);
+			}
+			$results = $query->execute();
+			
+			$stories = array();
+			foreach ($results as $row) {
+				$story = new self();
+				foreach ($row as $key => $value) {
+					if (!is_string($key)) {
+						continue;
+					}
+					$story->$key = $value;
+				}
+				$stories[] = $story;
+			}
+			return $stories;
+		} catch (\Exception $e) {
+			\Log::error('get_deleted_stories failed: ' . $e->getMessage());
+			return array();
+		}
+	}
+
+	/**
+	 * Đếm số truyện đã xóa
+	 * 
+	 * @param string $search
+	 * @return int
+	 */
+	public static function count_deleted($search = '')
+	{
+		try {
+			$sql = "SELECT COUNT(*) as total FROM stories s 
+					LEFT JOIN authors a ON s.author_id = a.id 
+					WHERE s.deleted_at IS NOT NULL";
+			$params = array();
+			
+			if (!empty($search)) {
+				$sql .= " AND (s.title LIKE :search OR a.name LIKE :search)";
+				$params['search'] = '%' . $search . '%';
+			}
+			
+			$query = \DB::query($sql);
+			foreach ($params as $key => $value) {
+				$query->param($key, $value);
+			}
+			$result = $query->execute();
+			return (int) $result->current()['total'];
+		} catch (\Exception $e) {
+			return 0;
+		}
+	}
+
+	/**
+	 * Tìm truyện đã xóa theo ID
+	 * 
+	 * @param int $id
+	 * @return Model_Story|null
+	 */
+	public static function find_deleted($id)
+	{
+		try {
+			$query = \DB::query("SELECT s.*, a.name as author_name FROM stories s 
+								LEFT JOIN authors a ON s.author_id = a.id 
+								WHERE s.id = :id AND s.deleted_at IS NOT NULL");
+			$result = $query->param('id', $id)->execute();
+
+			if ($result->count() > 0) {
+				$data = $result->current();
+				$story = new self();
+				foreach ($data as $key => $value) {
+					if (!is_string($key)) {
+						continue;
+					}
+					$story->$key = $value;
+				}
+				return $story;
+			}
+
+			return null;
+		} catch (\Exception $e) {
+			\Log::error('find_deleted failed: ' . $e->getMessage());
+			return null;
+		}
+	}
+
+
+	/**
+	 * Restore story from trash
+	 * 
+	 * @return bool
+	 */
+	public function restore()
+	{
+		try {
+			$updated_at = date('Y-m-d H:i:s');
+			
+			$query = \DB::query("UPDATE stories SET deleted_at = NULL, updated_at = :updated_at WHERE id = :id");
+			$result = $query->param('updated_at', $updated_at)
+							->param('id', $this->id)
+							->execute();
+				
+			if ($result !== false) {
+				$this->deleted_at = null;
+				$this->updated_at = $updated_at;
+				return true;
+			}
+			return false;
+		} catch (\Exception $e) {
+			\Log::error('Error restoring story: ' . $e->getMessage());
+			return false;
+		}
+	}
+
+	/**
+	 * Force delete story permanently
+	 * 
+	 * @return bool
+	 */
+	public function force_delete()
+	{
+		try {
+			// First delete related records
+			$this->remove_all_categories();
+			
+			// Then delete the story
+			$query = \DB::query("DELETE FROM stories WHERE id = :id");
+			$result = $query->param('id', $this->id)->execute();
+			
+			return $result !== false;
+		} catch (\Exception $e) {
+			\Log::error('Error force deleting story: ' . $e->getMessage());
+			return false;
+		}
+	}
+
+	/**
+	 * Save story changes to database
+	 * 
+	 * @return bool
+	 */
+	public function save()
+	{
+		try {
+			$updated_at = date('Y-m-d H:i:s');
+			
+			$query = \DB::query("UPDATE stories SET 
+								title = :title, 
+								slug = :slug, 
+								description = :description, 
+								cover_image = :cover_image, 
+								author_id = :author_id, 
+								status = :status, 
+								views = :views, 
+								is_featured = :is_featured, 
+								is_hot = :is_hot, 
+								is_visible = :is_visible, 
+								updated_at = :updated_at 
+								WHERE id = :id");
+			
+			$result = $query->param('title', $this->title)
+							->param('slug', $this->slug)
+							->param('description', $this->description)
+							->param('cover_image', $this->cover_image)
+							->param('author_id', $this->author_id)
+							->param('status', $this->status)
+							->param('views', $this->views)
+							->param('is_featured', $this->is_featured)
+							->param('is_hot', $this->is_hot)
+							->param('is_visible', $this->is_visible)
+							->param('updated_at', $updated_at)
+							->param('id', $this->id)
+							->execute();
+			
+			if ($result !== false) {
+				$this->updated_at = $updated_at;
+				return true;
+			}
+			return false;
+		} catch (\Exception $e) {
+			\Log::error('Error saving story: ' . $e->getMessage());
+			return false;
+		}
+	}
+
+	/**
+	 * Toggle trạng thái hiển thị của story
+	 * 
+	 * @return bool
+	 */
+	public function toggle_visibility()
+	{
+		try {
+			$updated_at = date('Y-m-d H:i:s');
+			$new_visibility = $this->is_visible ? 0 : 1;
+			
+			$query = \DB::query("UPDATE stories SET is_visible = :is_visible, updated_at = :updated_at WHERE id = :id");
+			$result = $query->param('is_visible', $new_visibility)
+							->param('updated_at', $updated_at)
+							->param('id', $this->id)
+							->execute();
+				
+			if ($result !== false) {
+				$this->is_visible = $new_visibility;
+				$this->updated_at = $updated_at;
+				return true;
+			}
+			return false;
+		} catch (\Exception $e) {
+			\Log::error('Error toggling story visibility: ' . $e->getMessage());
+			return false;
+		}
+	}
+
+	/**
+	 * Kiểm tra story có đang hiển thị không
+	 * 
+	 * @return bool
+	 */
+	public function is_visible()
+	{
+		return (bool) $this->is_visible;
+	}
+
+	/**
+	 * Lấy danh sách tất cả stories (bao gồm cả ẩn) - dành cho admin
+	 * 
+	 * @param int $limit Giới hạn số lượng
+	 * @param int $offset Vị trí bắt đầu
+	 * @param string $order_by Trường sắp xếp
+	 * @param string $order_direction Hướng sắp xếp
+	 * @return array
+	 */
+    public static function get_all_stories_admin($limit = null, $offset = 0, $order_by = 'created_at', $order_direction = 'DESC')
+	{
+		try {
+            // Build SQL safely with whitelisted order fields
+            $allowedOrderFields = array('created_at', 'updated_at', 'views', 'title', 'id');
+            if (!in_array($order_by, $allowedOrderFields, true)) {
+                $order_by = 'created_at';
+            }
+            $order_direction = strtoupper($order_direction) === 'ASC' ? 'ASC' : 'DESC';
+
+            $sql = "SELECT s.*, a.name AS author_name
+                    FROM stories s
+                    LEFT JOIN authors a ON s.author_id = a.id
+                    WHERE s.deleted_at IS NULL
+                    ORDER BY s." . $order_by . " " . $order_direction;
+
+            if ($limit !== null) {
+                $limit = (int) $limit;
+                $offset = (int) $offset;
+                $sql .= " LIMIT " . $limit . " OFFSET " . $offset;
+            }
+
+            $query = \DB::query($sql);
+
+			$results = $query->execute();
+			$stories = array();
+            
+            foreach ($results as $result) {
+				$story = new self();
+				foreach ($result as $key => $value) {
+					if ($key !== 'author_name') {
+						$story->$key = $value;
+					}
+				}
+				$story->author_name = $result['author_name'];
+				$stories[] = $story;
+			}
+
+			return $stories;
+        } catch (\Exception $e) {
+            \Log::error('Model_Story::get_all_stories_admin failed: ' . $e->getMessage());
+            return array();
 		}
 	}
 }

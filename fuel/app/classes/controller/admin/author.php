@@ -80,10 +80,12 @@ class Controller_Admin_Author extends Controller_Admin_Base
 					'is_active' => $is_active
 				);
 
-				// Kiểm tra dữ liệu đầu vào
-				if (empty($name)) {
-					$data['error_message'] = 'Vui lòng nhập tên tác giả.';
-				} else {
+				// Validation
+				$validation = Validation_Custom::forge();
+				$validation->add_field('name', 'Tên tác giả', 'required|custom_name|custom_category');
+				$validation->add_field('description', 'Mô tả', 'custom_category');
+
+				if ($validation->run()) {
 					// Xử lý upload avatar
 					$avatar = null;
 					if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
@@ -112,6 +114,28 @@ class Controller_Admin_Author extends Controller_Admin_Base
 							$data['error_message'] = 'Có lỗi xảy ra khi thêm tác giả.';
 						}
 					}
+				} else {
+					// Xử lý lỗi validation
+					$errors = $validation->error();
+					$error_messages = array();
+					
+					foreach ($errors as $field => $error) {
+						if ($field === 'name') {
+							if ($error->rule === 'custom_name') {
+								$error_messages[] = 'Tên tác giả không được để trống và phải có ít nhất 2 ký tự.';
+							}
+							if ($error->rule === 'custom_category') {
+								$error_messages[] = 'Tên tác giả chỉ được chứa chữ cái và khoảng trắng.';
+							}
+						}
+						if ($field === 'description') {
+							if ($error->rule === 'custom_category') {
+								$error_messages[] = 'Mô tả chỉ được chứa chữ cái và khoảng trắng.';
+							}
+						}
+					}
+					
+					$data['error_message'] = implode(' ', $error_messages);
 				}
 			}
 
@@ -160,10 +184,12 @@ class Controller_Admin_Author extends Controller_Admin_Base
 			$description = Input::post('description', '');
 			$is_active = Input::post('is_active', 1);
 
-			// Kiểm tra dữ liệu đầu vào
-			if (empty($name)) {
-				$data['error_message'] = 'Vui lòng nhập tên tác giả.';
-			} else {
+			// Validation
+			$validation = Validation_Custom::forge();
+			$validation->add_field('name', 'Tên tác giả', 'required|custom_name|custom_category');
+			$validation->add_field('description', 'Mô tả', 'custom_category');
+
+			if ($validation->run()) {
 				// Xử lý upload avatar
 				$avatar = $data['author']->avatar; // Giữ avatar cũ
 				if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
@@ -205,6 +231,28 @@ class Controller_Admin_Author extends Controller_Admin_Base
 						$data['error_message'] = 'Có lỗi xảy ra khi cập nhật tác giả.';
 					}
 				}
+			} else {
+				// Xử lý lỗi validation
+				$errors = $validation->error();
+				$error_messages = array();
+				
+				foreach ($errors as $field => $error) {
+					if ($field === 'name') {
+						if ($error->rule === 'custom_name') {
+							$error_messages[] = 'Tên tác giả không được để trống và phải có ít nhất 2 ký tự.';
+						}
+						if ($error->rule === 'custom_category') {
+							$error_messages[] = 'Tên tác giả chỉ được chứa chữ cái và khoảng trắng.';
+						}
+					}
+					if ($field === 'description') {
+						if ($error->rule === 'custom_category') {
+							$error_messages[] = 'Mô tả chỉ được chứa chữ cái và khoảng trắng.';
+						}
+					}
+				}
+				
+				$data['error_message'] = implode(' ', $error_messages);
 			}
 		}
 
@@ -270,6 +318,7 @@ class Controller_Admin_Author extends Controller_Admin_Base
 
 		// Lấy danh sách tác giả đã xóa
 		$data['authors'] = Model_Author::get_deleted_authors($limit, $offset, $search, $sort);
+		\Log::info("Found " . count($data['authors']) . " deleted authors for trash view");
 		$data['total_authors'] = Model_Author::count_deleted($search);
 		$data['current_page'] = $page;
 		$data['total_pages'] = ceil($data['total_authors'] / $limit);
@@ -474,6 +523,157 @@ class Controller_Admin_Author extends Controller_Admin_Base
 		}
 
 		return $this->success_response('Kết quả tìm kiếm', $filtered_authors);
+	}
+
+	/**
+	 * Xóa hàng loạt tác giả
+	 * 
+	 * @return void
+	 */
+	public function action_bulk_delete()
+	{
+		$this->require_login();
+
+		if (Input::method() !== 'POST') {
+			Response::redirect('admin/authors');
+		}
+
+		$author_ids = Input::post('author_ids', array());
+		
+		if (empty($author_ids)) {
+			Session::set_flash('error', 'Vui lòng chọn ít nhất một tác giả để xóa.');
+			Response::redirect('admin/authors');
+		}
+
+		$deleted_count = 0;
+		$error_count = 0;
+
+		foreach ($author_ids as $id) {
+			$author = Model_Author::find($id);
+			if ($author && !$author->deleted_at) {
+				if ($author->soft_delete()) {
+					$deleted_count++;
+				} else {
+					$error_count++;
+				}
+			} else {
+				$error_count++;
+			}
+		}
+
+		if ($deleted_count > 0) {
+			Session::set_flash('success', "Đã xóa thành công {$deleted_count} tác giả.");
+		}
+		
+		if ($error_count > 0) {
+			Session::set_flash('error', "Có {$error_count} tác giả không thể xóa.");
+		}
+
+		Response::redirect('admin/authors');
+	}
+
+	/**
+	 * Khôi phục hàng loạt tác giả
+	 * 
+	 * @return void
+	 */
+	public function action_bulk_restore()
+	{
+		$this->require_login();
+
+		if (Input::method() !== 'POST') {
+			Response::redirect('admin/authors/trash');
+		}
+
+		$author_ids = Input::post('author_ids', array());
+		
+		\Log::info("Bulk restore author IDs: " . implode(', ', $author_ids));
+		
+		if (empty($author_ids)) {
+			Session::set_flash('error', 'Vui lòng chọn ít nhất một tác giả để khôi phục.');
+			Response::redirect('admin/authors/trash');
+		}
+
+		$restored_count = 0;
+		$error_count = 0;
+
+		foreach ($author_ids as $id) {
+			$author = Model_Author::find($id);
+			\Log::info("Restore author ID: {$id}, Found: " . ($author ? 'Yes' : 'No') . ", Deleted_at: " . ($author ? $author->deleted_at : 'N/A'));
+			if ($author && $author->deleted_at) {
+				if ($author->restore()) {
+					$restored_count++;
+				} else {
+					$error_count++;
+				}
+			} else {
+				$error_count++;
+			}
+		}
+
+		if ($restored_count > 0) {
+			Session::set_flash('success', "Đã khôi phục thành công {$restored_count} tác giả.");
+		}
+		
+		if ($error_count > 0) {
+			Session::set_flash('error', "Có {$error_count} tác giả không thể khôi phục.");
+		}
+
+		Response::redirect('admin/authors/trash');
+	}
+
+	/**
+	 * Xóa vĩnh viễn hàng loạt tác giả
+	 * 
+	 * @return void
+	 */
+	public function action_bulk_force_delete()
+	{
+		$this->require_login();
+
+		if (Input::method() !== 'POST') {
+			Response::redirect('admin/authors/trash');
+		}
+
+		$author_ids = Input::post('author_ids', array());
+		
+		\Log::info("Bulk force delete author IDs: " . implode(', ', $author_ids));
+		
+		if (empty($author_ids)) {
+			Session::set_flash('error', 'Vui lòng chọn ít nhất một tác giả để xóa vĩnh viễn.');
+			Response::redirect('admin/authors/trash');
+		}
+
+		$deleted_count = 0;
+		$error_count = 0;
+
+		foreach ($author_ids as $id) {
+			$author = Model_Author::find($id);
+			\Log::info("Force delete author ID: {$id}, Found: " . ($author ? 'Yes' : 'No') . ", Deleted_at: " . ($author ? $author->deleted_at : 'N/A') . ", Is_active: " . ($author ? $author->is_active : 'N/A'));
+			
+			if ($author && $author->deleted_at !== null && $author->deleted_at !== '') {
+				if ($author->force_delete()) {
+					$deleted_count++;
+					\Log::info("Successfully force deleted author ID: {$id}");
+				} else {
+					$error_count++;
+					\Log::error("Failed to force delete author ID: {$id}");
+				}
+			} else {
+				$error_count++;
+				\Log::warning("Author ID {$id} not found or not deleted: " . ($author ? "deleted_at = '{$author->deleted_at}', is_active = {$author->is_active}" : "not found"));
+			}
+		}
+
+		if ($deleted_count > 0) {
+			Session::set_flash('success', "Đã xóa vĩnh viễn thành công {$deleted_count} tác giả.");
+		}
+		
+		if ($error_count > 0) {
+			Session::set_flash('error', "Có {$error_count} tác giả không thể xóa vĩnh viễn.");
+		}
+
+		Response::redirect('admin/authors/trash');
 	}
 
 	/**

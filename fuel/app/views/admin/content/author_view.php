@@ -21,10 +21,13 @@
 					<a href="<?php echo Uri::base(); ?>admin/authors/edit/<?php echo $author->id; ?>" class="btn btn-primary">
 						<i class="fas fa-edit me-1"></i>Sửa
 					</a>
-					<a href="<?php echo Uri::base(); ?>admin/authors/delete/<?php echo $author->id; ?>" 
-					   class="btn btn-danger" onclick="return confirm('Bạn có chắc chắn muốn xóa tác giả này?')">
-						<i class="fas fa-trash me-1"></i>Xóa
-					</a>
+					<form method="POST" action="<?php echo Uri::base(); ?>admin/authors/delete/<?php echo $author->id; ?>" 
+						  style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn xóa tác giả này?')">
+						<input type="hidden" name="<?php echo \Config::get('security.csrf_token_key'); ?>" value="<?php echo \Security::fetch_token(); ?>">
+						<button type="submit" class="btn btn-danger">
+							<i class="fas fa-trash me-1"></i>Xóa
+						</button>
+					</form>
 				</div>
 			</div>
 		</div>
@@ -46,7 +49,7 @@
 				<div class="row">
 					<div class="col-md-6">
 						<label class="form-label fw-bold">Số truyện:</label>
-						<p class="badge bg-info fs-6"><?php echo $author->story_count ?? 0; ?> truyện</p>
+						<p class="badge bg-info fs-6"><?php echo isset($story_count) ? $story_count : 0; ?> truyện</p>
 					</div>
 					<div class="col-md-6">
 						<label class="form-label fw-bold">Ngày tạo:</label>

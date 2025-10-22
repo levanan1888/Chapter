@@ -17,6 +17,7 @@
 		<?php endif; ?>
 
 		<form method="POST" action="<?php echo Uri::base(); ?>admin/users/edit/<?php echo isset($user) ? $user->id : ''; ?>">
+			<input type="hidden" name="<?php echo \Config::get('security.csrf_token_key'); ?>" value="<?php echo \Security::fetch_token(); ?>">
 			<div class="row">
 				<div class="col-md-6">
 					<div class="mb-3">

@@ -39,6 +39,7 @@ class Model_Author extends \Model
 		'created_at',
 		'updated_at',
 		'deleted_at',
+		'story_count',
 	);
 
 	/**
@@ -53,6 +54,7 @@ class Model_Author extends \Model
 	public $created_at;
 	public $updated_at;
 	public $deleted_at;
+	public $story_count;
 
 	/**
 	 * Tìm author theo ID
@@ -150,24 +152,27 @@ class Model_Author extends \Model
 	public static function get_all_authors($limit = null, $offset = 0, $search = '', $status = '', $sort = 'created_at_desc')
 	{
 		try {
-			$sql = "SELECT * FROM authors WHERE 1=1";
+			$sql = "SELECT a.*, COUNT(s.id) as story_count FROM authors a LEFT JOIN stories s ON a.id = s.author_id AND s.deleted_at IS NULL WHERE 1=1";
 			$params = array();
 			
 			// Filter theo trạng thái
 			if ($status === 'active') {
-				$sql .= " AND is_active = 1 AND deleted_at IS NULL";
+				$sql .= " AND a.is_active = 1 AND a.deleted_at IS NULL";
 			} elseif ($status === 'deleted') {
-				$sql .= " AND (is_active = 0 OR deleted_at IS NOT NULL)";
+				$sql .= " AND (a.is_active = 0 OR a.deleted_at IS NOT NULL)";
 			} else {
 				// Mặc định chỉ hiển thị active
-				$sql .= " AND is_active = 1 AND deleted_at IS NULL";
+				$sql .= " AND a.is_active = 1 AND a.deleted_at IS NULL";
 			}
 			
 			// Tìm kiếm theo tên
 			if (!empty($search)) {
-				$sql .= " AND name LIKE :search";
+				$sql .= " AND a.name LIKE :search";
 				$params['search'] = '%' . $search . '%';
 			}
+			
+			// GROUP BY để sử dụng COUNT
+			$sql .= " GROUP BY a.id";
 			
 			// Sắp xếp
 			$sort_parts = explode('_', $sort);
@@ -176,9 +181,9 @@ class Model_Author extends \Model
 			
 			$allowed_fields = array('name', 'created_at');
 			if (in_array($sort_field, $allowed_fields)) {
-				$sql .= " ORDER BY " . $sort_field . " " . $sort_direction;
+				$sql .= " ORDER BY a." . $sort_field . " " . $sort_direction;
 			} else {
-				$sql .= " ORDER BY created_at DESC";
+				$sql .= " ORDER BY a.created_at DESC";
 			}
 			
 			if ($limit) {
@@ -397,7 +402,7 @@ class Model_Author extends \Model
 							->param('id', $this->id)
 							->execute();
 				
-			if ($result) {
+			if ($result !== false) {
 				$this->is_active = 0;
 				$this->deleted_at = $deleted_at;
 				$this->updated_at = $updated_at;
@@ -426,7 +431,7 @@ class Model_Author extends \Model
 							->param('id', $this->id)
 							->execute();
 
-			if ($result) {
+			if ($result !== false) {
 				$this->is_active = 1;
 				$this->deleted_at = null;
 				$this->updated_at = $updated_at;
@@ -449,7 +454,7 @@ class Model_Author extends \Model
 		try {
 			$query = \DB::query("DELETE FROM authors WHERE id = :id");
 			$result = $query->param('id', $this->id)->execute();
-			return $result;
+			return $result !== false;
 		} catch (\Exception $e) {
 			\Log::error('Error force deleting author: ' . $e->getMessage());
 			return false;
@@ -468,14 +473,17 @@ class Model_Author extends \Model
 	public static function get_deleted_authors($limit = null, $offset = 0, $search = '', $sort = 'deleted_at_desc')
 	{
 		try {
-			$sql = "SELECT * FROM authors WHERE (is_active = 0 OR deleted_at IS NOT NULL)";
+			$sql = "SELECT a.*, COUNT(s.id) as story_count FROM authors a LEFT JOIN stories s ON a.id = s.author_id AND s.deleted_at IS NULL WHERE (a.is_active = 0 OR a.deleted_at IS NOT NULL)";
 			$params = array();
 			
 			// Tìm kiếm theo tên
 			if (!empty($search)) {
-				$sql .= " AND name LIKE :search";
+				$sql .= " AND a.name LIKE :search";
 				$params['search'] = '%' . $search . '%';
 			}
+			
+			// GROUP BY để sử dụng COUNT
+			$sql .= " GROUP BY a.id";
 			
 			// Sắp xếp
 			$sort_parts = explode('_', $sort);
@@ -484,9 +492,9 @@ class Model_Author extends \Model
 			
 			$allowed_fields = array('name', 'created_at', 'deleted_at');
 			if (in_array($sort_field, $allowed_fields)) {
-				$sql .= " ORDER BY " . $sort_field . " " . $sort_direction;
+				$sql .= " ORDER BY a." . $sort_field . " " . $sort_direction;
 			} else {
-				$sql .= " ORDER BY deleted_at DESC";
+				$sql .= " ORDER BY a.deleted_at DESC";
 			}
 			
 			if ($limit) {

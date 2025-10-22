@@ -145,7 +145,7 @@ function deleteChapter(chapterId) {
 		// Thêm CSRF token
 		const csrfToken = document.createElement('input');
 		csrfToken.type = 'hidden';
-		csrfToken.name = '<?php echo \Config::get('security.csrf_token_key'); ?>';
+		csrfToken.name = 'fuel_csrf_token';
 		csrfToken.value = '<?php echo \Security::fetch_token(); ?>';
 		form.appendChild(csrfToken);
 		

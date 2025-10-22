@@ -24,29 +24,18 @@ class Controller_Admin_Category extends Controller_Admin_Base
 		// Input filters
 		$q = Input::get('q', '');
 		$status = Input::get('status', 'active'); // active | inactive | all
+		$sort = Input::get('sort', 'created_at_desc');
 		$page = max(1, (int) Input::get('page', 1));
 		$perPage = 12;
 		$offset = ($page - 1) * $perPage;
 
 		$total = Model_Category::count_filtered($q, $status);
-		$data['categories'] = Model_Category::get_categories($q, $status, $perPage, $offset);
-		// Tính story_count tương tự màn tác giả
-		
-		if (!empty($data['categories'])) {
-			foreach ($data['categories'] as &$category) {
-				if (is_array($category)) {
-					$category = (object) $category; // normalize to object for views
-				}
-				$category->story_count = isset($category->id)
-					? (is_callable([$category, 'get_story_count']) ? $category->get_story_count() : Model_Category::get_story_count_by_id($category->id))
-					: 0;
-			}
-			unset($category);
-		}
+		$data['categories'] = Model_Category::get_categories($q, $status, $perPage, $offset, $sort);
 
 		// Pagination data
 		$data['q'] = $q;
 		$data['status'] = $status;
+		$data['sort'] = $sort;
 		$data['page'] = $page;
 		$data['per_page'] = $perPage;
 		$data['total'] = $total;
@@ -70,43 +59,84 @@ class Controller_Admin_Category extends Controller_Admin_Base
 		$data = array();
 		$data['success_message'] = '';
 		$data['error_message'] = '';
-
 		// Xử lý form thêm danh mục
 		if (Input::method() === 'POST') {
 			$name = Input::post('name', '');
+			$slug = Input::post('slug', '');
 			$description = Input::post('description', '');
 			$color = Input::post('color', '#007bff');
 			$sort_order = Input::post('sort_order', 0);
+			$is_active = Input::post('is_active', 0);
 
-			// Kiểm tra dữ liệu đầu vào
-			if (empty($name)) {
-				$data['error_message'] = 'Vui lòng nhập tên danh mục.';
-			} else {
+			// Tải lớp validation tùy chỉnh
+			require_once APPPATH . 'classes/validation/custom.php';
+			
+			// Thiết lập validation
+			$validation = Validation_Custom::forge();
+			// Thêm trường 'name' với các quy tắc validation:
+			// - required: bắt buộc phải có
+			// - custom_name: kiểm tra tên cơ bản (không rỗng, tối thiểu 2 ký tự)
+			// - custom_category: không được chứa chữ "n"
+			$validation->add_field('name', 'Tên danh mục', 'required|custom_name|custom_category');
+			$validation->add_field('description', 'Mô tả', 'required|custom_category|custom_name');
+
+			if ($validation->run()) {
+				// Tạo slug từ tên nếu không có slug
+				if (empty($slug)) {
+					$slug = $this->create_slug($name);
+				}
+				
 				// Tạo danh mục mới
 				$category_data = array(
 					'name' => $name,
+					'slug' => $slug,
 					'description' => $description,
 					'color' => $color,
 					'sort_order' => $sort_order,
+					'is_active' => $is_active,
 				);
-
 				$new_category = Model_Category::create_category($category_data);
 				if ($new_category) {
-					$data['success_message'] = 'Thêm danh mục thành công!';
-					// Reset form
-					$data['form_data'] = array();
+					Session::set_flash('success', 'Thêm danh mục thành công!');
+					Response::redirect('admin/categories');
 				} else {
 					$data['error_message'] = 'Có lỗi xảy ra khi thêm danh mục.';
 				}
+			} else {
+				// Xử lý lỗi validation
+				$errors = $validation->error(); // Lấy danh sách lỗi validation
+				$error_messages = array(); // Mảng chứa thông báo lỗi
+				
+				// Duyệt qua từng lỗi validation
+				foreach ($errors as $field => $error) {
+					if ($field === 'name') { // Nếu lỗi ở trường 'name'
+						// Kiểm tra loại lỗi validation cụ thể
+						if ($error->rule === 'custom_name') {
+							$error_messages[] = 'Tên danh mục không được để trống và phải có ít nhất 2 ký tự.';
+						}
+						if ($error->rule === 'custom_category') {
+							$error_messages[] = 'Tên danh mục chỉ được chứa chữ cái và khoảng trắng.';
+						}
+					}
+					if ($field === 'description') {
+						if ($error->rule === 'custom_category') {
+							$error_messages[] = 'Mô tả chỉ được chứa chữ cái và khoảng trắng.';
+						}
+					}
+				}
+				
+				$data['error_message'] = implode(' ', $error_messages);
 			}
 
 			// Giữ lại dữ liệu form nếu có lỗi
 			if (!empty($data['error_message'])) {
 				$data['form_data'] = array(
 					'name' => $name,
+					'slug' => $slug,
 					'description' => $description,
 					'color' => $color,
 					'sort_order' => $sort_order,
+					'is_active' => $is_active,
 				);
 			}
 		}
@@ -143,29 +173,65 @@ class Controller_Admin_Category extends Controller_Admin_Base
 		// Xử lý form sửa danh mục
 		if (Input::method() === 'POST') {
 			$name = Input::post('name', '');
+			$slug = Input::post('slug', '');
 			$description = Input::post('description', '');
 			$color = Input::post('color', '#007bff');
 			$sort_order = Input::post('sort_order', 0);
+			$is_active = Input::post('is_active', 0);
 
-			// Kiểm tra dữ liệu đầu vào
-			if (empty($name)) {
-				$data['error_message'] = 'Vui lòng nhập tên danh mục.';
-			} else {
+			// Tải lớp validation tùy chỉnh
+			require_once APPPATH . 'classes/validation/custom.php';
+			
+			// Thiết lập validation
+			$validation = Validation_Custom::forge();
+			$validation->add_field('name', 'Tên danh mục', 'required|custom_name|custom_category');
+			$validation->add_field('description', 'Mô tả', 'custom_category');
+
+			if ($validation->run()) {
+				// Tạo slug từ tên nếu không có slug
+				if (empty($slug)) {
+					$slug = $this->create_slug($name);
+				}
+				
 				// Cập nhật danh mục
 				$update_data = array(
 					'name' => $name,
+					'slug' => $slug,
 					'description' => $description,
 					'color' => $color,
 					'sort_order' => $sort_order,
+					'is_active' => $is_active,
 				);
 
 				if ($data['category']->update_category($update_data)) {
-					$data['success_message'] = 'Cập nhật danh mục thành công!';
-					// Reload data
-					$data['category'] = Model_Category::find($id);
+					Session::set_flash('success', 'Cập nhật danh mục thành công!');
+					Response::redirect('admin/categories');
 				} else {
 					$data['error_message'] = 'Có lỗi xảy ra khi cập nhật danh mục.';
 				}
+			} else {
+				// Xử lý lỗi validation
+				$errors = $validation->error(); // Lấy danh sách lỗi validation
+				$error_messages = array(); // Mảng chứa thông báo lỗi
+				
+				// Duyệt qua từng lỗi validation
+				foreach ($errors as $field => $error) {
+					if ($field === 'name') {
+						if ($error->rule === 'custom_name') {
+							$error_messages[] = 'Tên danh mục không được để trống và phải có ít nhất 2 ký tự.';
+						}
+						if ($error->rule === 'custom_category') {
+							$error_messages[] = 'Tên danh mục chỉ được chứa chữ cái và khoảng trắng.';
+						}
+					}
+					if ($field === 'description') {
+						if ($error->rule === 'custom_category') {
+							$error_messages[] = 'Mô tả chỉ được chứa chữ cái và khoảng trắng.';
+						}
+					}
+				}
+				
+				$data['error_message'] = implode(' ', $error_messages);
 			}
 		}
 
@@ -175,10 +241,10 @@ class Controller_Admin_Category extends Controller_Admin_Base
 	}
 
 	/**
-	 * Xóa danh mục (AJAX)
+	 * Xóa danh mục (soft delete)
 	 * 
 	 * @param int $id ID của danh mục
-	 * @return Response
+	 * @return void
 	 */
 	public function action_delete($id = null)
 	{
@@ -189,19 +255,23 @@ class Controller_Admin_Category extends Controller_Admin_Base
 		}
 
 		if (empty($id)) {
-			return $this->error_response('ID không hợp lệ.');
+			Session::set_flash('error', 'ID không hợp lệ.');
+			Response::redirect('admin/categories');
 		}
 
 		$category = Model_Category::find($id);
 		
 		if (!$category) {
-			return $this->error_response('Không tìm thấy danh mục.');
+			Session::set_flash('error', 'Không tìm thấy danh mục.');
+			Response::redirect('admin/categories');
 		}
 
 		if ($category->soft_delete()) {
-			return $this->success_response('Xóa danh mục thành công!');
+			Session::set_flash('success', 'Xóa danh mục thành công!');
+			Response::redirect('admin/categories');
 		} else {
-			return $this->error_response('Có lỗi xảy ra khi xóa danh mục.');
+			Session::set_flash('error', 'Có lỗi xảy ra khi xóa danh mục.');
+			Response::redirect('admin/categories');
 		}
 	}
 
@@ -294,17 +364,20 @@ class Controller_Admin_Category extends Controller_Admin_Base
 		$data = array();
 
 		// Input filters
-		$q = Input::get('q', '');
+		$search = Input::get('search', '');
+		$sort = Input::get('sort', 'deleted_at_desc');
 		$page = max(1, (int) Input::get('page', 1));
-		$perPage = 12;
+		$perPage = 10;
 		$offset = ($page - 1) * $perPage;
 
-		$total = Model_Category::count_deleted();
-		$data['categories'] = Model_Category::get_deleted_categories($perPage, $offset);
+		$total = Model_Category::count_deleted($search);
+		$data['categories'] = Model_Category::get_deleted_categories($perPage, $offset, $search, $sort);
+		\Log::info("Found " . count($data['categories']) . " deleted categories for trash view");
 
 		// Pagination data
-		$data['q'] = $q;
-		$data['page'] = $page;
+		$data['search'] = $search;
+		$data['sort'] = $sort;
+		$data['current_page'] = $page;
 		$data['per_page'] = $perPage;
 		$data['total'] = $total;
 		$data['total_pages'] = (int) ceil($total / $perPage);
@@ -315,43 +388,152 @@ class Controller_Admin_Category extends Controller_Admin_Base
 	}
 
 	/**
-	 * Khôi phục danh mục từ thùng rác (AJAX)
+	 * Xem chi tiết danh mục
 	 * 
 	 * @param int $id ID của danh mục
-	 * @return Response
+	 * @return void
+	 */
+	public function action_view($id = null)
+	{
+		$this->require_login();
+
+		if (empty($id)) {
+			Response::redirect('admin/categories');
+		}
+
+		$category = Model_Category::find($id);
+		if (!$category) {
+			Session::set_flash('error', 'Không tìm thấy danh mục.');
+			Response::redirect('admin/categories');
+		}
+
+		$data = array();
+		$data['category'] = $category;
+		
+		// Lấy danh sách truyện của danh mục
+		$data['stories'] = $category->get_stories();
+		$data['story_count'] = count($data['stories']);
+
+		$data['title'] = 'Chi tiết Danh mục - ' . $category->name;
+		$data['content'] = View::forge('admin/content/category_view', $data, false);
+		return View::forge('layouts/admin', $data);
+	}
+
+	/**
+	 * Khôi phục danh mục từ thùng rác
+	 * 
+	 * @param int $id ID của danh mục
+	 * @return void
 	 */
 	public function action_restore($id = null)
 	{
 		$this->require_login();
 
 		if (Input::method() !== 'POST') {
-			Response::redirect('admin/categories');
+			Response::redirect('admin/categories/trash');
 		}
 
 		if (empty($id)) {
-			return $this->error_response('ID không hợp lệ.');
+			Session::set_flash('error', 'ID không hợp lệ.');
+			Response::redirect('admin/categories/trash');
 		}
 
 		$category = Model_Category::find_deleted($id);
 		
 		if (!$category) {
-			return $this->error_response('Không tìm thấy danh mục trong thùng rác.');
+			Session::set_flash('error', 'Không tìm thấy danh mục trong thùng rác.');
+			Response::redirect('admin/categories/trash');
 		}
 
 		if ($category->restore()) {
-			return $this->success_response('Khôi phục danh mục thành công!');
+			Session::set_flash('success', 'Khôi phục danh mục thành công!');
+			Response::redirect('admin/categories/trash');
 		} else {
-			return $this->error_response('Có lỗi xảy ra khi khôi phục danh mục.');
+			Session::set_flash('error', 'Có lỗi xảy ra khi khôi phục danh mục.');
+			Response::redirect('admin/categories/trash');
 		}
 	}
 
 	/**
-	 * Xóa vĩnh viễn danh mục (AJAX)
+	 * Xóa vĩnh viễn danh mục
 	 * 
 	 * @param int $id ID của danh mục
-	 * @return Response
+	 * @return void
 	 */
 	public function action_force_delete($id = null)
+	{
+		$this->require_login();
+
+		if (Input::method() !== 'POST') {
+			Response::redirect('admin/categories/trash');
+		}
+
+		if (empty($id)) {
+			Session::set_flash('error', 'ID không hợp lệ.');
+			Response::redirect('admin/categories/trash');
+		}
+
+		$category = Model_Category::find_deleted($id);
+		
+		if (!$category) {
+			Session::set_flash('error', 'Không tìm thấy danh mục trong thùng rác.');
+			Response::redirect('admin/categories/trash');
+		}
+
+		if ($category->force_delete()) {
+			Session::set_flash('success', 'Xóa vĩnh viễn danh mục thành công!');
+			Response::redirect('admin/categories/trash');
+		} else {
+			Session::set_flash('error', 'Có lỗi xảy ra khi xóa vĩnh viễn danh mục.');
+			Response::redirect('admin/categories/trash');
+		}
+	}
+
+	/**
+	 * Tạo slug từ tên danh mục
+	 * 
+	 * @param string $name Tên danh mục
+	 * @return string Slug
+	 */
+	private function create_slug($name)
+	{
+		// Chuyển về chữ thường
+		$slug = strtolower($name);
+		
+		// Loại bỏ dấu tiếng Việt
+		$slug = str_replace(
+			array('á', 'à', 'ả', 'ã', 'ạ', 'ă', 'ắ', 'ằ', 'ẳ', 'ẵ', 'ặ', 'â', 'ấ', 'ầ', 'ẩ', 'ẫ', 'ậ',
+				  'é', 'è', 'ẻ', 'ẽ', 'ẹ', 'ê', 'ế', 'ề', 'ể', 'ễ', 'ệ',
+				  'í', 'ì', 'ỉ', 'ĩ', 'ị',
+				  'ó', 'ò', 'ỏ', 'õ', 'ọ', 'ô', 'ố', 'ồ', 'ổ', 'ỗ', 'ộ', 'ơ', 'ớ', 'ờ', 'ở', 'ỡ', 'ợ',
+				  'ú', 'ù', 'ủ', 'ũ', 'ụ', 'ư', 'ứ', 'ừ', 'ử', 'ữ', 'ự',
+				  'ý', 'ỳ', 'ỷ', 'ỹ', 'ỵ',
+				  'đ'),
+			array('a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a',
+				  'e', 'e', 'e', 'e', 'e', 'e', 'e', 'e', 'e', 'e', 'e',
+				  'i', 'i', 'i', 'i', 'i',
+				  'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o',
+				  'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u',
+				  'y', 'y', 'y', 'y', 'y',
+				  'd'),
+			$slug
+		);
+		
+		// Thay thế khoảng trắng và ký tự đặc biệt bằng dấu gạch ngang
+		$slug = preg_replace('/[^a-z0-9]+/', '-', $slug);
+		
+		// Loại bỏ dấu gạch ngang ở đầu và cuối
+		$slug = trim($slug, '-');
+		
+		return $slug;
+	}
+
+	/**
+	 * Xóa hàng loạt danh mục
+	 * 
+	 * @return void
+	 */
+	public function action_bulk_delete()
 	{
 		$this->require_login();
 
@@ -359,20 +541,142 @@ class Controller_Admin_Category extends Controller_Admin_Base
 			Response::redirect('admin/categories');
 		}
 
-		if (empty($id)) {
-			return $this->error_response('ID không hợp lệ.');
-		}
-
-		$category = Model_Category::find_deleted($id);
+		$category_ids = Input::post('category_ids', array());
 		
-		if (!$category) {
-			return $this->error_response('Không tìm thấy danh mục trong thùng rác.');
+		if (empty($category_ids)) {
+			Session::set_flash('error', 'Vui lòng chọn ít nhất một danh mục để xóa.');
+			Response::redirect('admin/categories');
 		}
 
-		if ($category->force_delete()) {
-			return $this->success_response('Xóa vĩnh viễn danh mục thành công!');
-		} else {
-			return $this->error_response('Có lỗi xảy ra khi xóa vĩnh viễn danh mục.');
+		$deleted_count = 0;
+		$error_count = 0;
+
+		foreach ($category_ids as $id) {
+			$category = Model_Category::find($id);
+			if ($category && !$category->deleted_at) {
+				if ($category->soft_delete()) {
+					$deleted_count++;
+				} else {
+					$error_count++;
+				}
+			} else {
+				$error_count++;
+			}
 		}
+
+		if ($deleted_count > 0) {
+			Session::set_flash('success', "Đã xóa thành công {$deleted_count} danh mục.");
+		}
+		
+		if ($error_count > 0) {
+			Session::set_flash('error', "Có {$error_count} danh mục không thể xóa.");
+		}
+
+		Response::redirect('admin/categories');
+	}
+
+	/**
+	 * Khôi phục hàng loạt danh mục
+	 * 
+	 * @return void
+	 */
+	public function action_bulk_restore()
+	{
+		$this->require_login();
+
+		if (Input::method() !== 'POST') {
+			Response::redirect('admin/categories/trash');
+		}
+
+		$category_ids = Input::post('category_ids', array());
+		
+		\Log::info("Bulk restore category IDs: " . implode(', ', $category_ids));
+		
+		if (empty($category_ids)) {
+			Session::set_flash('error', 'Vui lòng chọn ít nhất một danh mục để khôi phục.');
+			Response::redirect('admin/categories/trash');
+		}
+
+		$restored_count = 0;
+		$error_count = 0;
+
+		foreach ($category_ids as $id) {
+			$category = Model_Category::find_deleted($id);
+			\Log::info("Restore category ID: {$id}, Found: " . ($category ? 'Yes' : 'No') . ", Deleted_at: " . ($category ? $category->deleted_at : 'N/A'));
+			if ($category && $category->deleted_at) {
+				if ($category->restore()) {
+					$restored_count++;
+				} else {
+					$error_count++;
+				}
+			} else {
+				$error_count++;
+			}
+		}
+
+		if ($restored_count > 0) {
+			Session::set_flash('success', "Đã khôi phục thành công {$restored_count} danh mục.");
+		}
+		
+		if ($error_count > 0) {
+			Session::set_flash('error', "Có {$error_count} danh mục không thể khôi phục.");
+		}
+
+		Response::redirect('admin/categories/trash');
+	}
+
+	/**
+	 * Xóa vĩnh viễn hàng loạt danh mục
+	 * 
+	 * @return void
+	 */
+	public function action_bulk_force_delete()
+	{
+		$this->require_login();
+
+		if (Input::method() !== 'POST') {
+			Response::redirect('admin/categories/trash');
+		}
+
+		$category_ids = Input::post('category_ids', array());
+		
+		\Log::info("Bulk force delete category IDs: " . implode(', ', $category_ids));
+		
+		if (empty($category_ids)) {
+			Session::set_flash('error', 'Vui lòng chọn ít nhất một danh mục để xóa vĩnh viễn.');
+			Response::redirect('admin/categories/trash');
+		}
+
+		$deleted_count = 0;
+		$error_count = 0;
+
+		foreach ($category_ids as $id) {
+			$category = Model_Category::find_deleted($id);
+			\Log::info("Force delete category ID: {$id}, Found: " . ($category ? 'Yes' : 'No') . ", Deleted_at: " . ($category ? $category->deleted_at : 'N/A') . ", Is_active: " . ($category ? $category->is_active : 'N/A'));
+			
+			if ($category && $category->deleted_at !== null && $category->deleted_at !== '') {
+				if ($category->force_delete()) {
+					$deleted_count++;
+					\Log::info("Successfully force deleted category ID: {$id}");
+				} else {
+					$error_count++;
+					\Log::error("Failed to force delete category ID: {$id}");
+				}
+			} else {
+				$error_count++;
+				\Log::warning("Category ID {$id} not found or not deleted: " . ($category ? "deleted_at = '{$category->deleted_at}', is_active = {$category->is_active}" : "not found"));
+			}
+		}
+
+		if ($deleted_count > 0) {
+			Session::set_flash('success', "Đã xóa vĩnh viễn thành công {$deleted_count} danh mục.");
+		}
+		
+		if ($error_count > 0) {
+			Session::set_flash('error', "Có {$error_count} danh mục không thể xóa vĩnh viễn.");
+		}
+
+		Response::redirect('admin/categories/trash');
 	}
 }
+

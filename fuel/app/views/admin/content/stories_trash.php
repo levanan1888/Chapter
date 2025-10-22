@@ -1,13 +1,13 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
 	<h2 class="h3 mb-0">
-		<i class="fas fa-trash me-2"></i>Sọt rác - Tác giả đã xóa
+		<i class="fas fa-trash me-2"></i>Sọt rác - Truyện đã xóa
 	</h2>
 	<div>
-		<a href="<?php echo Uri::base(); ?>admin/authors" class="btn btn-outline-primary me-2">
+		<a href="<?php echo Uri::base(); ?>admin/stories" class="btn btn-outline-primary me-2">
 			<i class="fas fa-arrow-left me-2"></i>Quay lại danh sách
 		</a>
-		<a href="<?php echo Uri::base(); ?>admin/authors/add" class="btn btn-primary">
-			<i class="fas fa-plus me-2"></i>Thêm tác giả mới
+		<a href="<?php echo Uri::base(); ?>admin/stories/add" class="btn btn-primary">
+			<i class="fas fa-plus me-2"></i>Thêm truyện mới
 		</a>
 	</div>
 </div>
@@ -15,11 +15,11 @@
 <!-- Search and Filter Bar -->
 <div class="card mb-4">
 	<div class="card-body">
-		<form method="GET" action="<?php echo Uri::base(); ?>admin/authors/trash" class="row g-3">
+		<form method="GET" action="<?php echo Uri::base(); ?>admin/stories/trash" class="row g-3">
 			<div class="col-md-6">
 				<label for="search" class="form-label">Tìm kiếm</label>
 				<input type="text" class="form-control" id="search" name="search" 
-					   placeholder="Tìm theo tên tác giả..." 
+					   placeholder="Tìm theo tên truyện hoặc tác giả..." 
 					   value="<?php echo isset($search) ? htmlspecialchars($search) : ''; ?>">
 			</div>
 			<div class="col-md-4">
@@ -27,8 +27,8 @@
 				<select class="form-select" id="sort" name="sort">
 					<option value="deleted_at_desc" <?php echo (isset($sort) && $sort === 'deleted_at_desc') ? 'selected' : ''; ?>>Xóa gần nhất</option>
 					<option value="deleted_at_asc" <?php echo (isset($sort) && $sort === 'deleted_at_asc') ? 'selected' : ''; ?>>Xóa xa nhất</option>
-					<option value="name_asc" <?php echo (isset($sort) && $sort === 'name_asc') ? 'selected' : ''; ?>>Tên A-Z</option>
-					<option value="name_desc" <?php echo (isset($sort) && $sort === 'name_desc') ? 'selected' : ''; ?>>Tên Z-A</option>
+					<option value="title_asc" <?php echo (isset($sort) && $sort === 'title_asc') ? 'selected' : ''; ?>>Tên A-Z</option>
+					<option value="title_desc" <?php echo (isset($sort) && $sort === 'title_desc') ? 'selected' : ''; ?>>Tên Z-A</option>
 					<option value="created_at_desc" <?php echo (isset($sort) && $sort === 'created_at_desc') ? 'selected' : ''; ?>>Tạo mới nhất</option>
 				</select>
 			</div>
@@ -36,7 +36,7 @@
 				<button type="submit" class="btn btn-primary me-2">
 					<i class="fas fa-search me-1"></i>Tìm kiếm
 				</button>
-				<a href="<?php echo Uri::base(); ?>admin/authors/trash" class="btn btn-outline-secondary">
+				<a href="<?php echo Uri::base(); ?>admin/stories/trash" class="btn btn-outline-secondary">
 					<i class="fas fa-times"></i>
 				</a>
 			</div>
@@ -44,7 +44,7 @@
 	</div>
 </div>
 
-<!-- Authors Table -->
+<!-- Stories Table -->
 <div class="card">
 	<div class="card-body">
 		<!-- Success/Error Messages -->
@@ -62,7 +62,7 @@
 			</div>
 		<?php endif; ?>
 
-		<?php if (isset($authors) && !empty($authors)): ?>
+		<?php if (isset($stories) && !empty($stories)): ?>
 			<!-- Bulk Actions -->
 			<div class="row mb-3">
 				<div class="col-md-6">
@@ -91,69 +91,80 @@
 							<th width="50">
 								<input type="checkbox" id="select-all-header" class="form-check-input">
 							</th>
-							<th>Tên tác giả</th>
-							<th>Mô tả</th>
-							<th>Số truyện</th>
+							<th>Ảnh bìa</th>
+							<th>Tên truyện</th>
+							<th>Tác giả</th>
+							<th>Trạng thái</th>
+							<th>Lượt xem</th>
 							<th>Ngày tạo</th>
 							<th>Ngày xóa</th>
 							<th>Thao tác</th>
 						</tr>
 					</thead>
 					<tbody>
-						<?php foreach ($authors as $author): ?>
+						<?php foreach ($stories as $story): ?>
 						<tr class="table-danger">
 							<td>
-								<input type="checkbox" class="form-check-input author-checkbox" value="<?php echo $author->id; ?>">
+								<input type="checkbox" class="form-check-input story-checkbox" value="<?php echo $story->id; ?>">
 							</td>
 							<td>
-								<div class="d-flex align-items-center">
-									<?php if ($author->avatar && file_exists(DOCROOT . $author->avatar)): ?>
-										<img src="<?php echo Uri::base() . $author->avatar; ?>" 
-											 class="rounded-circle me-3" 
-											 style="width: 40px; height: 40px; object-fit: cover; border: 2px solid #e3e6f0; opacity: 0.6;" 
-											 alt="<?php echo htmlspecialchars($author->name); ?>">
-									<?php else: ?>
-										<div class="avatar-sm bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; opacity: 0.6;">
-											<i class="fas fa-user"></i>
-										</div>
-									<?php endif; ?>
-									<div>
-										<h6 class="mb-0 text-muted"><?php echo $author->name; ?></h6>
-										<small class="text-muted"><?php echo $author->slug; ?></small>
-									</div>
-								</div>
-							</td>
-							<td>
-								<?php if ($author->description): ?>
-									<p class="mb-0 text-truncate text-muted" style="max-width: 200px;" title="<?php echo $author->description; ?>">
-										<?php echo $author->description; ?>
-									</p>
+								<?php if ($story->cover_image && file_exists(DOCROOT . $story->cover_image)): ?>
+									<img src="<?php echo Uri::base() . $story->cover_image; ?>" 
+										 class="img-thumbnail" 
+										 style="width: 60px; height: 80px; object-fit: cover; opacity: 0.6;" 
+										 alt="<?php echo htmlspecialchars($story->title); ?>">
 								<?php else: ?>
-									<span class="text-muted">Chưa có mô tả</span>
+									<div class="bg-light d-flex align-items-center justify-content-center" 
+										 style="width: 60px; height: 80px; border: 1px solid #ddd; opacity: 0.6;">
+										<i class="fas fa-book text-muted"></i>
+									</div>
 								<?php endif; ?>
 							</td>
 							<td>
-								<span class="badge bg-secondary"><?php echo $author->story_count ?? 0; ?> truyện</span>
+								<div>
+									<h6 class="mb-0 text-muted"><?php echo $story->title; ?></h6>
+									<small class="text-muted"><?php echo $story->slug; ?></small>
+								</div>
 							</td>
-							<td class="text-muted"><?php echo date('d/m/Y', strtotime($author->created_at)); ?></td>
+							<td>
+								<?php if (isset($story->author_name) && $story->author_name): ?>
+									<span class="text-muted"><?php echo $story->author_name; ?></span>
+								<?php else: ?>
+									<span class="text-muted">Chưa xác định</span>
+								<?php endif; ?>
+							</td>
+							<td>
+								<span class="badge bg-secondary">
+									<?php 
+									switch($story->status) {
+										case 'ongoing': echo 'Đang cập nhật'; break;
+										case 'completed': echo 'Hoàn thành'; break;
+										case 'paused': echo 'Tạm dừng'; break;
+										default: echo $story->status;
+									}
+									?>
+								</span>
+							</td>
+							<td class="text-muted"><?php echo number_format(isset($story->views) ? $story->views : 0); ?></td>
+							<td class="text-muted"><?php echo date('d/m/Y', strtotime($story->created_at)); ?></td>
 							<td class="text-muted">
-								<?php if ($author->deleted_at): ?>
-									<?php echo date('d/m/Y H:i', strtotime($author->deleted_at)); ?>
+								<?php if ($story->deleted_at): ?>
+									<?php echo date('d/m/Y H:i', strtotime($story->deleted_at)); ?>
 								<?php else: ?>
 									<span class="text-muted">Chưa xác định</span>
 								<?php endif; ?>
 							</td>
 							<td>
 								<div class="btn-group" role="group">
-									<form method="POST" action="<?php echo Uri::base(); ?>admin/authors/restore/<?php echo $author->id; ?>" 
-										  style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn khôi phục tác giả này?')">
+									<form method="POST" action="<?php echo Uri::base(); ?>admin/stories/restore/<?php echo $story->id; ?>" 
+										  style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn khôi phục truyện này?')">
 										<input type="hidden" name="<?php echo \Config::get('security.csrf_token_key'); ?>" value="<?php echo \Security::fetch_token(); ?>">
 										<button type="submit" class="btn btn-sm btn-outline-success" title="Khôi phục">
 											<i class="fas fa-undo"></i>
 										</button>
 									</form>
-									<form method="POST" action="<?php echo Uri::base(); ?>admin/authors/force_delete/<?php echo $author->id; ?>" 
-										  style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn XÓA VĨNH VIỄN tác giả này? Hành động này không thể hoàn tác!')">
+									<form method="POST" action="<?php echo Uri::base(); ?>admin/stories/force_delete/<?php echo $story->id; ?>" 
+										  style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn XÓA VĨNH VIỄN truyện này? Hành động này không thể hoàn tác!')">
 										<input type="hidden" name="<?php echo \Config::get('security.csrf_token_key'); ?>" value="<?php echo \Security::fetch_token(); ?>">
 										<button type="submit" class="btn btn-sm btn-outline-danger" title="Xóa vĩnh viễn">
 											<i class="fas fa-trash-alt"></i>
@@ -181,7 +192,7 @@
 						
 						<?php if (isset($current_page) && $current_page > 1): ?>
 							<li class="page-item">
-								<a class="page-link" href="<?php echo Uri::base(); ?>admin/authors/trash?page=<?php echo $current_page - 1; ?><?php echo $query_string; ?>">
+								<a class="page-link" href="<?php echo Uri::base(); ?>admin/stories/trash?page=<?php echo $current_page - 1; ?><?php echo $query_string; ?>">
 									<i class="fas fa-chevron-left"></i>
 								</a>
 							</li>
@@ -191,17 +202,17 @@
 							<?php if ($i == $current_page): ?>
 								<li class="page-item active">
 									<span class="page-link"><?php echo $i; ?></span>
-								</li>
+							</li>
 							<?php else: ?>
 								<li class="page-item">
-									<a class="page-link" href="<?php echo Uri::base(); ?>admin/authors/trash?page=<?php echo $i; ?><?php echo $query_string; ?>"><?php echo $i; ?></a>
+									<a class="page-link" href="<?php echo Uri::base(); ?>admin/stories/trash?page=<?php echo $i; ?><?php echo $query_string; ?>"><?php echo $i; ?></a>
 								</li>
 							<?php endif; ?>
 						<?php endfor; ?>
 
 						<?php if (isset($current_page) && $current_page < $total_pages): ?>
 							<li class="page-item">
-								<a class="page-link" href="<?php echo Uri::base(); ?>admin/authors/trash?page=<?php echo $current_page + 1; ?><?php echo $query_string; ?>">
+								<a class="page-link" href="<?php echo Uri::base(); ?>admin/stories/trash?page=<?php echo $current_page + 1; ?><?php echo $query_string; ?>">
 									<i class="fas fa-chevron-right"></i>
 								</a>
 							</li>
@@ -214,8 +225,8 @@
 			<div class="text-center py-5">
 				<i class="fas fa-trash fa-3x text-muted mb-3"></i>
 				<h5 class="text-muted">Sọt rác trống</h5>
-				<p class="text-muted">Không có tác giả nào đã bị xóa</p>
-				<a href="<?php echo Uri::base(); ?>admin/authors" class="btn btn-primary">
+				<p class="text-muted">Không có truyện nào đã bị xóa</p>
+				<a href="<?php echo Uri::base(); ?>admin/stories" class="btn btn-primary">
 					<i class="fas fa-arrow-left me-2"></i>Quay lại danh sách
 				</a>
 			</div>
@@ -224,12 +235,12 @@
 </div>
 
 <!-- Bulk Actions Forms -->
-<form id="bulk-restore-form" method="POST" action="<?php echo Uri::base(); ?>admin/authors/bulk-restore" style="display: none;">
+<form id="bulk-restore-form" method="POST" action="<?php echo Uri::base(); ?>admin/stories/bulk-restore" style="display: none;">
 	<input type="hidden" name="<?php echo \Config::get('security.csrf_token_key'); ?>" value="<?php echo \Security::fetch_token(); ?>">
 	<div id="bulk-restore-ids"></div>
 </form>
 
-<form id="bulk-force-delete-form" method="POST" action="<?php echo Uri::base(); ?>admin/authors/bulk-force-delete" style="display: none;">
+<form id="bulk-force-delete-form" method="POST" action="<?php echo Uri::base(); ?>admin/stories/bulk-force-delete" style="display: none;">
 	<input type="hidden" name="<?php echo \Config::get('security.csrf_token_key'); ?>" value="<?php echo \Security::fetch_token(); ?>">
 	<div id="bulk-force-delete-ids"></div>
 </form>
@@ -238,7 +249,7 @@
 document.addEventListener('DOMContentLoaded', function() {
 	const selectAllCheckbox = document.getElementById('select-all');
 	const selectAllHeaderCheckbox = document.getElementById('select-all-header');
-	const authorCheckboxes = document.querySelectorAll('.author-checkbox');
+	const storyCheckboxes = document.querySelectorAll('.story-checkbox');
 	const bulkRestoreBtn = document.getElementById('bulk-restore-btn');
 	const bulkForceDeleteBtn = document.getElementById('bulk-force-delete-btn');
 	const selectedCountSpan = document.getElementById('selected-count');
@@ -249,7 +260,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 	// Function to update selected count
 	function updateSelectedCount() {
-		const checkedBoxes = document.querySelectorAll('.author-checkbox:checked');
+		const checkedBoxes = document.querySelectorAll('.story-checkbox:checked');
 		const count = checkedBoxes.length;
 		selectedCountSpan.textContent = count;
 		
@@ -263,7 +274,7 @@ document.addEventListener('DOMContentLoaded', function() {
 			selectAllCheckbox.checked = false;
 			selectAllHeaderCheckbox.indeterminate = false;
 			selectAllHeaderCheckbox.checked = false;
-		} else if (count === authorCheckboxes.length) {
+		} else if (count === storyCheckboxes.length) {
 			selectAllCheckbox.indeterminate = false;
 			selectAllCheckbox.checked = true;
 			selectAllHeaderCheckbox.indeterminate = false;
@@ -276,7 +287,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 	// Select all functionality
 	function selectAll(checked) {
-		authorCheckboxes.forEach(checkbox => {
+		storyCheckboxes.forEach(checkbox => {
 			checkbox.checked = checked;
 		});
 		updateSelectedCount();
@@ -291,19 +302,19 @@ document.addEventListener('DOMContentLoaded', function() {
 		selectAll(this.checked);
 	});
 
-	authorCheckboxes.forEach(checkbox => {
+	storyCheckboxes.forEach(checkbox => {
 		checkbox.addEventListener('change', updateSelectedCount);
 	});
 
 	// Bulk restore functionality
 	bulkRestoreBtn.addEventListener('click', function() {
-		const checkedBoxes = document.querySelectorAll('.author-checkbox:checked');
+		const checkedBoxes = document.querySelectorAll('.story-checkbox:checked');
 		if (checkedBoxes.length === 0) {
-			alert('Vui lòng chọn ít nhất một tác giả để khôi phục.');
+			alert('Vui lòng chọn ít nhất một truyện để khôi phục.');
 			return;
 		}
 
-		if (confirm(`Bạn có chắc chắn muốn khôi phục ${checkedBoxes.length} tác giả đã chọn?`)) {
+		if (confirm(`Bạn có chắc chắn muốn khôi phục ${checkedBoxes.length} truyện đã chọn?`)) {
 			// Clear previous IDs
 			bulkRestoreIds.innerHTML = '';
 			
@@ -311,7 +322,7 @@ document.addEventListener('DOMContentLoaded', function() {
 			checkedBoxes.forEach(checkbox => {
 				const hiddenInput = document.createElement('input');
 				hiddenInput.type = 'hidden';
-				hiddenInput.name = 'author_ids[]';
+				hiddenInput.name = 'story_ids[]';
 				hiddenInput.value = checkbox.value;
 				bulkRestoreIds.appendChild(hiddenInput);
 			});
@@ -323,13 +334,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
 	// Bulk force delete functionality
 	bulkForceDeleteBtn.addEventListener('click', function() {
-		const checkedBoxes = document.querySelectorAll('.author-checkbox:checked');
+		const checkedBoxes = document.querySelectorAll('.story-checkbox:checked');
 		if (checkedBoxes.length === 0) {
-			alert('Vui lòng chọn ít nhất một tác giả để xóa vĩnh viễn.');
+			alert('Vui lòng chọn ít nhất một truyện để xóa vĩnh viễn.');
 			return;
 		}
 
-		if (confirm(`Bạn có chắc chắn muốn XÓA VĨNH VIỄN ${checkedBoxes.length} tác giả đã chọn?\n\nHành động này không thể hoàn tác!`)) {
+		if (confirm(`Bạn có chắc chắn muốn XÓA VĨNH VIỄN ${checkedBoxes.length} truyện đã chọn?\n\nHành động này không thể hoàn tác!`)) {
 			// Clear previous IDs
 			bulkForceDeleteIds.innerHTML = '';
 			
@@ -337,7 +348,7 @@ document.addEventListener('DOMContentLoaded', function() {
 			checkedBoxes.forEach(checkbox => {
 				const hiddenInput = document.createElement('input');
 				hiddenInput.type = 'hidden';
-				hiddenInput.name = 'author_ids[]';
+				hiddenInput.name = 'story_ids[]';
 				hiddenInput.value = checkbox.value;
 				bulkForceDeleteIds.appendChild(hiddenInput);
 			});
@@ -348,4 +359,3 @@ document.addEventListener('DOMContentLoaded', function() {
 	});
 });
 </script>
-

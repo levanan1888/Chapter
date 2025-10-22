@@ -29,9 +29,12 @@
 			<div class="row">
 				<div class="col-md-8">
 					<div class="mb-3">
-						<label for="name" class="form-label">Tên tác giả *</label>
+						<label for="name" class="form-label">
+							Tên tác giả <span class="text-danger">*</span>
+						</label>
 						<input type="text" class="form-control" id="name" name="name" 
 							   value="<?php echo isset($form_data['name']) ? htmlspecialchars($form_data['name']) : ''; ?>" required>
+						<div class="form-text">Tên tác giả là bắt buộc và phải có ít nhất 2 ký tự</div>
 					</div>
 
 					<div class="mb-3">
@@ -45,6 +48,7 @@
 					<div class="mb-3">
 						<label for="description" class="form-label">Mô tả</label>
 						<textarea class="form-control" id="description" name="description" rows="5"><?php echo isset($form_data['description']) ? htmlspecialchars($form_data['description']) : ''; ?></textarea>
+						<div class="form-text">Mô tả chỉ được chứa chữ cái và khoảng trắng</div>
 					</div>
 				</div>
 

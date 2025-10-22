@@ -19,6 +19,7 @@
 	</div>
 	<div class="card-body">
 		<form method="POST" action="<?php echo Uri::base(); ?>../../admin/chapters/upload/<?php echo isset($chapter) ? $chapter->id : ''; ?>" enctype="multipart/form-data">
+			<input type="hidden" name="<?php echo \Config::get('security.csrf_token_key'); ?>" value="<?php echo \Security::fetch_token(); ?>">
 			<div class="row">
 				<div class="col-md-8">
 					<div class="mb-3">

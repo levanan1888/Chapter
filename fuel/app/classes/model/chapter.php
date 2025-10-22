@@ -42,6 +42,20 @@ class Model_Chapter extends \Model
 	);
 
 	/**
+	 * Set property value safely
+	 * 
+	 * @param string $property
+	 * @param mixed $value
+	 * @return void
+	 */
+	protected function set_property($property, $value)
+	{
+		if (in_array($property, static::$_properties)) {
+			$this->$property = $value;
+		}
+	}
+
+	/**
 	 * Các properties của model
 	 */
 	public $id;

@@ -13,6 +13,7 @@
 <?php endif; ?>
 
 <form method="POST" action="<?php echo Uri::base(); ?>admin/register">
+	<?php echo Form::csrf(); ?>
 	<div class="mb-3">
 		<label for="username" class="form-label">
 			<i class="fas fa-user me-2"></i>Tên đăng nhập *

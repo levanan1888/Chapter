@@ -64,3 +64,4 @@ class Alter_categories_add_missing_fields
 }
 
 
+

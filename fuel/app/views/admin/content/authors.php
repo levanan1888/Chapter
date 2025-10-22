@@ -72,10 +72,31 @@
 		<!-- Messages only; debug removed -->
 
 		<?php if (isset($authors) && !empty($authors)): ?>
+			<!-- Bulk Actions -->
+			<div class="row mb-3">
+				<div class="col-md-6">
+					<div class="d-flex align-items-center">
+						<input type="checkbox" id="select-all" class="form-check-input me-2">
+						<label for="select-all" class="form-check-label me-3">Chọn tất cả</label>
+						<button type="button" class="btn btn-outline-danger btn-sm" id="bulk-delete-btn" disabled>
+							<i class="fas fa-trash me-1"></i>Xóa đã chọn
+						</button>
+					</div>
+				</div>
+				<div class="col-md-6 text-end">
+					<small class="text-muted">
+						<span id="selected-count">0</span> mục đã chọn
+					</small>
+				</div>
+			</div>
+
 			<div class="table-responsive">
 				<table class="table table-hover">
 					<thead>
 						<tr>
+							<th width="50">
+								<input type="checkbox" id="select-all-header" class="form-check-input">
+							</th>
 							<th>Tên tác giả</th>
 							<th>Mô tả</th>
 							<th>Số truyện</th>
@@ -86,6 +107,9 @@
 					<tbody>
 						<?php foreach ($authors as $author): ?>
 						<tr>
+							<td>
+								<input type="checkbox" class="form-check-input author-checkbox" value="<?php echo $author->id; ?>">
+							</td>
 							<td>
 								<div class="d-flex align-items-center">
 									<?php if ($author->avatar && file_exists(DOCROOT . $author->avatar)): ?>
@@ -204,3 +228,94 @@
 		<?php endif; ?>
 	</div>
 </div>
+
+<!-- Bulk Delete Form -->
+<form id="bulk-delete-form" method="POST" action="<?php echo Uri::base(); ?>admin/authors/bulk-delete" style="display: none;">
+	<input type="hidden" name="<?php echo \Config::get('security.csrf_token_key'); ?>" value="<?php echo \Security::fetch_token(); ?>">
+	<div id="bulk-delete-ids"></div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+	const selectAllCheckbox = document.getElementById('select-all');
+	const selectAllHeaderCheckbox = document.getElementById('select-all-header');
+	const authorCheckboxes = document.querySelectorAll('.author-checkbox');
+	const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+	const selectedCountSpan = document.getElementById('selected-count');
+	const bulkDeleteForm = document.getElementById('bulk-delete-form');
+	const bulkDeleteIds = document.getElementById('bulk-delete-ids');
+
+	// Function to update selected count
+	function updateSelectedCount() {
+		const checkedBoxes = document.querySelectorAll('.author-checkbox:checked');
+		const count = checkedBoxes.length;
+		selectedCountSpan.textContent = count;
+		
+		// Enable/disable bulk delete button
+		bulkDeleteBtn.disabled = count === 0;
+		
+		// Update select all checkboxes
+		if (count === 0) {
+			selectAllCheckbox.indeterminate = false;
+			selectAllCheckbox.checked = false;
+			selectAllHeaderCheckbox.indeterminate = false;
+			selectAllHeaderCheckbox.checked = false;
+		} else if (count === authorCheckboxes.length) {
+			selectAllCheckbox.indeterminate = false;
+			selectAllCheckbox.checked = true;
+			selectAllHeaderCheckbox.indeterminate = false;
+			selectAllHeaderCheckbox.checked = true;
+		} else {
+			selectAllCheckbox.indeterminate = true;
+			selectAllHeaderCheckbox.indeterminate = true;
+		}
+	}
+
+	// Select all functionality
+	function selectAll(checked) {
+		authorCheckboxes.forEach(checkbox => {
+			checkbox.checked = checked;
+		});
+		updateSelectedCount();
+	}
+
+	// Event listeners
+	selectAllCheckbox.addEventListener('change', function() {
+		selectAll(this.checked);
+	});
+
+	selectAllHeaderCheckbox.addEventListener('change', function() {
+		selectAll(this.checked);
+	});
+
+	authorCheckboxes.forEach(checkbox => {
+		checkbox.addEventListener('change', updateSelectedCount);
+	});
+
+	// Bulk delete functionality
+	bulkDeleteBtn.addEventListener('click', function() {
+		const checkedBoxes = document.querySelectorAll('.author-checkbox:checked');
+		if (checkedBoxes.length === 0) {
+			alert('Vui lòng chọn ít nhất một tác giả để xóa.');
+			return;
+		}
+
+		if (confirm(`Bạn có chắc chắn muốn xóa ${checkedBoxes.length} tác giả đã chọn?`)) {
+			// Clear previous IDs
+			bulkDeleteIds.innerHTML = '';
+			
+			// Add selected IDs as hidden inputs
+			checkedBoxes.forEach(checkbox => {
+				const hiddenInput = document.createElement('input');
+				hiddenInput.type = 'hidden';
+				hiddenInput.name = 'author_ids[]';
+				hiddenInput.value = checkbox.value;
+				bulkDeleteIds.appendChild(hiddenInput);
+			});
+			
+			// Submit form
+			bulkDeleteForm.submit();
+		}
+	});
+});
+</script>

@@ -40,6 +40,7 @@ class Model_Category extends \Model
 		'created_at',
 		'updated_at',
 		'deleted_at',
+		'story_count',
 	);
 
 	/**
@@ -121,8 +122,8 @@ class Model_Category extends \Model
 	public static function find_deleted($id)
 	{
 		try {
-			$query = \DB::query("SELECT * FROM categories WHERE id = :id AND is_active = :is_active AND deleted_at IS NOT NULL");
-			$result = $query->param('id', $id)->param('is_active', 0)->execute();
+			$query = \DB::query("SELECT * FROM categories WHERE id = :id AND (is_active = 0 OR deleted_at IS NOT NULL)");
+			$result = $query->param('id', $id)->execute();
 
 			if ($result->count() > 0) {
 				$data = $result->current();
@@ -180,7 +181,7 @@ class Model_Category extends \Model
 	 * @param int $offset
 	 * @return array
 	 */
-	public static function get_categories($keyword = null, $status = 'active', $limit = 12, $offset = 0)
+	public static function get_categories($keyword = null, $status = 'active', $limit = 12, $offset = 0, $sort = 'created_at_desc')
 	{
 		try {
 			$whereParts = array();
@@ -199,11 +200,24 @@ class Model_Category extends \Model
 				$params['kw'] = '%' . $keyword . '%';
 			}
 
-			$sql = 'SELECT * FROM categories';
+			$sql = 'SELECT c.*, COUNT(s.id) as story_count FROM categories c LEFT JOIN story_categories sc ON c.id = sc.category_id LEFT JOIN stories s ON sc.story_id = s.id AND s.deleted_at IS NULL';
 			if (!empty($whereParts)) {
 				$sql .= ' WHERE ' . implode(' AND ', $whereParts);
 			}
-			$sql .= ' ORDER BY sort_order ASC, name ASC';
+			$sql .= ' GROUP BY c.id';
+			
+			// Add sorting
+			$sort_parts = explode('_', $sort);
+			$sort_field = $sort_parts[0];
+			$sort_direction = strtoupper($sort_parts[1]);
+			
+			$allowed_fields = array('name', 'created_at', 'sort_order');
+			if (in_array($sort_field, $allowed_fields)) {
+				$sql .= ' ORDER BY ' . $sort_field . ' ' . $sort_direction;
+			} else {
+				$sql .= ' ORDER BY created_at DESC';
+			}
+			
 			$sql .= ' LIMIT ' . (int) $limit . ' OFFSET ' . (int) $offset;
 
 			$query = \DB::query($sql);
@@ -219,8 +233,12 @@ class Model_Category extends \Model
 					if (!is_string($key)) {
 						continue;
 					}
-					$category->$key = $value;
+					if (property_exists($category, $key)) {
+						$category->$key = $value;
+					}
 				}
+				// Add story_count property
+				$category->story_count = (int) $row['story_count'];
 				$categories[] = $category;
 			}
 			return $categories;
@@ -433,7 +451,7 @@ class Model_Category extends \Model
 							->param('id', $this->id)
 							->execute();
 				
-			if ($result) {
+			if ($result !== false) {
 				$this->is_active = 0;
 				$this->deleted_at = $deleted_at;
 				$this->updated_at = $updated_at;
@@ -461,7 +479,7 @@ class Model_Category extends \Model
 							->param('id', $this->id)
 							->execute();
 				
-			if ($result) {
+			if ($result !== false) {
 				$this->is_active = 1;
 				$this->deleted_at = null;
 				$this->updated_at = $updated_at;
@@ -483,8 +501,9 @@ class Model_Category extends \Model
 		try {
 			$query = \DB::query("DELETE FROM categories WHERE id = :id");
 			$result = $query->param('id', $this->id)->execute();
-			return (bool) $result;
+			return $result !== false;
 		} catch (\Exception $e) {
+			\Log::error('Error force deleting category: ' . $e->getMessage());
 			return false;
 		}
 	}
@@ -496,16 +515,52 @@ class Model_Category extends \Model
 	 * @param int $offset
 	 * @return array
 	 */
-	public static function get_deleted_categories($limit = null, $offset = 0)
+	public static function get_deleted_categories($limit = null, $offset = 0, $search = '', $sort = 'deleted_at_desc')
 	{
 		try {
-			$sql = "SELECT * FROM categories WHERE is_active = 0 AND deleted_at IS NOT NULL ORDER BY deleted_at DESC";
+			$sql = "SELECT * FROM categories WHERE (is_active = 0 OR deleted_at IS NOT NULL)";
+			$params = array();
+			
+			// Tìm kiếm theo tên
+			if (!empty($search)) {
+				$sql .= " AND name LIKE :search";
+				$params['search'] = '%' . $search . '%';
+			}
+			
+			// Sắp xếp
+			switch ($sort) {
+				case 'deleted_at_asc':
+					$sql .= " ORDER BY deleted_at ASC";
+					break;
+				case 'name_asc':
+					$sql .= " ORDER BY name ASC";
+					break;
+				case 'name_desc':
+					$sql .= " ORDER BY name DESC";
+					break;
+				case 'created_at_desc':
+					$sql .= " ORDER BY created_at DESC";
+					break;
+				default:
+					$sql .= " ORDER BY deleted_at DESC";
+					break;
+			}
+			
 			if ($limit) {
 				$sql .= " LIMIT " . (int) $limit . " OFFSET " . (int) $offset;
 			}
-			$results = \DB::query($sql)->execute();
+			
+			\Log::info("Query for deleted categories: " . $sql);
+			$query = \DB::query($sql);
+			foreach ($params as $key => $value) {
+				$query->param($key, $value);
+			}
+			$results = $query->execute();
+			\Log::info("Query returned " . count($results) . " results");
+			
 			$categories = array();
 			foreach ($results as $row) {
+				\Log::info("Processing category row: ID=" . $row['id'] . ", is_active=" . $row['is_active'] . ", deleted_at=" . $row['deleted_at']);
 				$category = new self();
 				foreach ($row as $key => $value) {
 					if (!is_string($key)) {
@@ -527,10 +582,21 @@ class Model_Category extends \Model
 	 * 
 	 * @return int
 	 */
-	public static function count_deleted()
+	public static function count_deleted($search = '')
 	{
 		try {
-			$query = \DB::query("SELECT COUNT(*) as total FROM categories WHERE is_active = 0 AND deleted_at IS NOT NULL");
+			$sql = "SELECT COUNT(*) as total FROM categories WHERE (is_active = 0 OR deleted_at IS NOT NULL)";
+			$params = array();
+			
+			if (!empty($search)) {
+				$sql .= " AND name LIKE :search";
+				$params['search'] = '%' . $search . '%';
+			}
+			
+			$query = \DB::query($sql);
+			foreach ($params as $key => $value) {
+				$query->param($key, $value);
+			}
 			$result = $query->execute();
 			return (int) $result->current()['total'];
 		} catch (\Exception $e) {
@@ -620,6 +686,36 @@ class Model_Category extends \Model
 			return (int) $result->current()['total'];
 		} catch (\Exception $e) {
 			return 0;
+		}
+	}
+
+	/**
+	 * Lấy danh sách truyện trong category
+	 * 
+	 * @param int $limit
+	 * @param int $offset
+	 * @return array
+	 */
+	public function get_stories($limit = null, $offset = 0)
+	{
+		try {
+			$query = \DB::query("SELECT s.*, a.name as author_name FROM stories s 
+									INNER JOIN story_categories sc ON s.id = sc.story_id 
+									LEFT JOIN authors a ON s.author_id = a.id
+									WHERE sc.category_id = :category_id AND s.deleted_at IS NULL 
+									ORDER BY s.created_at DESC");
+			
+			if ($limit) {
+				$query->limit($limit);
+			}
+			if ($offset) {
+				$query->offset($offset);
+			}
+			
+			$result = $query->param('category_id', $this->id)->execute();
+			return $result->as_array();
+		} catch (\Exception $e) {
+			return array();
 		}
 	}
 }

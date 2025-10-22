@@ -1,193 +1,346 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
 	<h2 class="h3 mb-0">
-		<i class="fas fa-trash me-2"></i>Thùng rác - Danh mục
+		<i class="fas fa-trash me-2"></i>Sọt rác - Danh mục đã xóa
 	</h2>
 	<div>
 		<a href="<?php echo Uri::base(); ?>admin/categories" class="btn btn-outline-primary me-2">
-			<i class="fas fa-arrow-left me-2"></i>Quay lại
+			<i class="fas fa-arrow-left me-2"></i>Quay lại danh sách
 		</a>
-		<button class="btn btn-danger" onclick="emptyTrash()">
-			<i class="fas fa-trash-alt me-2"></i>Dọn sạch thùng rác
-		</button>
+		<a href="<?php echo Uri::base(); ?>admin/categories/add" class="btn btn-primary">
+			<i class="fas fa-plus me-2"></i>Thêm danh mục mới
+		</a>
 	</div>
 </div>
 
-<!-- Search -->
-<form method="get" class="row g-3 mb-3">
-	<div class="col-md-8">
-		<input type="text" class="form-control" name="q" placeholder="Tìm kiếm theo tên hoặc slug" value="<?php echo isset($q) ? htmlspecialchars($q) : ''; ?>">
+<!-- Search and Filter Bar -->
+<div class="card mb-4">
+	<div class="card-body">
+		<form method="GET" action="<?php echo Uri::base(); ?>admin/categories/trash" class="row g-3">
+			<div class="col-md-6">
+				<label for="search" class="form-label">Tìm kiếm</label>
+				<input type="text" class="form-control" id="search" name="search" 
+					   placeholder="Tìm theo tên danh mục..." 
+					   value="<?php echo isset($search) ? htmlspecialchars($search) : ''; ?>">
+			</div>
+			<div class="col-md-4">
+				<label for="sort" class="form-label">Sắp xếp</label>
+				<select class="form-select" id="sort" name="sort">
+					<option value="deleted_at_desc" <?php echo (isset($sort) && $sort === 'deleted_at_desc') ? 'selected' : ''; ?>>Xóa gần nhất</option>
+					<option value="deleted_at_asc" <?php echo (isset($sort) && $sort === 'deleted_at_asc') ? 'selected' : ''; ?>>Xóa xa nhất</option>
+					<option value="name_asc" <?php echo (isset($sort) && $sort === 'name_asc') ? 'selected' : ''; ?>>Tên A-Z</option>
+					<option value="name_desc" <?php echo (isset($sort) && $sort === 'name_desc') ? 'selected' : ''; ?>>Tên Z-A</option>
+					<option value="created_at_desc" <?php echo (isset($sort) && $sort === 'created_at_desc') ? 'selected' : ''; ?>>Tạo mới nhất</option>
+				</select>
+			</div>
+			<div class="col-md-2 d-flex align-items-end">
+				<button type="submit" class="btn btn-primary me-2">
+					<i class="fas fa-search me-1"></i>Tìm kiếm
+				</button>
+				<a href="<?php echo Uri::base(); ?>admin/categories/trash" class="btn btn-outline-secondary">
+					<i class="fas fa-times"></i>
+				</a>
+			</div>
+		</form>
 	</div>
-	<div class="col-md-4 d-grid">
-		<button type="submit" class="btn btn-outline-primary"><i class="fas fa-search me-2"></i>Tìm kiếm</button>
-	</div>
-</form>
+</div>
 
-<!-- Categories Grid -->
-<div class="row">
+<!-- Categories Table -->
+<div class="card">
+	<div class="card-body">
+		<!-- Success/Error Messages -->
+		<?php if (Session::get_flash('success')): ?>
+			<div class="alert alert-success">
+				<i class="fas fa-check-circle me-2"></i>
+				<?php echo Session::get_flash('success'); ?>
+			</div>
+		<?php endif; ?>
+
+		<?php if (Session::get_flash('error')): ?>
+			<div class="alert alert-danger">
+				<i class="fas fa-exclamation-triangle me-2"></i>
+				<?php echo Session::get_flash('error'); ?>
+	</div>
+		<?php endif; ?>
+
 	<?php if (isset($categories) && !empty($categories)): ?>
+			<!-- Bulk Actions -->
+			<div class="row mb-3">
+				<div class="col-md-6">
+					<div class="d-flex align-items-center">
+						<input type="checkbox" id="select-all" class="form-check-input me-2">
+						<label for="select-all" class="form-check-label me-3">Chọn tất cả</label>
+						<button type="button" class="btn btn-outline-success btn-sm me-2" id="bulk-restore-btn" disabled>
+							<i class="fas fa-undo me-1"></i>Khôi phục đã chọn
+						</button>
+						<button type="button" class="btn btn-outline-danger btn-sm" id="bulk-force-delete-btn" disabled>
+							<i class="fas fa-trash-alt me-1"></i>Xóa vĩnh viễn đã chọn
+						</button>
+					</div>
+				</div>
+				<div class="col-md-6 text-end">
+					<small class="text-muted">
+						<span id="selected-count">0</span> mục đã chọn
+					</small>
+				</div>
+			</div>
+
+			<div class="table-responsive">
+				<table class="table table-hover">
+					<thead>
+						<tr>
+							<th width="50">
+								<input type="checkbox" id="select-all-header" class="form-check-input">
+							</th>
+							<th>Tên danh mục</th>
+							<th>Mô tả</th>
+							<th>Màu sắc</th>
+							<th>Ngày tạo</th>
+							<th>Ngày xóa</th>
+							<th>Thao tác</th>
+						</tr>
+					</thead>
+					<tbody>
 		<?php foreach ($categories as $category): ?>
-		<div class="col-lg-4 col-md-6 mb-4">
-			<div class="card h-100 border-warning">
-				<div class="card-body">
-					<div class="d-flex justify-content-between align-items-start mb-3">
+						<tr class="table-danger">
+							<td>
+								<input type="checkbox" class="form-check-input category-checkbox" value="<?php echo $category->id; ?>">
+							</td>
+							<td>
 						<div class="d-flex align-items-center">
 							<div class="category-icon me-3" style="width: 40px; height: 40px; background-color: <?php echo $category->color; ?>; border-radius: 8px; display: flex; align-items: center; justify-content: center; opacity: 0.6;">
 								<i class="fas fa-tag text-white"></i>
 							</div>
 							<div>
-								<h5 class="mb-0 text-muted"><?php echo $category->name; ?></h5>
+										<h6 class="mb-0 text-muted"><?php echo $category->name; ?></h6>
 								<small class="text-muted"><?php echo $category->slug; ?></small>
 							</div>
 						</div>
-						<div class="dropdown">
-							<button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown">
-								<i class="fas fa-ellipsis-v"></i>
+							</td>
+							<td>
+								<?php if ($category->description): ?>
+									<p class="mb-0 text-truncate text-muted" style="max-width: 200px;" title="<?php echo $category->description; ?>">
+										<?php echo $category->description; ?>
+									</p>
+								<?php else: ?>
+									<span class="text-muted">Chưa có mô tả</span>
+								<?php endif; ?>
+							</td>
+							<td>
+								<div class="d-flex align-items-center">
+									<div class="color-preview me-2" style="width: 20px; height: 20px; background-color: <?php echo $category->color; ?>; border-radius: 4px; border: 1px solid #ddd;"></div>
+									<small class="text-muted"><?php echo $category->color; ?></small>
+								</div>
+							</td>
+							<td class="text-muted"><?php echo date('d/m/Y', strtotime($category->created_at)); ?></td>
+							<td class="text-muted">
+								<?php if ($category->deleted_at): ?>
+									<?php echo date('d/m/Y H:i', strtotime($category->deleted_at)); ?>
+								<?php else: ?>
+									<span class="text-muted">Chưa xác định</span>
+								<?php endif; ?>
+							</td>
+							<td>
+								<div class="btn-group" role="group">
+									<form method="POST" action="<?php echo Uri::base(); ?>admin/categories/restore/<?php echo $category->id; ?>" 
+										  style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn khôi phục danh mục này?')">
+										<input type="hidden" name="<?php echo \Config::get('security.csrf_token_key'); ?>" value="<?php echo \Security::fetch_token(); ?>">
+										<button type="submit" class="btn btn-sm btn-outline-success" title="Khôi phục">
+											<i class="fas fa-undo"></i>
+										</button>
+									</form>
+									<form method="POST" action="<?php echo Uri::base(); ?>admin/categories/force_delete/<?php echo $category->id; ?>" 
+										  style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn XÓA VĨNH VIỄN danh mục này? Hành động này không thể hoàn tác!')">
+										<input type="hidden" name="<?php echo \Config::get('security.csrf_token_key'); ?>" value="<?php echo \Security::fetch_token(); ?>">
+										<button type="submit" class="btn btn-sm btn-outline-danger" title="Xóa vĩnh viễn">
+											<i class="fas fa-trash-alt"></i>
 							</button>
-							<ul class="dropdown-menu">
-								<li><a class="dropdown-item text-success" href="#" 
-									   onclick="restoreCategory(<?php echo $category->id; ?>, '<?php echo htmlspecialchars($category->name); ?>')">
-									<i class="fas fa-undo me-2"></i>Khôi phục
-								</a></li>
-								<li><a class="dropdown-item text-danger" href="#" 
-									   onclick="forceDeleteCategory(<?php echo $category->id; ?>, '<?php echo htmlspecialchars($category->name); ?>')">
-									<i class="fas fa-trash-alt me-2"></i>Xóa vĩnh viễn
-								</a></li>
-							</ul>
+									</form>
 						</div>
+							</td>
+						</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
 					</div>
 					
-					<?php if ($category->description): ?>
-						<p class="text-muted mb-3"><?php echo $category->description; ?></p>
+			<!-- Pagination -->
+			<?php if (isset($total_pages) && $total_pages > 1): ?>
+				<nav aria-label="Page navigation" class="mt-4">
+					<ul class="pagination justify-content-center">
+						<?php 
+						// Build query string for pagination
+						$query_params = array();
+						if (isset($search) && !empty($search)) $query_params['search'] = $search;
+						if (isset($sort) && !empty($sort)) $query_params['sort'] = $sort;
+						$query_string = !empty($query_params) ? '&' . http_build_query($query_params) : '';
+						?>
+						
+						<?php if (isset($current_page) && $current_page > 1): ?>
+							<li class="page-item">
+								<a class="page-link" href="<?php echo Uri::base(); ?>admin/categories/trash?page=<?php echo $current_page - 1; ?><?php echo $query_string; ?>">
+									<i class="fas fa-chevron-left"></i>
+								</a>
+							</li>
+						<?php endif; ?>
+
+						<?php for ($i = 1; $i <= $total_pages; $i++): ?>
+							<?php if ($i == $current_page): ?>
+								<li class="page-item active">
+									<span class="page-link"><?php echo $i; ?></span>
+								</li>
+							<?php else: ?>
+								<li class="page-item">
+									<a class="page-link" href="<?php echo Uri::base(); ?>admin/categories/trash?page=<?php echo $i; ?><?php echo $query_string; ?>"><?php echo $i; ?></a>
+								</li>
+							<?php endif; ?>
+						<?php endfor; ?>
+
+						<?php if (isset($current_page) && $current_page < $total_pages): ?>
+							<li class="page-item">
+								<a class="page-link" href="<?php echo Uri::base(); ?>admin/categories/trash?page=<?php echo $current_page + 1; ?><?php echo $query_string; ?>">
+									<i class="fas fa-chevron-right"></i>
+								</a>
+							</li>
+						<?php endif; ?>
+					</ul>
+				</nav>
 					<?php endif; ?>
 					
-					<div class="d-flex justify-content-between align-items-center">
-						<span class="badge bg-warning">Đã xóa</span>
-						<small class="text-muted">
-							Xóa: <?php echo date('d/m/Y H:i', strtotime($category->deleted_at)); ?>
-						</small>
-					</div>
-				</div>
-			</div>
-		</div>
-		<?php endforeach; ?>
 	<?php else: ?>
-		<div class="col-12">
 			<div class="text-center py-5">
 				<i class="fas fa-trash fa-3x text-muted mb-3"></i>
-				<h5 class="text-muted">Thùng rác trống</h5>
-				<p class="text-muted">Không có danh mục nào trong thùng rác</p>
+				<h5 class="text-muted">Sọt rác trống</h5>
+				<p class="text-muted">Không có danh mục nào đã bị xóa</p>
 				<a href="<?php echo Uri::base(); ?>admin/categories" class="btn btn-primary">
 					<i class="fas fa-arrow-left me-2"></i>Quay lại danh sách
 				</a>
 			</div>
+		<?php endif; ?>
 		</div>
-	<?php endif; ?>
 </div>
 
-<!-- Pagination -->
-<?php if (!empty($total_pages) && $total_pages > 1): ?>
-<?php
-    $currentPage = isset($page) ? (int) $page : 1;
-    $queryBase = array(
-        'q' => isset($q) ? $q : '',
-    );
-?>
-<nav aria-label="Trash pagination" class="mt-3">
-	<ul class="pagination justify-content-center">
-		<li class="page-item <?php echo $currentPage <= 1 ? 'disabled' : ''; ?>">
-			<a class="page-link" href="?<?php echo http_build_query($queryBase + array('page' => max(1, $currentPage - 1))); ?>" tabindex="-1">&laquo;</a>
-		</li>
-		<?php for ($i = 1; $i <= $total_pages; $i++): ?>
-			<li class="page-item <?php echo $i === $currentPage ? 'active' : ''; ?>">
-				<a class="page-link" href="?<?php echo http_build_query($queryBase + array('page' => $i)); ?>"><?php echo $i; ?></a>
-			</li>
-		<?php endfor; ?>
-		<li class="page-item <?php echo $currentPage >= $total_pages ? 'disabled' : ''; ?>">
-			<a class="page-link" href="?<?php echo http_build_query($queryBase + array('page' => min($total_pages, $currentPage + 1))); ?>">&raquo;</a>
-		</li>
-	</ul>
-</nav>
-<?php endif; ?>
+<!-- Bulk Actions Forms -->
+<form id="bulk-restore-form" method="POST" action="<?php echo Uri::base(); ?>admin/categories/bulk-restore" style="display: none;">
+	<input type="hidden" name="<?php echo \Config::get('security.csrf_token_key'); ?>" value="<?php echo \Security::fetch_token(); ?>">
+	<div id="bulk-restore-ids"></div>
+</form>
+
+<form id="bulk-force-delete-form" method="POST" action="<?php echo Uri::base(); ?>admin/categories/bulk-force-delete" style="display: none;">
+	<input type="hidden" name="<?php echo \Config::get('security.csrf_token_key'); ?>" value="<?php echo \Security::fetch_token(); ?>">
+	<div id="bulk-force-delete-ids"></div>
+</form>
 
 <script>
-function restoreCategory(id, name) {
-	if (confirm('Bạn có chắc chắn muốn khôi phục danh mục "' + name + '"?')) {
-		// Lấy CSRF token từ meta tag hoặc form
-		const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '<?php echo Security::fetch_token(); ?>';
+document.addEventListener('DOMContentLoaded', function() {
+	const selectAllCheckbox = document.getElementById('select-all');
+	const selectAllHeaderCheckbox = document.getElementById('select-all-header');
+	const categoryCheckboxes = document.querySelectorAll('.category-checkbox');
+	const bulkRestoreBtn = document.getElementById('bulk-restore-btn');
+	const bulkForceDeleteBtn = document.getElementById('bulk-force-delete-btn');
+	const selectedCountSpan = document.getElementById('selected-count');
+	const bulkRestoreForm = document.getElementById('bulk-restore-form');
+	const bulkForceDeleteForm = document.getElementById('bulk-force-delete-form');
+	const bulkRestoreIds = document.getElementById('bulk-restore-ids');
+	const bulkForceDeleteIds = document.getElementById('bulk-force-delete-ids');
+
+	// Function to update selected count
+	function updateSelectedCount() {
+		const checkedBoxes = document.querySelectorAll('.category-checkbox:checked');
+		const count = checkedBoxes.length;
+		selectedCountSpan.textContent = count;
 		
-		const body = new URLSearchParams();
-		body.append('fuel_csrf_token', csrfToken);
-
-		fetch('<?php echo Uri::base(); ?>admin/categories/restore/' + id, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/x-www-form-urlencoded',
-				'X-Requested-With': 'XMLHttpRequest'
-			},
-			body: body.toString()
-		})
-		.then(response => {
-			if (!response.ok) {
-				throw new Error('HTTP ' + response.status);
-			}
-			return response.json();
-		})
-		.then(data => {
-			if (data.success) {
-				alert(data.message);
-				location.reload();
-			} else {
-				alert('Lỗi: ' + data.message);
-			}
-		})
-		.catch(error => {
-			console.error('Error:', error);
-			alert('Có lỗi xảy ra khi khôi phục danh mục. Vui lòng thử lại.');
-		});
-	}
-}
-
-function forceDeleteCategory(id, name) {
-	if (confirm('Bạn có chắc chắn muốn XÓA VĨNH VIỄN danh mục "' + name + '"?\n\nHành động này không thể hoàn tác!')) {
-		// Lấy CSRF token từ meta tag hoặc form
-		const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '<?php echo Security::fetch_token(); ?>';
+		// Enable/disable bulk action buttons
+		bulkRestoreBtn.disabled = count === 0;
+		bulkForceDeleteBtn.disabled = count === 0;
 		
-		const body = new URLSearchParams();
-		body.append('fuel_csrf_token', csrfToken);
+		// Update select all checkboxes
+		if (count === 0) {
+			selectAllCheckbox.indeterminate = false;
+			selectAllCheckbox.checked = false;
+			selectAllHeaderCheckbox.indeterminate = false;
+			selectAllHeaderCheckbox.checked = false;
+		} else if (count === categoryCheckboxes.length) {
+			selectAllCheckbox.indeterminate = false;
+			selectAllCheckbox.checked = true;
+			selectAllHeaderCheckbox.indeterminate = false;
+			selectAllHeaderCheckbox.checked = true;
+		} else {
+			selectAllCheckbox.indeterminate = true;
+			selectAllHeaderCheckbox.indeterminate = true;
+		}
+	}
 
-		fetch('<?php echo Uri::base(); ?>admin/categories/force_delete/' + id, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/x-www-form-urlencoded',
-				'X-Requested-With': 'XMLHttpRequest'
-			},
-			body: body.toString()
-		})
-		.then(response => {
-			if (!response.ok) {
-				throw new Error('HTTP ' + response.status);
-			}
-			return response.json();
-		})
-		.then(data => {
-			if (data.success) {
-				alert(data.message);
-				location.reload();
-			} else {
-				alert('Lỗi: ' + data.message);
-			}
-		})
-		.catch(error => {
-			console.error('Error:', error);
-			alert('Có lỗi xảy ra khi xóa vĩnh viễn danh mục. Vui lòng thử lại.');
+	// Select all functionality
+	function selectAll(checked) {
+		categoryCheckboxes.forEach(checkbox => {
+			checkbox.checked = checked;
 		});
+		updateSelectedCount();
 	}
-}
 
-function emptyTrash() {
-	if (confirm('Bạn có chắc chắn muốn dọn sạch thùng rác?\n\nTất cả danh mục trong thùng rác sẽ bị xóa vĩnh viễn!')) {
-		// TODO: Implement bulk force delete
-		alert('Chức năng dọn sạch thùng rác sẽ được thêm sau');
-	}
-}
+	// Event listeners
+	selectAllCheckbox.addEventListener('change', function() {
+		selectAll(this.checked);
+	});
+
+	selectAllHeaderCheckbox.addEventListener('change', function() {
+		selectAll(this.checked);
+	});
+
+	categoryCheckboxes.forEach(checkbox => {
+		checkbox.addEventListener('change', updateSelectedCount);
+	});
+
+	// Bulk restore functionality
+	bulkRestoreBtn.addEventListener('click', function() {
+		const checkedBoxes = document.querySelectorAll('.category-checkbox:checked');
+		if (checkedBoxes.length === 0) {
+			alert('Vui lòng chọn ít nhất một danh mục để khôi phục.');
+			return;
+		}
+
+		if (confirm(`Bạn có chắc chắn muốn khôi phục ${checkedBoxes.length} danh mục đã chọn?`)) {
+			// Clear previous IDs
+			bulkRestoreIds.innerHTML = '';
+			
+			// Add selected IDs as hidden inputs
+			checkedBoxes.forEach(checkbox => {
+				const hiddenInput = document.createElement('input');
+				hiddenInput.type = 'hidden';
+				hiddenInput.name = 'category_ids[]';
+				hiddenInput.value = checkbox.value;
+				bulkRestoreIds.appendChild(hiddenInput);
+			});
+			
+			// Submit form
+			bulkRestoreForm.submit();
+		}
+	});
+
+	// Bulk force delete functionality
+	bulkForceDeleteBtn.addEventListener('click', function() {
+		const checkedBoxes = document.querySelectorAll('.category-checkbox:checked');
+		if (checkedBoxes.length === 0) {
+			alert('Vui lòng chọn ít nhất một danh mục để xóa vĩnh viễn.');
+			return;
+		}
+
+		if (confirm(`Bạn có chắc chắn muốn XÓA VĨNH VIỄN ${checkedBoxes.length} danh mục đã chọn?\n\nHành động này không thể hoàn tác!`)) {
+			// Clear previous IDs
+			bulkForceDeleteIds.innerHTML = '';
+			
+			// Add selected IDs as hidden inputs
+			checkedBoxes.forEach(checkbox => {
+				const hiddenInput = document.createElement('input');
+				hiddenInput.type = 'hidden';
+				hiddenInput.name = 'category_ids[]';
+				hiddenInput.value = checkbox.value;
+				bulkForceDeleteIds.appendChild(hiddenInput);
+			});
+			
+			// Submit form
+			bulkForceDeleteForm.submit();
+		}
+	});
+});
 </script>

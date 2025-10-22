@@ -22,6 +22,7 @@
 		<?php endif; ?>
 
 		<form method="POST" action="<?php echo Uri::base(); ?>admin/chapters/add/<?php echo isset($story) ? $story->id : ''; ?>" enctype="multipart/form-data">
+			<input type="hidden" name="<?php echo \Config::get('security.csrf_token_key'); ?>" value="<?php echo \Security::fetch_token(); ?>">
 			<div class="row">
 				<div class="col-md-6">
 					<div class="mb-3">

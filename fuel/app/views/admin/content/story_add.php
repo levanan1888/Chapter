@@ -24,7 +24,7 @@
 <div class="card">
 	<div class="card-body">
 		<form method="POST" action="<?php echo Uri::base(); ?>admin/stories/add" enctype="multipart/form-data">
-			<input type="hidden" name="<?php echo \Config::get('security.csrf_token_key'); ?>" value="<?php echo \Security::fetch_token(); ?>">
+			<input type="hidden" name="fuel_csrf_token" value="<?php echo \Security::fetch_token(); ?>">
 			<div class="row">
 				<div class="col-md-8">
 					<div class="mb-3">
@@ -75,9 +75,9 @@
 								<?php foreach ($categories as $category): ?>
 									<div class="col-md-4">
 										<div class="form-check">
-											<input class="form-check-input" type="checkbox" name="categories[]" value="<?php echo $category->id; ?>" 
+											<input class="form-check-input" type="checkbox" name="category_ids[]" value="<?php echo $category->id; ?>" 
 												   id="category_<?php echo $category->id; ?>"
-												   <?php echo (isset($form_data['categories']) && in_array($category->id, $form_data['categories'])) ? 'checked' : ''; ?>>
+												   <?php echo (isset($form_data['category_ids']) && in_array($category->id, $form_data['category_ids'])) ? 'checked' : ''; ?>>
 											<label class="form-check-label" for="category_<?php echo $category->id; ?>">
 												<span class="badge" style="background-color: <?php echo $category->color; ?>;">
 													<?php echo $category->name; ?>
@@ -98,10 +98,6 @@
 						<div class="form-text">Hỗ trợ: JPG, PNG, GIF (tối đa 2MB)</div>
 					</div>
 
-					<!-- Bỏ phần quản lý ảnh chương đầu tiên theo yêu cầu -->
-					</div>
-				</div>
-
 					<div class="mb-3">
 						<label class="form-label">Tùy chọn</label>
 						<div class="form-check">
@@ -116,6 +112,13 @@
 								   id="is_hot" <?php echo (isset($form_data['is_hot']) && $form_data['is_hot']) ? 'checked' : ''; ?>>
 							<label class="form-check-label" for="is_hot">
 								Truyện hot
+							</label>
+						</div>
+						<div class="form-check">
+							<input class="form-check-input" type="checkbox" name="is_visible" value="1" 
+								   id="is_visible" <?php echo (isset($form_data['is_visible']) && $form_data['is_visible']) ? 'checked' : ''; ?>>
+							<label class="form-check-label" for="is_visible">
+								Hiển thị truyện
 							</label>
 						</div>
 					</div>

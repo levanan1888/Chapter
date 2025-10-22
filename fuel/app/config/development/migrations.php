@@ -12,6 +12,7 @@ return array (
         6 => '007_seed_fake_data',
         7 => '008_seed_fake_data_with_faker',
         8 => '009_alter_categories_add_missing_fields',
+        9 => '010_add_is_visible_to_stories',
       ),
     ),
     'module' => array(    

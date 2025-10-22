@@ -1,0 +1,64 @@
+---
+description: FuelPHP Coding Standards - Enforce PSR-12, FuelPHP conventions, and prohibit core file modifications.
+globs: ["**/*.php"]
+alwaysApply: true
+---
+
+# FuelPHP Coding Standards
+
+Ensure AI-generated code for FuelPHP projects adheres to PSR-12 and FuelPHP conventions. **Critical**: Never modify `/fuel/core/` files; use `/app/` or `/modules/` for extensions. Apply to all PHP files.
+
+Follow FuelPHP (PHP HMVC) framework, PSR-12 standard, and project rules. Use `Security::htmlentities()` for output escaping, `Input::post()` for safe input, and `Form::csrf()` in forms. Handle errors with `try-catch` and log via `\Log::error()`. Use 4 spaces for indentation, max 120 characters per line, UTF-8 without BOM, start files with `<?php` (no closing `?>`). Match namespaces to FuelPHP structure, e.g., `namespace App\Controller;`, and use `use` for imports, e.g., `use Fuel\Core\Controller;`.
+
+Name classes in UpperCamelCase (e.g., `Controller_User`, `Model_Product`), methods in camelCase (e.g., `getUserData()`, `saveProduct()`), variables in snake_case (e.g., `$user_id`, `$product_name`), and files in lowercase_snake_case matching class (e.g., `controller/user.php`). Extend FuelPHP base classes like `Controller` or `Orm\Model`, include PHPDoc for all classes/methods, and use dependency injection, avoiding globals.
+
+Place models in `/app/classes/model/`, extend `Orm\Model`, define `$_properties`, and include validation logic. Place views in `/app/views/`, minimize PHP logic (handle in controllers/models), and escape output with `Security::htmlentities()`. Custom configs go in `/app/config/`; do not edit `/fuel/core/config/`—copy to `/app/config/` for overrides.
+
+Use `try-catch` for risky operations, log errors with `\Log::error()`, and avoid `@` suppression. Suggest PHPUnit tests, use `\Log::debug()` for debugging (remove before commit), and avoid `var_dump()` or `print_r()` in production code.
+
+**Example Controller**:
+```php
+<?php
+namespace App\Controller;
+
+use Fuel\Core\Controller;
+use Fuel\Core\Response;
+use App\Model\User;
+
+/**
+ * User Controller
+ * Handles user operations: list, create, update.
+ * @package App
+ */
+class Controller_User extends Controller
+{
+    /**
+     * List all users.
+     * @return Response
+     */
+    public function action_index()
+    {
+        $data = ['users' => User::find('all')];
+        return Response::forge(\View::forge('user/index', $data));
+    }
+
+    /**
+     * Create a user.
+     * @throws Exception
+     * @return Response
+     */
+    public function action_create()
+    {
+        try {
+            $user = User::forge([
+                'username' => \Input::post('username'),
+                'email' => \Input::post('email')
+            ]);
+            $user->save();
+            return Response::forge('User created', 201);
+        } catch (\Exception $e) {
+            \Log::error('Create user failed: ' . $e->getMessage());
+            return Response::forge('Error', 500);
+        }
+    }
+}
