@@ -38,66 +38,24 @@
 					</div>
 				</div>
 
-				<div class="col-md-6">
-					<div class="mb-3">
-						<label class="form-label">Ảnh chương mới</label>
-						<div class="image-upload-container">
-							<div class="row" id="image-upload-grid">
-								<!-- Images will be added here -->
-							</div>
-							<button type="button" class="btn btn-outline-primary mt-3" id="add-image-btn">
-								<i class="fas fa-plus me-2"></i>Thêm ảnh
-							</button>
-						</div>
-						<div class="form-text">Chọn ảnh (JPG, PNG, GIF - tối đa 2MB mỗi ảnh)</div>
-					</div>
-				</div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Ảnh chương (kéo thả để sắp xếp)</label>
+                        <div class="image-upload-container">
+                            <div class="row" id="image-upload-grid">
+                                <!-- Images will be added here -->
+                            </div>
+                            <button type="button" class="btn btn-outline-primary mt-3" id="add-image-btn">
+                                <i class="fas fa-plus me-2"></i>Thêm ảnh
+                            </button>
+                        </div>
+                        <div class="form-text">Chọn ảnh (JPG, PNG, GIF - tối đa 2MB mỗi ảnh). Có thể sắp xếp cả ảnh cũ và mới.</div>
+                    </div>
+                    <?php $existing_images = isset($chapter) ? $chapter->get_images() : array(); ?>
+                </div>
 			</div>
 
-			<!-- Current Images Section -->
-            <?php if (isset($chapter)): ?>
-			<div class="row mb-4">
-				<div class="col-12">
-					<div class="card">
-						<div class="card-header">
-                            <h6 class="mb-0">
-                                <i class="fas fa-images me-2"></i>Ảnh hiện tại
-                                <?php $curr_images = method_exists($chapter, 'get_images') ? $chapter->get_images() : array(); ?>
-                                <span class="badge bg-info ms-2"><?php echo is_array($curr_images) ? count($curr_images) : 0; ?></span>
-                            </h6>
-						</div>
-						<div class="card-body">
-                            <div class="row">
-                                <?php foreach ($curr_images as $index => $image): ?>
-								<div class="col-lg-3 col-md-4 col-sm-6 mb-3">
-									<div class="card">
-										<img src="<?php echo Uri::base() . $image; ?>" class="card-img-top" 
-											 style="height: 150px; object-fit: cover;" alt="Page <?php echo $index + 1; ?>">
-										<div class="card-body p-2">
-											<div class="d-flex justify-content-between align-items-center">
-												<small class="text-muted">Trang <?php echo $index + 1; ?></small>
-												<div>
-													<button type="button" class="btn btn-sm btn-outline-info me-2 view-full-btn" 
-															title="Xem full size" data-image-src="<?php echo Uri::base() . $image; ?>">
-														<i class="fas fa-expand"></i>
-													</button>
-													<a href="<?php echo Uri::base(); ?>admin/chapters/delete-image/<?php echo $chapter->id; ?>/<?php echo $index; ?>" 
-													   class="btn btn-sm btn-outline-danger" 
-													   onclick="return confirm('Bạn có chắc chắn muốn xóa ảnh này?')">
-														<i class="fas fa-trash"></i>
-													</a>
-												</div>
-											</div>
-										</div>
-									</div>
-								</div>
-								<?php endforeach; ?>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-			<?php endif; ?>
+            <!-- Current Images Section intentionally hidden per requirement -->
 
 			<!-- New Image Preview Section -->
 			<div class="row" id="image-preview-section" style="display: none;">
@@ -161,7 +119,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function addImageSlot() {
-        const imageId = `image_${imageCounter}`;
+        const imageId = `new_${imageCounter}`;
         imageCounter++;
 
         const col = document.createElement('div');
@@ -302,6 +260,90 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Preload existing images into the same grid so they can be reordered with new ones
+    (function preloadExisting() {
+        try {
+            const existingImages = <?php echo json_encode($existing_images); ?>;
+            if (!Array.isArray(existingImages) || existingImages.length === 0) {
+                return;
+            }
+
+            existingImages.forEach(function(path, idx) {
+                const col = document.createElement('div');
+                col.className = 'col-lg-4 col-md-6 col-sm-12 mb-3';
+                const imageId = 'existing_' + idx;
+                col.id = 'image-slot-' + imageId;
+                col.innerHTML = `
+                    <div class="card image-upload-slot has-image" data-existing-path="${path}" style="min-height: 300px;">
+                        <div class="card-body d-flex flex-column justify-content-center align-items-center text-center p-4">
+                            <div class="image-preview-container" style="display: block;">
+                                <img class="img-fluid rounded" style="max-height: 250px; width: 100%; object-fit: contain;" alt="Preview" src="<?php echo Uri::base(); ?>${path}">
+                            </div>
+                            <div class="image-actions mt-3" style="display: block;">
+                                <div class="d-flex justify-content-between align-items-center w-100">
+                                    <small class="text-muted">Trang <span class="page-number">${idx + 1}</span></small>
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary move-up-btn" title="Di chuyển lên">
+                                            <i class="fas fa-arrow-up"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary move-down-btn" title="Di chuyển xuống">
+                                            <i class="fas fa-arrow-down"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-info view-full-btn" title="Xem full size" data-image-src="<?php echo Uri::base(); ?>${path}">
+                                            <i class="fas fa-expand"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger remove-image-btn" title="Xóa ảnh">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+
+                imageUploadGrid.appendChild(col);
+
+                // Hook actions
+                const viewFullBtn = col.querySelector('.view-full-btn');
+                const moveUpBtn = col.querySelector('.move-up-btn');
+                const moveDownBtn = col.querySelector('.move-down-btn');
+                const removeBtn = col.querySelector('.remove-image-btn');
+
+                viewFullBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    showImageModal(this.dataset.imageSrc);
+                });
+                moveUpBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const c = col.closest('.col-lg-4, .col-md-6, .col-sm-12');
+                    if (c && c.previousElementSibling) {
+                        c.parentNode.insertBefore(c, c.previousElementSibling);
+                        updatePageNumbers();
+                        updateImageOrder();
+                    }
+                });
+                moveDownBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const c = col.closest('.col-lg-4, .col-md-6, .col-sm-12');
+                    if (c && c.nextElementSibling) {
+                        c.parentNode.insertBefore(c.nextElementSibling, c);
+                        updatePageNumbers();
+                        updateImageOrder();
+                    }
+                });
+                removeBtn.addEventListener('click', function() {
+                    col.remove();
+                    updatePageNumbers();
+                    updateImageOrder();
+                });
+            });
+
+            updateImageOrder();
+        } catch (e) {
+            // ignore
+        }
+    })();
+
     function updatePageNumbers() {
         const visibleSlots = document.querySelectorAll('.image-upload-slot .image-preview-container[style*="block"]');
         visibleSlots.forEach((slot, index) => {
@@ -313,16 +355,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateImageOrder() {
-        const visibleSlots = document.querySelectorAll('.image-upload-slot .image-preview-container[style*="block"]');
+        const visibleCards = document.querySelectorAll('#image-upload-grid .image-upload-slot');
         const order = [];
-        visibleSlots.forEach(slot => {
-            const fileInput = slot.closest('.image-upload-slot').querySelector('input[type="file"]');
-            const imageId = fileInput.dataset.imageId;
-            order.push(imageId);
+        visibleCards.forEach(card => {
+            const existingPath = card.getAttribute('data-existing-path');
+            if (existingPath) {
+                order.push(`existing:${existingPath}`);
+                return;
+            }
+            const fileInput = card.querySelector('input[type="file"]');
+            if (fileInput) {
+                order.push(`new:${fileInput.dataset.imageId}`);
+            }
         });
         imageOrderInput.value = JSON.stringify(order);
-        
-        // Update hidden inputs for form submission
         updateHiddenInputs();
     }
 
@@ -368,36 +414,67 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Setup view full buttons for existing images
-    document.querySelectorAll('.view-full-btn').forEach(btn => {
+    document.querySelectorAll('.view-full-existing').forEach(btn => {
         btn.addEventListener('click', function() {
             const imageSrc = this.dataset.imageSrc;
             showImageModal(imageSrc);
         });
     });
 
+    // Delete existing image via AJAX
+    document.querySelectorAll('.delete-existing').forEach(btn => {
+        btn.addEventListener('click', function() {
+            if (!confirm('Bạn có chắc chắn muốn xóa ảnh này?')) return;
+
+            const imagePath = this.dataset.imagePath;
+            const url = '<?php echo Uri::base(); ?>admin/chapters/delete-image/<?php echo isset($chapter) ? $chapter->id : 0; ?>';
+            const formData = new FormData();
+            formData.append('image_path', imagePath);
+            formData.append('<?php echo \Config::get('security.csrf_token_key'); ?>', '<?php echo \Security::fetch_token(); ?>');
+
+            fetch(url, { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(json => {
+                    if (json && json.success) {
+                        const cardCol = document.querySelector(`[data-image-path="${CSS.escape(imagePath)}"]`);
+                        if (cardCol) cardCol.remove();
+                    } else {
+                        alert(json && json.message ? json.message : 'Không thể xóa ảnh');
+                    }
+                })
+                .catch(() => alert('Không thể xóa ảnh'));
+        });
+    });
+
     // Handle form submission
     document.querySelector('form').addEventListener('submit', function(e) {
-        // Create FormData and append files
-        const formData = new FormData(this);
+        e.preventDefault();
         
-        // Remove existing file inputs
-        const existingFileInputs = this.querySelectorAll('input[type="file"]');
-        existingFileInputs.forEach(input => input.remove());
+        // Create FormData manually to ensure proper data
+        const formData = new FormData();
+        
+        // Add basic form fields
+        formData.append('title', document.getElementById('title').value);
+        formData.append('chapter_number', document.getElementById('chapter_number').value);
+        formData.append('image_order', imageOrderInput.value);
+        formData.append('<?php echo \Config::get('security.csrf_token_key'); ?>', '<?php echo \Security::fetch_token(); ?>');
         
         // Add files in correct order
         const order = JSON.parse(imageOrderInput.value || '[]');
-        order.forEach(imageId => {
-            const slot = document.getElementById(`image-slot-${imageId}`);
-            if (slot) {
-                const fileInput = slot.querySelector('input[type="file"]');
-                if (fileInput && fileInput.files[0]) {
-                    formData.append('images[]', fileInput.files[0]);
+        order.forEach(key => {
+            if (typeof key === 'string' && key.startsWith('new:')) {
+                const id = key.substring('new:'.length);
+                const slot = document.getElementById(`image-slot-${id}`);
+                if (slot) {
+                    const fileInput = slot.querySelector('input[type="file"]');
+                    if (fileInput && fileInput.files[0]) {
+                        formData.append('images[]', fileInput.files[0]);
+                    }
                 }
             }
         });
         
         // Submit form with FormData
-        e.preventDefault();
         
         // Create new form submission
         const xhr = new XMLHttpRequest();

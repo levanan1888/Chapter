@@ -24,7 +24,8 @@ class Controller_Admin_Chapter extends Controller_Admin_Base
 			Response::redirect('admin/stories');
 		}
 
-		$story = Model_Story::find($story_id);
+		// Use admin finder to allow managing chapters even if story is soft-deleted
+		$story = Model_Story::find_admin($story_id);
 		if (!$story) {
 			Session::set_flash('error', 'Không tìm thấy truyện.');
 			Response::redirect('admin/stories');
@@ -73,7 +74,8 @@ class Controller_Admin_Chapter extends Controller_Admin_Base
 			Response::redirect('admin/stories');
 		}
 
-		$story = Model_Story::find($story_id);
+		// Use admin finder to avoid false negatives if story is in trash
+		$story = Model_Story::find_admin($story_id);
 		if (!$story) {
 			Session::set_flash('error', 'Không tìm thấy truyện.');
 			Response::redirect('admin/stories');
@@ -159,6 +161,13 @@ class Controller_Admin_Chapter extends Controller_Admin_Base
 
 		// Xử lý form sửa chương
 		if (Input::method() === 'POST') {
+			\Log::info('Chapter edit POST received', array(
+				'chapter_id' => $id,
+				'post_data' => Input::post(),
+				'files' => isset($_FILES['images']) ? array_keys($_FILES['images']) : 'no files',
+				'csrf_token' => Input::post(\Config::get('security.csrf_token_key'))
+			));
+
 			$title = Input::post('title', '');
 			$chapter_number = Input::post('chapter_number', '');
 			$image_order = Input::post('image_order', '');
@@ -166,11 +175,20 @@ class Controller_Admin_Chapter extends Controller_Admin_Base
 			// Kiểm tra dữ liệu đầu vào
 			if (empty($title) || empty($chapter_number)) {
 				$data['error_message'] = 'Vui lòng nhập đầy đủ thông tin bắt buộc.';
+				\Log::warning('Chapter edit validation failed', array(
+					'title' => $title,
+					'chapter_number' => $chapter_number
+				));
 			} else {
 				// Xử lý upload ảnh mới
 				$new_images = array();
 				if (isset($_FILES['images']) && !empty($_FILES['images']['name'][0])) {
-					$new_images = $this->process_chapter_images($_FILES['images'], $data['chapter']->story_id, $image_order);
+					// order sẽ được xử lý thủ công bên dưới để trộn cùng ảnh cũ
+					$new_images = $this->process_chapter_images($_FILES['images'], $data['chapter']->story_id, '');
+					\Log::info('New images processed', array(
+						'count' => count($new_images),
+						'images' => $new_images
+					));
 				}
 
 				// Cập nhật chương
@@ -179,18 +197,60 @@ class Controller_Admin_Chapter extends Controller_Admin_Base
 					'chapter_number' => $chapter_number,
 				);
 
-				// Nếu có ảnh mới, thêm vào danh sách ảnh hiện tại
-				if (!empty($new_images)) {
-					$current_images = $data['chapter']->get_images();
-					$all_images = array_merge($current_images, $new_images);
-					$update_data['images'] = $all_images;
+				// Kết hợp ảnh cũ và mới theo thứ tự gửi từ client
+				$current_images = $data['chapter']->get_images();
+				$final_images = array();
+				if (!empty($image_order)) {
+					$order_array = json_decode($image_order, true);
+					\Log::info('Image order processing', array(
+						'image_order' => $image_order,
+						'decoded' => $order_array,
+						'current_images' => $current_images
+					));
+					if (is_array($order_array)) {
+						$new_ptr = 0;
+						foreach ($order_array as $token) {
+							if (is_string($token) && strpos($token, 'existing:') === 0) {
+								$path = substr($token, 9);
+								if (in_array($path, $current_images, true)) {
+									$final_images[] = $path;
+								}
+							} elseif (is_string($token) && strpos($token, 'new:') === 0) {
+								if (isset($new_images[$new_ptr])) {
+									$final_images[] = $new_images[$new_ptr];
+									$new_ptr++;
+								}
+							}
+						}
+						// Append any remaining new images just in case
+						for ($i = $new_ptr; $i < count($new_images); $i++) {
+							$final_images[] = $new_images[$i];
+						}
+					}
 				}
+				// Nếu không có order hợp lệ thì giữ nguyên ảnh cũ và thêm ảnh mới vào cuối
+				if (empty($final_images)) {
+					$final_images = array_merge($current_images, $new_images);
+				}
+				\Log::info('Final images array', array(
+					'final_images' => $final_images,
+					'count' => count($final_images)
+				));
+				$update_data['images'] = $final_images;
 
 				if ($data['chapter']->update_chapter($update_data)) {
 					Session::set_flash('success', 'Cập nhật chương thành công!');
+					\Log::info('Chapter updated successfully', array(
+						'chapter_id' => $id,
+						'update_data' => $update_data
+					));
 					Response::redirect('admin/chapters/' . $data['chapter']->story_id);
 				} else {
 					$data['error_message'] = 'Có lỗi xảy ra khi cập nhật chương.';
+					\Log::error('Chapter update failed', array(
+						'chapter_id' => $id,
+						'update_data' => $update_data
+					));
 				}
 			}
 		}
@@ -402,7 +462,7 @@ class Controller_Admin_Chapter extends Controller_Admin_Base
 				mkdir($upload_dir, 0777, true);
 			}
 
-			$allowed_types = array('image/jpeg', 'image/png', 'image/gif', 'image/webp');
+			$allowed_types = array('image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/pjpeg');
 
 			// Xử lý multiple files
 			$file_count = count($files['name']);
@@ -412,11 +472,21 @@ class Controller_Admin_Chapter extends Controller_Admin_Base
 				if ($files['error'][$i] == 0) {
 					// Validate file type
 					if (!in_array($files['type'][$i], $allowed_types)) {
+						\Log::warning('Chapter image skipped due to invalid mime type', array(
+							'index' => $i,
+							'type' => $files['type'][$i],
+							'name' => $files['name'][$i]
+						));
 						continue;
 					}
 
-					// Validate file size (2MB)
-					if ($files['size'][$i] > 2 * 1024 * 1024) {
+					// Validate file size (10MB)
+					if ($files['size'][$i] > 10 * 1024 * 1024) {
+						\Log::warning('Chapter image skipped due to size > 10MB', array(
+							'index' => $i,
+							'size' => $files['size'][$i],
+							'name' => $files['name'][$i]
+						));
 						continue;
 					}
 
@@ -428,26 +498,34 @@ class Controller_Admin_Chapter extends Controller_Admin_Base
 					// Move uploaded file
 					if (move_uploaded_file($files['tmp_name'][$i], $filepath)) {
 						$temp_images[$i] = 'uploads/chapters/story_' . $story_id . '/' . $filename;
+					} else {
+						\Log::error('Failed to move uploaded chapter image', array(
+							'index' => $i,
+							'tmp_name' => $files['tmp_name'][$i],
+							'destination' => $filepath,
+							'error' => isset($files['error'][$i]) ? $files['error'][$i] : null,
+							'name' => $files['name'][$i]
+						));
 					}
 				}
 			}
 
-			// Sắp xếp theo thứ tự nếu có
+			// Sắp xếp: FormData đã gửi file theo thứ tự mong muốn, fallback an toàn
+			$uploaded_images = array_values($temp_images);
 			if (!empty($image_order)) {
 				$order_array = json_decode($image_order, true);
-				if (is_array($order_array)) {
+				// Chỉ thử sắp xếp lại nếu order là mảng số nguyên khớp index
+				if (is_array($order_array) && !empty($order_array) && is_int(reset($order_array))) {
+					$reordered = array();
 					foreach ($order_array as $index) {
 						if (isset($temp_images[$index])) {
-							$uploaded_images[] = $temp_images[$index];
+							$reordered[] = $temp_images[$index];
 						}
 					}
-				} else {
-					// Nếu không có thứ tự, sử dụng thứ tự mặc định
-					$uploaded_images = array_values($temp_images);
+					if (!empty($reordered)) {
+						$uploaded_images = $reordered;
+					}
 				}
-			} else {
-				// Nếu không có thứ tự, sử dụng thứ tự mặc định
-				$uploaded_images = array_values($temp_images);
 			}
 
 			return $uploaded_images;

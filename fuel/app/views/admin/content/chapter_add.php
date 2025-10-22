@@ -272,14 +272,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Handle form submission
     document.querySelector('form').addEventListener('submit', function(e) {
-        // Create FormData and append files
-        const formData = new FormData(this);
-        
-        // Remove existing file inputs
-        const existingFileInputs = this.querySelectorAll('input[type="file"]');
-        existingFileInputs.forEach(input => input.remove());
-        
-        // Add files in correct order
+        e.preventDefault();
+
+        // Build FormData manually to control file order and avoid duplicates
+        const form = this;
+        const formData = new FormData();
+
+        // Append non-file fields from the form
+        const rawFormData = new FormData(form);
+        for (const [key, value] of rawFormData.entries()) {
+            if (key === 'images[]') {
+                continue; // skip any auto-captured file inputs
+            }
+            formData.append(key, value);
+        }
+
+        // Append files in the specified order
         const order = JSON.parse(imageOrderInput.value || '[]');
         order.forEach(imageId => {
             const slot = document.getElementById(`image-slot-${imageId}`);
@@ -290,24 +298,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
-        
-        // Submit form with FormData
-        e.preventDefault();
-        
-        // Create new form submission
+
         const xhr = new XMLHttpRequest();
-        xhr.open('POST', this.action, true);
-        
+        xhr.open('POST', form.action, true);
         xhr.onload = function() {
             if (xhr.status === 200) {
-                // Handle success
                 window.location.href = window.location.href.replace('/add/', '/');
             } else {
-                // Handle error
                 alert('Có lỗi xảy ra khi lưu chương');
             }
         };
-        
         xhr.send(formData);
     });
 

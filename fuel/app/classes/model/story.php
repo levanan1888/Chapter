@@ -95,6 +95,34 @@ class Model_Story extends \Model
 		}
 	}
 
+    /**
+     * Admin: Find story by ID without deleted_at filtering
+     *
+     * @param int $id
+     * @return Model_Story|null
+     */
+    public static function find_admin($id)
+    {
+        try {
+            $query = \DB::query("SELECT * FROM stories WHERE id = :id");
+            $result = $query->param('id', $id)->execute();
+
+            if ($result->count() > 0) {
+                $data = $result->current();
+                $story = new self();
+                foreach ($data as $key => $value) {
+                    $story->$key = $value;
+                }
+                return $story;
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            \Log::error('Model_Story::find_admin error: ' . $e->getMessage());
+            return null;
+        }
+    }
+
 	/**
 	 * Tìm story theo slug
 	 * 

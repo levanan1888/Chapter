@@ -458,6 +458,11 @@ class Model_Chapter extends \Model
 	public function update_chapter(array $data)
 	{
 		try {
+			\Log::info('Model_Chapter::update_chapter called', array(
+				'chapter_id' => $this->id,
+				'data' => $data
+			));
+			
 			$updated_at = date('Y-m-d H:i:s');
 			$set_parts = array();
 			$params = array('id' => $this->id, 'updated_at' => $updated_at);
@@ -489,6 +494,11 @@ class Model_Chapter extends \Model
 			}
 
 			$sql = "UPDATE chapters SET " . implode(', ', $set_parts) . ", updated_at = :updated_at WHERE id = :id";
+			\Log::info('Model_Chapter::update_chapter SQL', array(
+				'sql' => $sql,
+				'params' => $params
+			));
+			
 			$query = \DB::query($sql);
 			
 			foreach ($params as $key => $value) {
@@ -496,6 +506,10 @@ class Model_Chapter extends \Model
 			}
 			
 			$result = $query->execute();
+			\Log::info('Model_Chapter::update_chapter result', array(
+				'result' => $result,
+				'affected_rows' => $result
+			));
 			
 			if ($result) {
 				// Cập nhật properties của object
@@ -511,6 +525,11 @@ class Model_Chapter extends \Model
 			}
 			return false;
 		} catch (\Exception $e) {
+			\Log::error('Model_Chapter::update_chapter exception', array(
+				'chapter_id' => $this->id,
+				'error' => $e->getMessage(),
+				'trace' => $e->getTraceAsString()
+			));
 			return false;
 		}
 	}
