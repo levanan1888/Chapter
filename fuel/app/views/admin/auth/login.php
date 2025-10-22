@@ -1,18 +1,19 @@
 <?php if (isset($error_message) && !empty($error_message)): ?>
-	<div class="alert alert-danger">
-		<i class="fas fa-exclamation-triangle me-2"></i>
-		<?php echo $error_message; ?>
-	</div>
+    <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <?php echo Security::htmlentities($error_message); ?>
+    </div>
 <?php endif; ?>
 
 <?php if (isset($success_message) && !empty($success_message)): ?>
-	<div class="alert alert-success">
-		<i class="fas fa-check-circle me-2"></i>
-		<?php echo $success_message; ?>
-	</div>
+    <div class="alert alert-success">
+        <i class="fas fa-check-circle me-2"></i>
+        <?php echo Security::htmlentities($success_message); ?>
+    </div>
 <?php endif; ?>
 
 <form method="POST" action="<?php echo Uri::base(); ?>admin/login">
+    <?php echo Form::csrf(); ?>
 	<div class="mb-3">
 		<label for="username" class="form-label">
 			<i class="fas fa-user me-2"></i>Tên đăng nhập
