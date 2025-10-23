@@ -22,21 +22,21 @@
 		<?php endif; ?>
 
 		<form method="POST" action="<?php echo Uri::base(); ?>admin/chapters/add/<?php echo isset($story) ? $story->id : ''; ?>" enctype="multipart/form-data">
-			<input type="hidden" name="<?php echo \Config::get('security.csrf_token_key'); ?>" value="<?php echo \Security::fetch_token(); ?>">
+			<input type="hidden" name="<?php echo \Config::get('security.csrf_token_key'); ?>" id="csrf-token" value="">
 			<div class="row">
 				<div class="col-md-6">
-					<div class="mb-3">
-						<label for="title" class="form-label">Tên chương *</label>
-						<input type="text" class="form-control" id="title" name="title" 
-							   value="<?php echo isset($form_data['title']) ? $form_data['title'] : ''; ?>" required>
-					</div>
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Tên chương *</label>
+                        <input type="text" class="form-control" id="title" name="title" 
+                               value="<?php echo isset($form_data['title']) ? $form_data['title'] : ''; ?>" required>
+                    </div>
 
-					<div class="mb-3">
-						<label for="chapter_number" class="form-label">Thứ tự *</label>
-						<input type="number" class="form-control" id="chapter_number" name="chapter_number" 
-							   value="<?php echo isset($form_data['chapter_number']) ? $form_data['chapter_number'] : ''; ?>" required>
-						<div class="form-text">Thứ tự hiển thị của chương trong truyện (1, 2, 3...)</div>
-					</div>
+                    <div class="mb-3">
+                        <label for="chapter_number" class="form-label">Thứ tự *</label>
+                        <input type="number" class="form-control" id="chapter_number" name="chapter_number" 
+                               value="<?php echo isset($form_data['chapter_number']) ? $form_data['chapter_number'] : ''; ?>" required>
+                        <div class="form-text">Thứ tự hiển thị của chương trong truyện (1, 2, 3...)</div>
+                    </div>
 				</div>
 
 				<div class="col-md-6">
@@ -78,6 +78,10 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize CSRF token from meta tag
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    document.getElementById('csrf-token').value = csrfToken;
+    
     const addImageBtn = document.getElementById('add-image-btn');
     const imageUploadGrid = document.getElementById('image-upload-grid');
     const hiddenInputsContainer = document.getElementById('hidden-inputs-container');
@@ -261,55 +265,25 @@ document.addEventListener('DOMContentLoaded', function() {
         // Clear existing hidden inputs
         hiddenInputsContainer.innerHTML = '';
         
-        // Create hidden inputs for each selected image
+        // Create actual file inputs for each selected image
         selectedImages.forEach((imageData, index) => {
-            const hiddenInput = document.createElement('input');
-            hiddenInput.type = 'hidden';
-            hiddenInput.name = 'images[]';
-            hiddenInput.value = imageData.file.name;
-            hiddenInputsContainer.appendChild(hiddenInput);
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.name = 'images[]';
+            fileInput.style.display = 'none';
+            
+            // Create a new FileList-like object
+            const dt = new DataTransfer();
+            dt.items.add(imageData.file);
+            fileInput.files = dt.files;
+            
+            hiddenInputsContainer.appendChild(fileInput);
         });
     }
 
-    // Handle form submission
-    document.querySelector('form').addEventListener('submit', function(e) {
-        e.preventDefault();
-
-        // Build FormData manually to control file order and avoid duplicates
-        const form = this;
-        const formData = new FormData();
-
-        // Append non-file fields from the form
-        const rawFormData = new FormData(form);
-        for (const [key, value] of rawFormData.entries()) {
-            if (key === 'images[]') {
-                continue; // skip any auto-captured file inputs
-            }
-            formData.append(key, value);
-        }
-
-        // Append files in the specified order
-        const order = JSON.parse(imageOrderInput.value || '[]');
-        order.forEach(imageId => {
-            const slot = document.getElementById(`image-slot-${imageId}`);
-            if (slot) {
-                const fileInput = slot.querySelector('input[type="file"]');
-                if (fileInput && fileInput.files[0]) {
-                    formData.append('images[]', fileInput.files[0]);
-                }
-            }
-        });
-
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', form.action, true);
-        xhr.onload = function() {
-            if (xhr.status === 200) {
-                window.location.href = window.location.href.replace('/add/', '/');
-            } else {
-                alert('Có lỗi xảy ra khi lưu chương');
-            }
-        };
-        xhr.send(formData);
+    // Handle form submission: just ensure image order is updated, then allow normal submit (CSRF-safe)
+    document.querySelector('form').addEventListener('submit', function() {
+        updateImageOrder();
     });
 
     function showImageModal(imageSrc) {

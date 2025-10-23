@@ -43,7 +43,7 @@ class Controller_Admin_Chapter extends Controller_Admin_Base
 		\Log::info('Controller_Admin_Chapter::action_index fetch chapters', array('story_id' => $story_id, 'page' => $page, 'limit' => $limit, 'offset' => $offset));
         // Filters
         $search = Input::get('search', '');
-        $status = Input::get('status', 'all'); // all | active | deleted
+        $status = Input::get('status', 'active'); // default exclude deleted
         $sort = Input::get('sort', 'created_at_desc');
 
         $data['chapters'] = Model_Chapter::get_chapters_by_story_admin_with_filter($story_id, $limit, $offset, $search, $status, $sort);
@@ -88,44 +88,120 @@ class Controller_Admin_Chapter extends Controller_Admin_Base
 
 		// Xử lý form thêm chương
 		if (Input::method() === 'POST') {
-			$title = Input::post('title', '');
-			$chapter_number = Input::post('chapter_number', '');
-			$image_order = Input::post('image_order', '');
+			// Kiểm tra CSRF token
+			if (!Security::check_token()) {
+				Session::set_flash('error', 'Token bảo mật không hợp lệ. Vui lòng thử lại.');
+				Response::redirect('admin/chapters/add/' . $story_id);
+			}
+			// Tạo validation rules
+            $val = Validation::forge('chapter_add');
+            $val->add_callable('Validation_Custom');
+            $val->add_field('title', 'Tên chương', 'required|chapter_title');
+            $val->add_field('chapter_number', 'Thứ tự chương', 'required|chapter_number|chapter_number_unique');
+            $val->add_field('story_id', 'ID truyện', 'required|valid_string[numeric]|story_exists');
+            // Thông báo tiếng Việt cho quy tắc trùng chương
+            $val->set_message('chapter_number_unique', 'Không được trùng chương');
+			
+            // Dữ liệu validation
+            $validation_data = array(
+                'title' => Input::post('title', ''),
+                'chapter_number' => Input::post('chapter_number', ''),
+                'story_id' => (int)$story_id
+            );
 
-			// Kiểm tra dữ liệu đầu vào
-			if (empty($title) || empty($chapter_number)) {
-				$data['error_message'] = 'Vui lòng nhập đầy đủ thông tin bắt buộc.';
-			} else {
+            // Debug validation data
+            \Log::info('Chapter validation data', array(
+                'validation_data' => $validation_data,
+                'story_id' => $story_id,
+                'story_id_type' => gettype($story_id)
+            ));
+
+            // Kiểm tra validation
+            if ($val->run($validation_data)) {
+				$title = $val->validated('title');
+				$chapter_number = $val->validated('chapter_number');
+				$image_order = Input::post('image_order', '');
 				// Xử lý upload ảnh
 				$uploaded_images = array();
 				if (isset($_FILES['images']) && !empty($_FILES['images']['name'][0])) {
 					$uploaded_images = $this->process_chapter_images($_FILES['images'], $story_id, $image_order);
 				}
 
-				// Tạo chương mới
-				$chapter_data = array(
-					'story_id' => $story_id,
-					'title' => $title,
-					'chapter_number' => $chapter_number,
-					'images' => $uploaded_images,
-				);
+				// Validate images
+				$image_val = Validation::forge('chapter_images');
+				$image_val->add_callable('Validation_Custom');
+				$image_val->add_field('images', 'Ảnh chương', 'chapter_images');
+                if ($image_val->run(array('images' => $uploaded_images))) {
+					// Tạo chương mới
+					$chapter_data = array(
+						'story_id' => $story_id,
+						'title' => $title,
+						'chapter_number' => $chapter_number,
+						'images' => $uploaded_images,
+					);
 
-				$new_chapter = Model_Chapter::create_chapter($chapter_data);
-				if ($new_chapter) {
-					Session::set_flash('success', 'Thêm chương thành công!');
-					Response::redirect('admin/chapters/' . $story_id);
-				} else {
-					$data['error_message'] = 'Có lỗi xảy ra khi thêm chương.';
+					$new_chapter = Model_Chapter::create_chapter($chapter_data);
+					if ($new_chapter) {
+						Session::set_flash('success', 'Thêm chương thành công!');
+						Response::redirect('admin/chapters/' . $story_id);
+					} else {
+						$data['error_message'] = 'Có lỗi xảy ra khi thêm chương.';
+					}
+                } else {
+                    $img_errors = $image_val->error();
+                    $img_msgs = array();
+                    foreach ($img_errors as $field => $error) {
+                        if ($error instanceof \Validation_Error) {
+                            $img_msgs[] = $error->get_message();
+                        } else {
+                            $img_msgs[] = (string)$error;
+                        }
+                    }
+                    $data['error_message'] = 'Dữ liệu ảnh không hợp lệ' . (!empty($img_msgs) ? ': ' . implode('; ', $img_msgs) : '.');
+                }
+			} else {
+				// Validation failed
+                $errors = $val->error();
+				$error_messages = array();
+				
+				// Debug validation errors
+				\Log::warning('Chapter validation failed', array(
+					'errors' => $errors,
+					'validation_data' => $validation_data
+				));
+				
+                if (isset($errors['title']) && $errors['title'] instanceof \Validation_Error) {
+                    $error_messages[] = 'Tên chương: ' . $errors['title']->get_message();
+                }
+                if (isset($errors['chapter_number']) && $errors['chapter_number'] instanceof \Validation_Error) {
+                    $error_messages[] = 'Thứ tự chương: ' . $errors['chapter_number']->get_message();
+                }
+                if (isset($errors['story_id']) && $errors['story_id'] instanceof \Validation_Error) {
+                    $error_messages[] = 'Truyện: ' . $errors['story_id']->get_message();
+                }
+				
+				$data['error_message'] = 'Dữ liệu không hợp lệ: ' . implode('; ', $error_messages);
+				
+				// Tạo error messages cụ thể cho từng field
+				$data['field_errors'] = array();
+				if (isset($errors['title']) && $errors['title'] instanceof \Validation_Error) {
+					$data['field_errors']['title'] = $errors['title']->get_message();
+				}
+				if (isset($errors['chapter_number']) && $errors['chapter_number'] instanceof \Validation_Error) {
+					$data['field_errors']['chapter_number'] = $errors['chapter_number']->get_message();
+				}
+				if (isset($errors['story_id']) && $errors['story_id'] instanceof \Validation_Error) {
+					$data['field_errors']['story_id'] = $errors['story_id']->get_message();
 				}
 			}
 
-			// Giữ lại dữ liệu form nếu có lỗi
-			if (!empty($data['error_message'])) {
-				$data['form_data'] = array(
-					'title' => $title,
-					'chapter_number' => $chapter_number,
-				);
-			}
+            // Giữ lại dữ liệu form nếu có lỗi
+            if (!empty($data['error_message'])) {
+                $data['form_data'] = array(
+                    'title' => Input::post('title', ''),
+                    'chapter_number' => Input::post('chapter_number', ''),
+                );
+            }
 		}
 
 		$data['title'] = 'Thêm Chương - ' . $story->title;
@@ -166,6 +242,11 @@ class Controller_Admin_Chapter extends Controller_Admin_Base
 
 		// Xử lý form sửa chương
 		if (Input::method() === 'POST') {
+			// Kiểm tra CSRF token
+			if (!Security::check_token()) {
+				Session::set_flash('error', 'Token bảo mật không hợp lệ. Vui lòng thử lại.');
+				Response::redirect('admin/chapters/edit/' . $id);
+			}
 			\Log::info('Chapter edit POST received', array(
 				'chapter_id' => $id,
 				'post_data' => Input::post(),
@@ -173,18 +254,29 @@ class Controller_Admin_Chapter extends Controller_Admin_Base
 				'csrf_token' => Input::post(\Config::get('security.csrf_token_key'))
 			));
 
-			$title = Input::post('title', '');
-			$chapter_number = Input::post('chapter_number', '');
-			$image_order = Input::post('image_order', '');
+			// Tạo validation rules
+            $val = Validation::forge('chapter_edit');
+            $val->add_callable('Validation_Custom');
+            $val->add_field('title', 'Tên chương', 'required|chapter_title');
+            $val->add_field('chapter_number', 'Thứ tự chương', 'required|chapter_number|chapter_number_unique');
+            $val->add_field('story_id', 'ID truyện', 'required|valid_string[numeric]|story_exists');
+            $val->add_field('chapter_id', 'ID chương', 'required');
+            // Thông báo tiếng Việt cho quy tắc trùng chương
+            $val->set_message('chapter_number_unique', 'Không được trùng chương');
+			
+            // Dữ liệu validation
+            $validation_data = array(
+                'title' => Input::post('title', ''),
+                'chapter_number' => Input::post('chapter_number', ''),
+                'story_id' => $data['chapter']->story_id,
+                'chapter_id' => $id
+            );
 
-			// Kiểm tra dữ liệu đầu vào
-			if (empty($title) || empty($chapter_number)) {
-				$data['error_message'] = 'Vui lòng nhập đầy đủ thông tin bắt buộc.';
-				\Log::warning('Chapter edit validation failed', array(
-					'title' => $title,
-					'chapter_number' => $chapter_number
-				));
-			} else {
+            // Kiểm tra validation
+            if ($val->run($validation_data)) {
+				$title = $val->validated('title');
+				$chapter_number = $val->validated('chapter_number');
+				$image_order = Input::post('image_order', '');
 				// Xử lý upload ảnh mới
 				$new_images = array();
 				if (isset($_FILES['images']) && !empty($_FILES['images']['name'][0])) {
@@ -195,12 +287,6 @@ class Controller_Admin_Chapter extends Controller_Admin_Base
 						'images' => $new_images
 					));
 				}
-
-				// Cập nhật chương
-				$update_data = array(
-					'title' => $title,
-					'chapter_number' => $chapter_number,
-				);
 
 				// Kết hợp ảnh cũ và mới theo thứ tự gửi từ client
 				$current_images = $data['chapter']->get_images();
@@ -237,26 +323,71 @@ class Controller_Admin_Chapter extends Controller_Admin_Base
 				if (empty($final_images)) {
 					$final_images = array_merge($current_images, $new_images);
 				}
-				\Log::info('Final images array', array(
-					'final_images' => $final_images,
-					'count' => count($final_images)
-				));
-				$update_data['images'] = $final_images;
+				
+				// Validate final images
+				$image_val = Validation::forge('chapter_edit_images');
+				$image_val->add_callable('Validation_Custom');
+				$image_val->add_field('images', 'Ảnh chương', 'chapter_images');
+                if ($image_val->run(array('images' => $final_images))) {
+					\Log::info('Final images array', array(
+						'final_images' => $final_images,
+						'count' => count($final_images)
+					));
+					
+					// Cập nhật chương
+					$update_data = array(
+						'title' => $title,
+						'chapter_number' => $chapter_number,
+						'images' => $final_images,
+					);
 
-				if ($data['chapter']->update_chapter($update_data)) {
-					Session::set_flash('success', 'Cập nhật chương thành công!');
-					\Log::info('Chapter updated successfully', array(
-						'chapter_id' => $id,
-						'update_data' => $update_data
-					));
-					Response::redirect('admin/chapters/' . $data['chapter']->story_id);
-				} else {
-					$data['error_message'] = 'Có lỗi xảy ra khi cập nhật chương.';
-					\Log::error('Chapter update failed', array(
-						'chapter_id' => $id,
-						'update_data' => $update_data
-					));
-				}
+					if ($data['chapter']->update_chapter($update_data)) {
+						Session::set_flash('success', 'Cập nhật chương thành công!');
+						\Log::info('Chapter updated successfully', array(
+							'chapter_id' => $id,
+							'update_data' => $update_data
+						));
+						Response::redirect('admin/chapters/' . $data['chapter']->story_id);
+					} else {
+						$data['error_message'] = 'Có lỗi xảy ra khi cập nhật chương.';
+						\Log::error('Chapter update failed', array(
+							'chapter_id' => $id,
+							'update_data' => $update_data
+						));
+					}
+                } else {
+                    $img_errors = $image_val->error();
+                    $img_msgs = array();
+                    foreach ($img_errors as $field => $error) {
+                        if ($error instanceof \Validation_Error) {
+                            $img_msgs[] = $error->get_message();
+                        } else {
+                            $img_msgs[] = (string)$error;
+                        }
+                    }
+                    $data['error_message'] = 'Dữ liệu ảnh không hợp lệ' . (!empty($img_msgs) ? ': ' . implode('; ', $img_msgs) : '.');
+                }
+			} else {
+				// Validation failed
+				$errors = $val->error();
+				$error_messages = array();
+				
+                if (isset($errors['title']) && $errors['title'] instanceof \Validation_Error) {
+                    $error_messages[] = 'Tên chương: ' . $errors['title']->get_message();
+                }
+                if (isset($errors['chapter_number']) && $errors['chapter_number'] instanceof \Validation_Error) {
+                    $error_messages[] = 'Thứ tự chương: ' . $errors['chapter_number']->get_message();
+                }
+                if (isset($errors['story_id']) && $errors['story_id'] instanceof \Validation_Error) {
+                    $error_messages[] = 'Truyện: ' . $errors['story_id']->get_message();
+                }
+				
+				$data['error_message'] = 'Dữ liệu không hợp lệ: ' . implode('; ', $error_messages);
+				\Log::warning('Chapter edit validation failed', array(
+					'errors' => $errors,
+					'title' => Input::post('title', ''),
+					'chapter_number' => Input::post('chapter_number', '')
+				));
 			}
 		}
 
@@ -456,6 +587,134 @@ class Controller_Admin_Chapter extends Controller_Admin_Base
 		);
 
 		return $this->success_response('Danh sách chương', $data);
+	}
+
+	/**
+	 * Trash bin - Danh sách chương đã xóa
+	 * 
+	 * @param int $story_id ID của truyện
+	 * @return void
+	 */
+	public function action_trash($story_id = null)
+	{
+		$this->require_login();
+
+		if (empty($story_id)) {
+			Response::redirect('admin/stories');
+		}
+
+		// Use admin finder to allow managing chapters even if story is soft-deleted
+		$story = Model_Story::find_admin($story_id);
+		if (!$story) {
+			Session::set_flash('error', 'Không tìm thấy truyện.');
+			Response::redirect('admin/stories');
+		}
+
+		$data = array();
+		$data['story'] = $story;
+		
+		// Phân trang
+		$page = Input::get('page', 1);
+		$limit = 10;
+		$offset = ($page - 1) * $limit;
+
+		// Lấy danh sách chương đã xóa
+		$search = Input::get('search', '');
+		$sort = Input::get('sort', 'deleted_at_desc');
+
+		$data['chapters'] = Model_Chapter::get_chapters_by_story_admin_with_filter($story_id, $limit, $offset, $search, 'deleted', $sort);
+		$data['total_chapters'] = Model_Chapter::count_by_story_admin_with_filter($story_id, $search, 'deleted');
+		$data['current_page'] = $page;
+		$data['total_pages'] = ceil($data['total_chapters'] / $limit);
+		$data['search'] = $search;
+		$data['status'] = 'deleted';
+		$data['sort'] = $sort;
+
+		$data['title'] = 'Sọt rác - Chương đã xóa - ' . $story->title;
+		$data['content'] = View::forge('admin/content/chapter_trash', $data, false);
+
+		return View::forge('layouts/admin', $data);
+	}
+
+	/**
+	 * Khôi phục chương từ sọt rác (AJAX)
+	 * 
+	 * @param int $id ID của chương
+	 * @return Response
+	 */
+	public function action_restore($id = null)
+	{
+		$this->require_login();
+
+		if (Input::method() !== 'POST') {
+			Response::redirect('admin/stories');
+		}
+
+		// Kiểm tra CSRF token
+		if (!Security::check_token()) {
+			return $this->error_response('Token bảo mật không hợp lệ. Vui lòng thử lại.');
+		}
+
+		if (empty($id)) {
+			return $this->error_response('ID không hợp lệ.');
+		}
+
+		$chapter = Model_Chapter::find_admin($id);
+		
+		if (!$chapter) {
+			return $this->error_response('Không tìm thấy chương.');
+		}
+
+		if ($chapter->restore()) {
+			return $this->success_response('Khôi phục chương thành công!');
+		} else {
+			return $this->error_response('Có lỗi xảy ra khi khôi phục chương.');
+		}
+	}
+
+	/**
+	 * Xóa vĩnh viễn chương (AJAX)
+	 * 
+	 * @param int $id ID của chương
+	 * @return Response
+	 */
+	public function action_force_delete($id = null)
+	{
+		$this->require_login();
+
+		if (Input::method() !== 'POST') {
+			Response::redirect('admin/stories');
+		}
+
+		// Kiểm tra CSRF token
+		if (!Security::check_token()) {
+			return $this->error_response('Token bảo mật không hợp lệ. Vui lòng thử lại.');
+		}
+
+		if (empty($id)) {
+			return $this->error_response('ID không hợp lệ.');
+		}
+
+		$chapter = Model_Chapter::find_admin($id);
+		
+		if (!$chapter) {
+			return $this->error_response('Không tìm thấy chương.');
+		}
+
+		// Xóa các file ảnh trước khi xóa chương
+		$images = $chapter->get_images();
+		foreach ($images as $image_path) {
+			$full_path = DOCROOT . $image_path;
+			if (file_exists($full_path)) {
+				unlink($full_path);
+			}
+		}
+
+		if ($chapter->force_delete()) {
+			return $this->success_response('Xóa vĩnh viễn chương thành công!');
+		} else {
+			return $this->error_response('Có lỗi xảy ra khi xóa vĩnh viễn chương.');
+		}
 	}
 
 	/**

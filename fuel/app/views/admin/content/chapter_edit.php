@@ -22,21 +22,21 @@
 		<?php endif; ?>
 
 		<form method="POST" action="<?php echo Uri::base(); ?>admin/chapters/edit/<?php echo isset($chapter) ? $chapter->id : ''; ?>" enctype="multipart/form-data">
-			<input type="hidden" name="<?php echo \Config::get('security.csrf_token_key'); ?>" value="<?php echo \Security::fetch_token(); ?>">
+			<input type="hidden" name="<?php echo \Config::get('security.csrf_token_key'); ?>" id="csrf-token" value="">
 			<div class="row">
 				<div class="col-md-6">
-					<div class="mb-3">
-						<label for="title" class="form-label">Tên chương *</label>
-						<input type="text" class="form-control" id="title" name="title" 
-							   value="<?php echo isset($chapter) ? $chapter->title : ''; ?>" required>
-					</div>
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Tên chương *</label>
+                        <input type="text" class="form-control" id="title" name="title" 
+                               value="<?php echo isset($chapter) ? $chapter->title : ''; ?>" required>
+                    </div>
 
-					<div class="mb-3">
-						<label for="chapter_number" class="form-label">Thứ tự *</label>
-						<input type="number" class="form-control" id="chapter_number" name="chapter_number" 
-							   value="<?php echo isset($chapter) ? $chapter->chapter_number : ''; ?>" required>
-						<div class="form-text">Thứ tự hiển thị của chương trong truyện (1, 2, 3...)</div>
-					</div>
+                    <div class="mb-3">
+                        <label for="chapter_number" class="form-label">Thứ tự *</label>
+                        <input type="number" class="form-control" id="chapter_number" name="chapter_number" 
+                               value="<?php echo isset($chapter) ? $chapter->chapter_number : ''; ?>" required>
+                        <div class="form-text">Thứ tự hiển thị của chương trong truyện (1, 2, 3...)</div>
+                    </div>
 				</div>
 
                 <div class="col-md-6">
@@ -106,6 +106,10 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize CSRF token from meta tag
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    document.getElementById('csrf-token').value = csrfToken;
+    
     const addImageBtn = document.getElementById('add-image-btn');
     const imageUploadGrid = document.getElementById('image-upload-grid');
     const hiddenInputsContainer = document.getElementById('hidden-inputs-container');
@@ -440,7 +444,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const url = '<?php echo Uri::base(); ?>admin/chapters/delete-image/<?php echo isset($chapter) ? $chapter->id : 0; ?>';
             const formData = new FormData();
             formData.append('image_path', imagePath);
-            formData.append('<?php echo \Config::get('security.csrf_token_key'); ?>', '<?php echo \Security::fetch_token(); ?>');
+            formData.append('<?php echo \Config::get('security.csrf_token_key'); ?>', csrfToken);
 
             fetch(url, { method: 'POST', body: formData })
                 .then(res => res.json())
