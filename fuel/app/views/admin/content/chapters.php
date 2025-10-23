@@ -250,6 +250,12 @@
 	</div>
 <?php endif; ?>
 
+<!-- Bulk Delete Form -->
+<form id="bulk-delete-form" method="POST" action="<?php echo Uri::base(); ?>admin/chapters/bulk-delete" style="display: none;">
+	<input type="hidden" name="fuel_csrf_token" value="<?php echo \Security::fetch_token(); ?>">
+	<div id="bulk-delete-ids"></div>
+</form>
+
 <script>
 // Initialize CSRF token on page load
 window.currentCsrfToken = '<?php echo \Security::fetch_token(); ?>';
@@ -269,19 +275,25 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Function to refresh CSRF token
-function refreshCsrfToken() {
-	fetch('<?php echo Uri::base(); ?>admin/chapters', {
-		method: 'GET',
-		headers: {
-			'X-Requested-With': 'XMLHttpRequest'
+async function refreshCsrfToken() {
+	try {
+		const response = await fetch('<?php echo Uri::base(); ?>admin/chapters', {
+			method: 'GET',
+			headers: {
+				'X-Requested-With': 'XMLHttpRequest'
+			}
+		});
+		
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
 		}
-	})
-	.then(response => response.text())
-	.then(html => {
+		
+		const html = await response.text();
 		const parser = new DOMParser();
 		const doc = parser.parseFromString(html, 'text/html');
 		const newToken = doc.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
 						doc.querySelector('input[name="<?php echo \Config::get('security.csrf_token_key'); ?>"]')?.value;
+		
 		if (newToken) {
 			window.currentCsrfToken = newToken;
 			
@@ -297,11 +309,15 @@ function refreshCsrfToken() {
 			});
 			
 			console.log('CSRF token refreshed:', newToken);
+			return newToken;
+		} else {
+			console.warn('No CSRF token found in response');
+			return null;
 		}
-	})
-	.catch(err => {
+	} catch (err) {
 		console.error('Failed to refresh CSRF token:', err);
-	});
+		return null;
+	}
 }
 
 // Refresh CSRF token when page becomes visible (user returns from another page)
@@ -324,6 +340,8 @@ const selectAllHeaderCheckbox = document.getElementById('select-all-header');
 const chapterCheckboxes = document.querySelectorAll('.chapter-checkbox');
 const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
 const selectedCountSpan = document.getElementById('selected-count');
+const bulkDeleteForm = document.getElementById('bulk-delete-form');
+const bulkDeleteIds = document.getElementById('bulk-delete-ids');
 
 function updateSelectedCount() {
     const checked = document.querySelectorAll('.chapter-checkbox:checked');
@@ -361,26 +379,29 @@ if (selectAllHeaderCheckbox) {
 chapterCheckboxes.forEach(cb => cb.addEventListener('change', updateSelectedCount));
 
 if (bulkDeleteBtn) {
-    bulkDeleteBtn.addEventListener('click', async function() {
-        const checked = Array.from(document.querySelectorAll('.chapter-checkbox:checked')).map(cb => cb.value);
-        if (checked.length === 0) return;
-        if (!confirm(`Bạn có chắc chắn muốn xóa ${checked.length} chương đã chọn?`)) return;
-
-        for (const id of checked) {
-            try {
-                const formData = new FormData();
-                formData.append('<?php echo \Config::get('security.csrf_token_key'); ?>', window.currentCsrfToken || '<?php echo \Security::fetch_token(); ?>');
-                const res = await fetch(`<?php echo Uri::base(); ?>admin/chapters/delete/${id}`, { method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                const json = await res.json();
-                if (json && json.data && json.data.csrf_token) {
-                    window.currentCsrfToken = json.data.csrf_token;
-                }
-            } catch (e) {
-                // continue on error
-            }
+    bulkDeleteBtn.addEventListener('click', function() {
+        const checkedBoxes = document.querySelectorAll('.chapter-checkbox:checked');
+        if (checkedBoxes.length === 0) {
+            alert('Vui lòng chọn ít nhất một chương để xóa.');
+            return;
         }
-        // reload to reflect
-        window.location.reload();
+
+        if (confirm(`Bạn có chắc chắn muốn xóa ${checkedBoxes.length} chương đã chọn?`)) {
+            // Clear previous IDs
+            bulkDeleteIds.innerHTML = '';
+            
+            // Add selected IDs as hidden inputs
+            checkedBoxes.forEach(checkbox => {
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = 'chapter_ids[]';
+                hiddenInput.value = checkbox.value;
+                bulkDeleteIds.appendChild(hiddenInput);
+            });
+            
+            // Submit form
+            bulkDeleteForm.submit();
+        }
     });
 }
 
@@ -498,4 +519,5 @@ function showAlert(type, message) {
         }
     }, 5000);
 }
+</script>
 </script>

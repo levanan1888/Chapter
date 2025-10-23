@@ -88,6 +88,11 @@ abstract class Controller_Admin_Base extends Controller
 			'message' => $message
 		);
 		
+		// Always include fresh CSRF token in response
+		if (!isset($data['csrf_token'])) {
+			$data['csrf_token'] = Security::fetch_token();
+		}
+		
 		if (!empty($data)) {
 			$response['data'] = $data;
 		}

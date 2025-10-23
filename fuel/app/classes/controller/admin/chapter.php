@@ -397,6 +397,185 @@ class Controller_Admin_Chapter extends Controller_Admin_Base
 	}
 
 	/**
+	 * Xóa nhiều chương (Bulk Delete)
+	 * 
+	 * @return void
+	 */
+	public function action_bulk_delete()
+	{
+		$this->require_login();
+
+		if (Input::method() !== 'POST') {
+			Response::redirect('admin/stories');
+		}
+
+		// Kiểm tra CSRF token
+		if (!Security::check_token()) {
+			Session::set_flash('error', 'Token bảo mật không hợp lệ. Vui lòng thử lại.');
+			Response::redirect('admin/stories');
+		}
+
+		$chapter_ids = Input::post('chapter_ids', array());
+		
+		if (empty($chapter_ids) || !is_array($chapter_ids)) {
+			Session::set_flash('error', 'Không có chương nào được chọn để xóa.');
+			Response::redirect('admin/stories');
+		}
+
+		$success_count = 0;
+		$error_count = 0;
+		$errors = array();
+
+		foreach ($chapter_ids as $chapter_id) {
+			$chapter = Model_Chapter::find($chapter_id);
+			
+			if ($chapter && $chapter->soft_delete()) {
+				$success_count++;
+			} else {
+				$error_count++;
+				$errors[] = "Chương ID {$chapter_id}";
+			}
+		}
+
+		// Hiển thị thông báo kết quả
+		if ($success_count > 0 && $error_count === 0) {
+			Session::set_flash('success', "Đã xóa thành công {$success_count} chương!");
+		} else if ($success_count > 0 && $error_count > 0) {
+			Session::set_flash('warning', "Đã xóa thành công {$success_count} chương, {$error_count} chương lỗi: " . implode(', ', $errors));
+		} else {
+			Session::set_flash('error', "Không thể xóa chương nào. Lỗi: " . implode(', ', $errors));
+		}
+
+		// Redirect về trang trước đó
+		$referer = Input::server('HTTP_REFERER', 'admin/stories');
+		Response::redirect($referer);
+	}
+
+	/**
+	 * Khôi phục nhiều chương (Bulk Restore)
+	 * 
+	 * @return void
+	 */
+	public function action_bulk_restore()
+	{
+		$this->require_login();
+
+		if (Input::method() !== 'POST') {
+			Response::redirect('admin/stories');
+		}
+
+		// Kiểm tra CSRF token
+		if (!Security::check_token()) {
+			Session::set_flash('error', 'Token bảo mật không hợp lệ. Vui lòng thử lại.');
+			Response::redirect('admin/stories');
+		}
+
+		$chapter_ids = Input::post('chapter_ids', array());
+		
+		if (empty($chapter_ids) || !is_array($chapter_ids)) {
+			Session::set_flash('error', 'Không có chương nào được chọn để khôi phục.');
+			Response::redirect('admin/stories');
+		}
+
+		$success_count = 0;
+		$error_count = 0;
+		$errors = array();
+
+		foreach ($chapter_ids as $chapter_id) {
+			$chapter = Model_Chapter::find_admin($chapter_id);
+			
+			if ($chapter && $chapter->restore()) {
+				$success_count++;
+			} else {
+				$error_count++;
+				$errors[] = "Chương ID {$chapter_id}";
+			}
+		}
+
+		// Hiển thị thông báo kết quả
+		if ($success_count > 0 && $error_count === 0) {
+			Session::set_flash('success', "Đã khôi phục thành công {$success_count} chương!");
+		} else if ($success_count > 0 && $error_count > 0) {
+			Session::set_flash('warning', "Đã khôi phục thành công {$success_count} chương, {$error_count} chương lỗi: " . implode(', ', $errors));
+		} else {
+			Session::set_flash('error', "Không thể khôi phục chương nào. Lỗi: " . implode(', ', $errors));
+		}
+
+		// Redirect về trang trước đó
+		$referer = Input::server('HTTP_REFERER', 'admin/stories');
+		Response::redirect($referer);
+	}
+
+	/**
+	 * Xóa vĩnh viễn nhiều chương (Bulk Force Delete)
+	 * 
+	 * @return void
+	 */
+	public function action_bulk_force_delete()
+	{
+		$this->require_login();
+
+		if (Input::method() !== 'POST') {
+			Response::redirect('admin/stories');
+		}
+
+		// Kiểm tra CSRF token
+		if (!Security::check_token()) {
+			Session::set_flash('error', 'Token bảo mật không hợp lệ. Vui lòng thử lại.');
+			Response::redirect('admin/stories');
+		}
+
+		$chapter_ids = Input::post('chapter_ids', array());
+		
+		if (empty($chapter_ids) || !is_array($chapter_ids)) {
+			Session::set_flash('error', 'Không có chương nào được chọn để xóa vĩnh viễn.');
+			Response::redirect('admin/stories');
+		}
+
+		$success_count = 0;
+		$error_count = 0;
+		$errors = array();
+
+		foreach ($chapter_ids as $chapter_id) {
+			$chapter = Model_Chapter::find_admin($chapter_id);
+			
+			if ($chapter) {
+				// Xóa các file ảnh trước khi xóa chương
+				$images = $chapter->get_images();
+				foreach ($images as $image_path) {
+					$full_path = DOCROOT . $image_path;
+					if (file_exists($full_path)) {
+						unlink($full_path);
+					}
+				}
+
+				if ($chapter->force_delete()) {
+					$success_count++;
+				} else {
+					$error_count++;
+					$errors[] = "Chương ID {$chapter_id}";
+				}
+			} else {
+				$error_count++;
+				$errors[] = "Chương ID {$chapter_id}";
+			}
+		}
+
+		// Hiển thị thông báo kết quả
+		if ($success_count > 0 && $error_count === 0) {
+			Session::set_flash('success', "Đã xóa vĩnh viễn thành công {$success_count} chương!");
+		} else if ($success_count > 0 && $error_count > 0) {
+			Session::set_flash('warning', "Đã xóa vĩnh viễn thành công {$success_count} chương, {$error_count} chương lỗi: " . implode(', ', $errors));
+		} else {
+			Session::set_flash('error', "Không thể xóa vĩnh viễn chương nào. Lỗi: " . implode(', ', $errors));
+		}
+
+		// Redirect về trang trước đó
+		$referer = Input::server('HTTP_REFERER', 'admin/stories');
+		Response::redirect($referer);
+	}
+
+	/**
 	 * Xóa chương (AJAX)
 	 * 
 	 * @param int $id ID của chương
