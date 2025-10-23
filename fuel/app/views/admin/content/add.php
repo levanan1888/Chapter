@@ -13,11 +13,11 @@
 			<div class="alert alert-danger">
 				<i class="fas fa-exclamation-triangle me-2"></i>
 				<?php echo $error_message; ?>
-                    </div>
-                <?php endif; ?>
+			</div>
+		<?php endif; ?>
 
 		<form method="POST" action="<?php echo Uri::base(); ?>admin/users/add">
-			<input type="hidden" name="<?php echo \Config::get('security.csrf_token_key'); ?>" value="<?php echo \Security::fetch_token(); ?>">
+			<?php echo \Form::csrf(); ?>
 			<div class="row">
 				<div class="col-md-6">
                 <div class="mb-3">
@@ -45,6 +45,18 @@
 						<input type="password" class="form-control" id="password" name="password" required>
         </div>
     </div>
+</div>
+
+<div class="row">
+	<div class="col-md-6">
+		<div class="mb-3">
+			<label for="user_type" class="form-label">Loại người dùng *</label>
+			<select class="form-control" id="user_type" name="user_type" required>
+				<option value="admin" <?php echo (isset($form_data['user_type']) && $form_data['user_type'] == 'admin') ? 'selected' : ''; ?>>Admin</option>
+				<option value="user" <?php echo (isset($form_data['user_type']) && $form_data['user_type'] == 'user') ? 'selected' : ''; ?>>User</option>
+			</select>
+		</div>
+	</div>
 </div>
 
 			<div class="d-flex justify-content-end gap-2">

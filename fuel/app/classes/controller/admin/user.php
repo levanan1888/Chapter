@@ -66,14 +66,17 @@ class Controller_Admin_User extends Controller_Admin_Base
 			$email = Input::post('email', '');
 			$password = Input::post('password', '');
 			$full_name = Input::post('full_name', '');
+			$user_type = Input::post('user_type', 'admin');
 
 			// Kiểm tra dữ liệu đầu vào
 			if (empty($username) || empty($email) || empty($password)) {
+				\Log::warning('Admin creation failed: Missing required fields - Username: ' . $username . ', Email: ' . $email);
 				$data['error_message'] = 'Vui lòng nhập đầy đủ thông tin bắt buộc.';
 			} else {
 				// Kiểm tra username và email đã tồn tại chưa
 				$existing_admin = Model_Admin::find_by_username_or_email($username);
 				if ($existing_admin) {
+					\Log::warning('Admin creation failed: Username/Email already exists - Username: ' . $username . ', Email: ' . $email);
 					$data['error_message'] = 'Username hoặc email đã tồn tại.';
 				} else {
 					// Tạo admin mới
@@ -82,16 +85,18 @@ class Controller_Admin_User extends Controller_Admin_Base
 						'email' => $email,
 						'password' => $password,
 						'full_name' => $full_name,
+						'user_type' => $user_type,
 						'is_active' => 1
 					);
 
 					$new_admin = Model_Admin::create_admin($admin_data);
 					if ($new_admin) {
-						$data['success_message'] = 'Thêm admin thành công!';
-						// Reset form
-						$data['form_data'] = array();
+						\Log::info('Admin created successfully: ID ' . $new_admin->id . ', Username: ' . $new_admin->username);
+						Session::set_flash('success', 'Thêm admin thành công!');
+						Response::redirect('admin/users');
 					} else {
-						$data['error_message'] = 'Có lỗi xảy ra khi thêm admin.';
+						\Log::error('Failed to create admin: Username: ' . $username . ', Email: ' . $email);
+						$data['error_message'] = 'Có lỗi xảy ra khi thêm admin. Vui lòng thử lại.';
 					}
 				}
 			}
@@ -101,7 +106,8 @@ class Controller_Admin_User extends Controller_Admin_Base
 				$data['form_data'] = array(
 					'username' => $username,
 					'email' => $email,
-					'full_name' => $full_name
+					'full_name' => $full_name,
+					'user_type' => $user_type
 				);
 			}
 		}
@@ -141,19 +147,23 @@ class Controller_Admin_User extends Controller_Admin_Base
 			$email = Input::post('email', '');
 			$password = Input::post('password', '');
 			$full_name = Input::post('full_name', '');
+			$user_type = Input::post('user_type', 'admin');
 			$is_active = Input::post('is_active', 1);
 
 			// Kiểm tra dữ liệu đầu vào
 			if (empty($username) || empty($email)) {
+				\Log::warning('Admin update failed: Missing required fields - ID: ' . $id . ', Username: ' . $username . ', Email: ' . $email);
 				$data['error_message'] = 'Vui lòng nhập đầy đủ thông tin bắt buộc.';
 			} else {
 				// Kiểm tra username và email đã tồn tại chưa (trừ admin hiện tại)
 				$existing_admin = Model_Admin::find_by_username_or_email($username);
 				if ($existing_admin && $existing_admin->id != $id) {
+					\Log::warning('Admin update failed: Username already exists - ID: ' . $id . ', Username: ' . $username);
 					$data['error_message'] = 'Username đã tồn tại.';
 				} else {
 					$existing_admin = Model_Admin::find_by_username_or_email($email);
 					if ($existing_admin && $existing_admin->id != $id) {
+						\Log::warning('Admin update failed: Email already exists - ID: ' . $id . ', Email: ' . $email);
 						$data['error_message'] = 'Email đã tồn tại.';
 					} else {
 						// Cập nhật admin
@@ -161,6 +171,7 @@ class Controller_Admin_User extends Controller_Admin_Base
 							'username' => $username,
 							'email' => $email,
 							'full_name' => $full_name,
+							'user_type' => $user_type,
 							'is_active' => $is_active
 						);
 
@@ -170,11 +181,12 @@ class Controller_Admin_User extends Controller_Admin_Base
 						}
 
 						if ($data['admin']->update_admin($update_data)) {
-							$data['success_message'] = 'Cập nhật admin thành công!';
-							// Reload data
-							$data['admin'] = Model_Admin::find($id);
+							\Log::info('Admin updated successfully: ID ' . $id . ', Username: ' . $username);
+							Session::set_flash('success', 'Cập nhật admin thành công!');
+							Response::redirect('admin/users');
 						} else {
-							$data['error_message'] = 'Có lỗi xảy ra khi cập nhật admin.';
+							\Log::error('Failed to update admin: ID ' . $id . ', Username: ' . $username);
+							$data['error_message'] = 'Có lỗi xảy ra khi cập nhật admin. Vui lòng thử lại.';
 						}
 					}
 				}
@@ -217,7 +229,7 @@ class Controller_Admin_User extends Controller_Admin_Base
 		}
 
 		if ($admin->soft_delete()) {
-			\Log::info('Admin deleted successfully: ID ' . $admin->id);
+			\Log::info('Admin soft deleted successfully: ID ' . $admin->id . ', Username: ' . $admin->username);
 			
 			// Tạo CSRF token mới sau khi xử lý thành công
 			$new_csrf_token = Security::fetch_token();
@@ -229,8 +241,8 @@ class Controller_Admin_User extends Controller_Admin_Base
 			
 			return $this->success_response('Xóa admin thành công!', $data);
 		} else {
-			\Log::error('Failed to delete admin: ID ' . $admin->id);
-			return $this->error_response('Có lỗi xảy ra khi xóa admin.');
+			\Log::error('Failed to soft delete admin: ID ' . $admin->id . ', Username: ' . $admin->username);
+			return $this->error_response('Có lỗi xảy ra khi xóa admin. Vui lòng thử lại.');
 		}
 	}
 
@@ -295,6 +307,8 @@ class Controller_Admin_User extends Controller_Admin_Base
 					$admin->$key = $value;
 				}
 				if ($admin->restore()) {
+					\Log::info('Admin restored successfully: ID ' . $admin->id . ', Username: ' . $admin->username);
+					
 					// Tạo CSRF token mới sau khi xử lý thành công
 					$new_csrf_token = Security::fetch_token();
 					
@@ -305,11 +319,13 @@ class Controller_Admin_User extends Controller_Admin_Base
 					
 					return $this->success_response('Khôi phục admin thành công!', $data);
 				} else {
-					return $this->error_response('Khôi phục thất bại.');
+					\Log::error('Failed to restore admin: ID ' . $admin->id . ', Username: ' . $admin->username);
+					return $this->error_response('Khôi phục thất bại. Vui lòng thử lại.');
 				}
 			}
 		} catch (\Exception $e) {
-			return $this->error_response('Có lỗi xảy ra.');
+			\Log::error('Exception in admin restore: ' . $e->getMessage() . ' - ID: ' . $id);
+			return $this->error_response('Có lỗi xảy ra. Vui lòng thử lại.');
 		}
 	}
 
@@ -343,6 +359,8 @@ class Controller_Admin_User extends Controller_Admin_Base
 					$admin->$key = $value; 
 				}
 				if ($admin->hard_delete()) {
+					\Log::info('Admin hard deleted successfully: ID ' . $admin->id . ', Username: ' . $admin->username);
+					
 					// Tạo CSRF token mới sau khi xử lý thành công
 					$new_csrf_token = Security::fetch_token();
 					
@@ -353,11 +371,13 @@ class Controller_Admin_User extends Controller_Admin_Base
 					
 					return $this->success_response('Đã xóa vĩnh viễn!', $data);
 				} else {
-					return $this->error_response('Xóa vĩnh viễn thất bại.');
+					\Log::error('Failed to hard delete admin: ID ' . $admin->id . ', Username: ' . $admin->username);
+					return $this->error_response('Xóa vĩnh viễn thất bại. Vui lòng thử lại.');
 				}
 			}
 		} catch (\Exception $e) {
-			return $this->error_response('Có lỗi xảy ra.');
+			\Log::error('Exception in admin hard delete: ' . $e->getMessage() . ' - ID: ' . $id);
+			return $this->error_response('Có lỗi xảy ra. Vui lòng thử lại.');
 		}
 	}
 
@@ -389,6 +409,12 @@ class Controller_Admin_User extends Controller_Admin_Base
 
 		$count = Model_Admin::bulk_soft_delete($ids);
 		
+		if ($count > 0) {
+			\Log::info('Bulk soft delete completed: ' . $count . ' admins deleted, IDs: ' . implode(',', $ids));
+		} else {
+			\Log::warning('Bulk soft delete failed: No admins were deleted, IDs: ' . implode(',', $ids));
+		}
+		
 		// Tạo CSRF token mới sau khi xử lý thành công
 		$new_csrf_token = Security::fetch_token();
 		
@@ -418,6 +444,12 @@ class Controller_Admin_User extends Controller_Admin_Base
 
 		$count = Model_Admin::bulk_restore($ids);
 		
+		if ($count > 0) {
+			\Log::info('Bulk restore completed: ' . $count . ' admins restored, IDs: ' . implode(',', $ids));
+		} else {
+			\Log::warning('Bulk restore failed: No admins were restored, IDs: ' . implode(',', $ids));
+		}
+		
 		// Tạo CSRF token mới sau khi xử lý thành công
 		$new_csrf_token = Security::fetch_token();
 		
@@ -446,6 +478,12 @@ class Controller_Admin_User extends Controller_Admin_Base
 		}
 
 		$count = Model_Admin::bulk_hard_delete($ids);
+		
+		if ($count > 0) {
+			\Log::info('Bulk hard delete completed: ' . $count . ' admins permanently deleted, IDs: ' . implode(',', $ids));
+		} else {
+			\Log::warning('Bulk hard delete failed: No admins were deleted, IDs: ' . implode(',', $ids));
+		}
 		
 		// Tạo CSRF token mới sau khi xử lý thành công
 		$new_csrf_token = Security::fetch_token();

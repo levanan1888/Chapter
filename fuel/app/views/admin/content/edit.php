@@ -16,20 +16,20 @@
 			</div>
 		<?php endif; ?>
 
-		<form method="POST" action="<?php echo Uri::base(); ?>admin/users/edit/<?php echo isset($user) ? $user->id : ''; ?>">
-			<input type="hidden" name="<?php echo \Config::get('security.csrf_token_key'); ?>" value="<?php echo \Security::fetch_token(); ?>">
+		<form method="POST" action="<?php echo Uri::base(); ?>admin/users/edit/<?php echo isset($admin) ? $admin->id : ''; ?>">
+			<?php echo \Form::csrf(); ?>
 			<div class="row">
 				<div class="col-md-6">
 					<div class="mb-3">
 						<label for="username" class="form-label">Tên đăng nhập *</label>
 						<input type="text" class="form-control" id="username" name="username" 
-							   value="<?php echo isset($user) ? $user->username : ''; ?>" required>
+							   value="<?php echo isset($admin) ? $admin->username : ''; ?>" required>
 					</div>
 
 					<div class="mb-3">
 						<label for="email" class="form-label">Email *</label>
 						<input type="email" class="form-control" id="email" name="email" 
-							   value="<?php echo isset($user) ? $user->email : ''; ?>" required>
+							   value="<?php echo isset($admin) ? $admin->email : ''; ?>" required>
 					</div>
 				</div>
 
@@ -37,7 +37,7 @@
 					<div class="mb-3">
 						<label for="full_name" class="form-label">Họ và tên</label>
 						<input type="text" class="form-control" id="full_name" name="full_name" 
-							   value="<?php echo isset($user) ? $user->full_name : ''; ?>">
+							   value="<?php echo isset($admin) ? $admin->full_name : ''; ?>">
 					</div>
 
 					<div class="mb-3">
@@ -48,10 +48,22 @@
 				</div>
 			</div>
 
+			<div class="row">
+				<div class="col-md-6">
+					<div class="mb-3">
+						<label for="user_type" class="form-label">Loại người dùng *</label>
+						<select class="form-control" id="user_type" name="user_type" required>
+							<option value="admin" <?php echo (isset($admin) && $admin->user_type == 'admin') ? 'selected' : ''; ?>>Admin</option>
+							<option value="user" <?php echo (isset($admin) && $admin->user_type == 'user') ? 'selected' : ''; ?>>User</option>
+						</select>
+					</div>
+				</div>
+			</div>
+
 			<div class="mb-3">
 				<div class="form-check">
 					<input class="form-check-input" type="checkbox" name="is_active" value="1" 
-						   id="is_active" <?php echo (isset($user) && $user->is_active) ? 'checked' : ''; ?>>
+						   id="is_active" <?php echo (isset($admin) && $admin->is_active) ? 'checked' : ''; ?>>
 					<label class="form-check-label" for="is_active">
 						Hoạt động
 					</label>

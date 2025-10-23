@@ -101,6 +101,7 @@
 							<th>Tên đăng nhập</th>
 							<th>Email</th>
 							<th>Họ tên</th>
+							<th>Loại người dùng</th>
 							<th>Trạng thái</th>
 							<th>Đăng nhập cuối</th>
 							<th>Ngày tạo</th>
@@ -137,6 +138,11 @@
 							</td>
 							<td><?php echo $user->email; ?></td>
 							<td><?php echo $user->full_name ?: 'Chưa có'; ?></td>
+							<td>
+								<span class="badge bg-<?php echo $user->user_type == 'admin' ? 'primary' : 'info'; ?>">
+									<?php echo $user->user_type == 'admin' ? 'Admin' : 'User'; ?>
+								</span>
+							</td>
 							<td>
 								<span class="badge bg-<?php echo $user->is_active ? 'success' : 'danger'; ?>">
 									<?php echo $user->is_active ? 'Hoạt động' : 'Không hoạt động'; ?>

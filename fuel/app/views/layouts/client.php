@@ -310,7 +310,7 @@
 							results.innerHTML = data.data.map(story => `
 								<div class="search-item" onclick="window.location.href='<?php echo Uri::base(); ?>client/story/${story.slug}'">
 									<div class="d-flex">
-										<img src="${story.cover_image || 'https://via.placeholder.com/50x70'}" 
+										<img src="${story.cover_image || '<?php echo Uri::base(); ?>assets/img/default-story-cover.svg'}" 
 											 class="me-3" style="width: 50px; height: 70px; object-fit: cover;">
 										<div>
 											<h6 class="mb-1">${story.title}</h6>

@@ -70,9 +70,9 @@ class Controller_Admin_Story extends Controller_Admin_Base
 			$author_id = Input::post('author_id', '');
 			$status = Input::post('status', 'ongoing');
 			$category_ids = Input::post('category_ids', array());
-			$is_featured = Input::post('is_featured', 0);
-			$is_hot = Input::post('is_hot', 0);
-			$is_visible = Input::post('is_visible', 1);
+			$is_featured = Input::post('is_featured') ? 1 : 0;
+			$is_hot = Input::post('is_hot') ? 1 : 0;
+			$is_visible = Input::post('is_visible') ? 1 : 0;
 
 			// Validation
 			$errors = array();
@@ -241,9 +241,9 @@ class Controller_Admin_Story extends Controller_Admin_Base
 			$author_id = Input::post('author_id', '');
 			$status = Input::post('status', 'ongoing');
 			$category_ids = Input::post('category_ids', array());
-			$is_featured = Input::post('is_featured', 0);
-			$is_hot = Input::post('is_hot', 0);
-			$is_visible = Input::post('is_visible', 1);
+			$is_featured = Input::post('is_featured') ? 1 : 0;
+			$is_hot = Input::post('is_hot') ? 1 : 0;
+			$is_visible = Input::post('is_visible') ? 1 : 0;
 
 			// Validation
 			$errors = array();

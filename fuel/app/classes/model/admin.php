@@ -36,6 +36,7 @@ class Model_Admin extends \Model
 		'password',
 		'full_name',
 		'is_active',
+		'user_type',
 		'last_login',
 		'google_id',
 		'created_at',
@@ -52,6 +53,7 @@ class Model_Admin extends \Model
 	public $password;
 	public $full_name;
 	public $is_active;
+	public $user_type;
 	public $last_login;
 	public $google_id;
 	public $created_at;
@@ -225,17 +227,19 @@ class Model_Admin extends \Model
 			// Đặt giá trị mặc định
 			$is_active = isset($data['is_active']) ? $data['is_active'] : 1;
 			$full_name = isset($data['full_name']) ? $data['full_name'] : '';
+			$user_type = isset($data['user_type']) ? $data['user_type'] : 'admin';
 			$google_id = isset($data['google_id']) ? $data['google_id'] : null;
 			$created_at = date('Y-m-d H:i:s');
 			$updated_at = date('Y-m-d H:i:s');
 
 			// Thêm vào database với Raw SQL
-			$query = \DB::query("INSERT INTO admins (username, email, password, full_name, is_active, google_id, created_at, updated_at) VALUES (:username, :email, :password, :full_name, :is_active, :google_id, :created_at, :updated_at)");
+			$query = \DB::query("INSERT INTO admins (username, email, password, full_name, is_active, user_type, google_id, created_at, updated_at) VALUES (:username, :email, :password, :full_name, :is_active, :user_type, :google_id, :created_at, :updated_at)");
 			$result = $query->param('username', $data['username'])
 							->param('email', $data['email'])
 							->param('password', $hashed_password)
 							->param('full_name', $full_name)
 							->param('is_active', $is_active)
+							->param('user_type', $user_type)
 							->param('google_id', $google_id)
 							->param('created_at', $created_at)
 							->param('updated_at', $updated_at)
@@ -249,6 +253,7 @@ class Model_Admin extends \Model
 				$admin->password = $hashed_password;
 				$admin->full_name = $full_name;
 				$admin->is_active = $is_active;
+				$admin->user_type = $user_type;
 				$admin->google_id = $google_id;
 				$admin->created_at = $created_at;
 				$admin->updated_at = $updated_at;
@@ -654,6 +659,10 @@ class Model_Admin extends \Model
 			if (isset($data['is_active'])) {
 				$set_parts[] = 'is_active = :is_active';
 				$params['is_active'] = $data['is_active'];
+			}
+			if (isset($data['user_type'])) {
+				$set_parts[] = 'user_type = :user_type';
+				$params['user_type'] = $data['user_type'];
 			}
 			if (isset($data['password'])) {
 				$set_parts[] = 'password = :password';

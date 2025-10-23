@@ -221,6 +221,7 @@ class Controller_Client extends Controller
 
 		$chapter = Model_Chapter::find_by_story_and_number($story->id, $chapter_number);
 		if (!$chapter) {
+			\Log::error('Chapter not found: story_id=' . $story->id . ', chapter_number=' . $chapter_number);
 			Response::redirect('client/story/' . $story_slug);
 		}
 

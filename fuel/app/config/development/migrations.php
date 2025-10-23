@@ -11,8 +11,10 @@ return array (
         5 => '006_create_chapters_table',
         6 => '007_seed_fake_data',
         7 => '008_seed_fake_data_with_faker',
-        8 => '009_alter_categories_add_missing_fields',
-        9 => '010_add_is_visible_to_stories',
+        8 => '009_add_slug_is_active_to_categories',
+        9 => '011_alter_categories_add_missing_fields',
+        10 => '012_add_is_visible_to_stories',
+        11 => '013_add_user_type_to_admins',
       ),
     ),
     'module' => array(    

@@ -137,10 +137,9 @@ class Model_Chapter extends \Model
 	public static function find_by_story_and_number($story_id, $chapter_number)
 	{
 		try {
-			$query = \DB::query("SELECT * FROM chapters WHERE story_id = :story_id AND chapter_number = :chapter_number AND is_active = :is_active");
+			$query = \DB::query("SELECT * FROM chapters WHERE story_id = :story_id AND chapter_number = :chapter_number AND deleted_at IS NULL");
 			$result = $query->param('story_id', $story_id)
 							->param('chapter_number', $chapter_number)
-							->param('is_active', 1)
 							->execute();
 
             if ($result->count() > 0) {
@@ -154,6 +153,7 @@ class Model_Chapter extends \Model
 
 			return null;
 		} catch (\Exception $e) {
+			\Log::error('Model_Chapter::find_by_story_and_number error: ' . $e->getMessage());
 			return null;
 		}
 	}
@@ -293,10 +293,9 @@ class Model_Chapter extends \Model
 	public function get_previous_chapter()
 	{
 		try {
-			$query = \DB::query("SELECT * FROM chapters WHERE story_id = :story_id AND chapter_number < :chapter_number AND is_active = :is_active ORDER BY chapter_number DESC LIMIT 1");
+			$query = \DB::query("SELECT * FROM chapters WHERE story_id = :story_id AND chapter_number < :chapter_number AND deleted_at IS NULL ORDER BY chapter_number DESC LIMIT 1");
 			$result = $query->param('story_id', $this->story_id)
 							->param('chapter_number', $this->chapter_number)
-							->param('is_active', 1)
 							->execute();
 
             if ($result->count() > 0) {
@@ -322,10 +321,9 @@ class Model_Chapter extends \Model
 	public function get_next_chapter()
 	{
 		try {
-			$query = \DB::query("SELECT * FROM chapters WHERE story_id = :story_id AND chapter_number > :chapter_number AND is_active = :is_active ORDER BY chapter_number ASC LIMIT 1");
+			$query = \DB::query("SELECT * FROM chapters WHERE story_id = :story_id AND chapter_number > :chapter_number AND deleted_at IS NULL ORDER BY chapter_number ASC LIMIT 1");
 			$result = $query->param('story_id', $this->story_id)
 							->param('chapter_number', $this->chapter_number)
-							->param('is_active', 1)
 							->execute();
 
             if ($result->count() > 0) {
