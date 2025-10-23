@@ -23,7 +23,7 @@ class Controller_Admin_Category extends Controller_Admin_Base
 
 		// Input filters
 		$q = Input::get('q', '');
-		$status = Input::get('status', 'active'); // active | inactive | all
+		$status = Input::get('status', 'all'); // active | inactive | all
 		$sort = Input::get('sort', 'created_at_desc');
 		$page = max(1, (int) Input::get('page', 1));
 		$perPage = 12;
@@ -254,6 +254,12 @@ class Controller_Admin_Category extends Controller_Admin_Base
 			Response::redirect('admin/categories');
 		}
 
+		// Kiểm tra CSRF token
+		if (!Security::check_token()) {
+			Session::set_flash('error', 'Token bảo mật không hợp lệ. Vui lòng thử lại.');
+			Response::redirect('admin/categories');
+		}
+
 		if (empty($id)) {
 			Session::set_flash('error', 'ID không hợp lệ.');
 			Response::redirect('admin/categories');
@@ -266,12 +272,78 @@ class Controller_Admin_Category extends Controller_Admin_Base
 			Response::redirect('admin/categories');
 		}
 
+		// Kiểm tra trạng thái danh mục
+		if ($category->is_active == 0) {
+			Session::set_flash('error', 'Không thể xóa danh mục không hoạt động. Vui lòng kích hoạt danh mục trước khi xóa.');
+			Response::redirect('admin/categories');
+		}
+
+		if ($category->deleted_at) {
+			Session::set_flash('error', 'Danh mục đã bị xóa trước đó.');
+			Response::redirect('admin/categories');
+		}
+
 		if ($category->soft_delete()) {
 			Session::set_flash('success', 'Xóa danh mục thành công!');
 			Response::redirect('admin/categories');
 		} else {
 			Session::set_flash('error', 'Có lỗi xảy ra khi xóa danh mục.');
 			Response::redirect('admin/categories');
+		}
+	}
+
+	/**
+	 * Toggle trạng thái danh mục (AJAX)
+	 * 
+	 * @param int $id ID của danh mục
+	 * @return Response
+	 */
+	public function action_toggle_status($id = null)
+	{
+		$this->require_login();
+
+		// Chỉ cho phép POST request
+		if (Input::method() !== 'POST') {
+			return $this->error_response('Method not allowed', 405);
+		}
+
+		// Kiểm tra CSRF token
+		if (!Security::check_token()) {
+			return $this->error_response('Invalid CSRF token', 403);
+		}
+
+		if (empty($id)) {
+			return $this->error_response('ID không hợp lệ.', 400);
+		}
+
+		$category = Model_Category::find($id);
+		
+		if (!$category) {
+			return $this->error_response('Không tìm thấy danh mục.', 404);
+		}
+
+		if ($category->deleted_at) {
+			return $this->error_response('Không thể thay đổi trạng thái danh mục đã bị xóa.', 400);
+		}
+
+		$is_active = (int) Input::post('is_active', 0);
+		
+		// Cập nhật trạng thái danh mục
+		$result = $category->update_category(array('is_active' => $is_active));
+		
+		if ($result) {
+			// Tạo CSRF token mới sau khi xử lý thành công
+			$new_csrf_token = Security::fetch_token();
+			
+			$data = array(
+				'id' => $category->id,
+				'is_active' => $is_active,
+				'csrf_token' => $new_csrf_token
+			);
+			
+			return $this->success_response($is_active ? 'Danh mục đã được kích hoạt.' : 'Danh mục đã được ẩn.', $data);
+		} else {
+			return $this->error_response('Có lỗi xảy ra khi cập nhật trạng thái danh mục.', 500);
 		}
 	}
 
@@ -550,10 +622,17 @@ class Controller_Admin_Category extends Controller_Admin_Base
 
 		$deleted_count = 0;
 		$error_count = 0;
+		$inactive_count = 0;
 
 		foreach ($category_ids as $id) {
 			$category = Model_Category::find($id);
 			if ($category && !$category->deleted_at) {
+				// Kiểm tra trạng thái danh mục
+				if ($category->is_active == 0) {
+					$inactive_count++;
+					continue;
+				}
+				
 				if ($category->soft_delete()) {
 					$deleted_count++;
 				} else {
@@ -566,6 +645,10 @@ class Controller_Admin_Category extends Controller_Admin_Base
 
 		if ($deleted_count > 0) {
 			Session::set_flash('success', "Đã xóa thành công {$deleted_count} danh mục.");
+		}
+		
+		if ($inactive_count > 0) {
+			Session::set_flash('warning', "Có {$inactive_count} danh mục không hoạt động không thể xóa. Vui lòng kích hoạt trước khi xóa.");
 		}
 		
 		if ($error_count > 0) {

@@ -196,15 +196,13 @@ class Model_Chapter extends \Model
 	public static function get_chapters_by_story($story_id, $limit = null, $offset = 0)
 	{
 		try {
-			// Original method filtered by is_active, which may not exist depending on schema.
-			// Keep existing behavior but add guard logs to aid debugging.
-			$sql = "SELECT * FROM chapters WHERE story_id = :story_id AND is_active = :is_active ORDER BY chapter_number ASC";
+			$sql = "SELECT * FROM chapters WHERE story_id = :story_id AND deleted_at IS NULL ORDER BY chapter_number ASC";
 			if ($limit) {
 				$sql .= " LIMIT :limit OFFSET :offset";
 			}
 			
 			$query = \DB::query($sql);
-			$query->param('story_id', $story_id)->param('is_active', 1);
+			$query->param('story_id', $story_id);
 			if ($limit) {
 				$query->param('limit', $limit)->param('offset', $offset);
 			}
@@ -350,8 +348,8 @@ class Model_Chapter extends \Model
 	public static function count_by_story($story_id)
 	{
 		try {
-			$query = \DB::query("SELECT COUNT(*) as total FROM chapters WHERE story_id = :story_id AND is_active = :is_active");
-			$result = $query->param('story_id', $story_id)->param('is_active', 1)->execute();
+			$query = \DB::query("SELECT COUNT(*) as total FROM chapters WHERE story_id = :story_id AND deleted_at IS NULL");
+			$result = $query->param('story_id', $story_id)->execute();
 			$val = (int) $result->current()['total'];
 			\Log::info('Model_Chapter::count_by_story', array('story_id' => $story_id, 'count' => $val));
 			return $val;
@@ -386,8 +384,8 @@ class Model_Chapter extends \Model
 	public static function count_all()
 	{
 		try {
-			$query = \DB::query("SELECT COUNT(*) as total FROM chapters WHERE is_active = :is_active");
-			$result = $query->param('is_active', 1)->execute();
+			$query = \DB::query("SELECT COUNT(*) as total FROM chapters WHERE deleted_at IS NULL");
+			$result = $query->execute();
 			return (int) $result->current()['total'];
 		} catch (\Exception $e) {
 			return 0;

@@ -116,6 +116,7 @@ return array(
 	'admin/categories/api/list' => 'admin/category/api_list',
 	'admin/categories/api/create' => 'admin/category/api_create',
 	'admin/categories/api/update-order' => 'admin/category/api_update_order',
+	'admin/categories/toggle_status/(:num)' => 'admin/category/toggle_status/$1',
 	
 	// Author management routes
 	'admin/authors' => 'admin/author/index',

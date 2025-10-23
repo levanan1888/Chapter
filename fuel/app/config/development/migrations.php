@@ -15,6 +15,8 @@ return array (
         9 => '011_alter_categories_add_missing_fields',
         10 => '012_add_is_visible_to_stories',
         11 => '013_add_user_type_to_admins',
+        12 => '014_update_stories_visibility_for_cascade',
+        13 => '015_add_original_visibility_to_stories',
       ),
     ),
     'module' => array(    

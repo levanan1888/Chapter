@@ -151,6 +151,73 @@
 <?php endif; ?>
 
 <script>
+// Initialize CSRF token on page load
+window.currentCsrfToken = '<?php echo \Security::fetch_token(); ?>';
+console.log('Initial CSRF token:', window.currentCsrfToken);
+
+// Update CSRF token in meta tag and hidden form when page loads
+document.addEventListener('DOMContentLoaded', function() {
+	const metaToken = document.querySelector('meta[name="csrf-token"]');
+	const hiddenTokens = document.querySelectorAll('input[name="<?php echo \Config::get('security.csrf_token_key'); ?>"]');
+	
+	if (metaToken) {
+		metaToken.setAttribute('content', window.currentCsrfToken);
+	}
+	hiddenTokens.forEach(token => {
+		token.value = window.currentCsrfToken;
+	});
+});
+
+// Function to refresh CSRF token
+function refreshCsrfToken() {
+	fetch('<?php echo Uri::base(); ?>admin/chapters', {
+		method: 'GET',
+		headers: {
+			'X-Requested-With': 'XMLHttpRequest'
+		}
+	})
+	.then(response => response.text())
+	.then(html => {
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(html, 'text/html');
+		const newToken = doc.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+						doc.querySelector('input[name="<?php echo \Config::get('security.csrf_token_key'); ?>"]')?.value;
+		if (newToken) {
+			window.currentCsrfToken = newToken;
+			
+			// Update meta tag and hidden forms with new token
+			const metaToken = document.querySelector('meta[name="csrf-token"]');
+			const hiddenTokens = document.querySelectorAll('input[name="<?php echo \Config::get('security.csrf_token_key'); ?>"]');
+			
+			if (metaToken) {
+				metaToken.setAttribute('content', newToken);
+			}
+			hiddenTokens.forEach(token => {
+				token.value = newToken;
+			});
+			
+			console.log('CSRF token refreshed:', newToken);
+		}
+	})
+	.catch(err => {
+		console.error('Failed to refresh CSRF token:', err);
+	});
+}
+
+// Refresh CSRF token when page becomes visible (user returns from another page)
+document.addEventListener('visibilitychange', function() {
+	if (!document.hidden) {
+		console.log('Page became visible, refreshing CSRF token...');
+		refreshCsrfToken();
+	}
+});
+
+// Also refresh token when page gains focus
+window.addEventListener('focus', function() {
+	console.log('Window gained focus, refreshing CSRF token...');
+	refreshCsrfToken();
+});
+
 function deleteChapter(chapterId) {
 	if (confirm('Bạn có chắc chắn muốn xóa chương này? Hành động này không thể hoàn tác.')) {
 		// Tạo form ẩn để submit
@@ -158,11 +225,11 @@ function deleteChapter(chapterId) {
 		form.method = 'POST';
 		form.action = '<?php echo Uri::base(); ?>admin/chapters/delete/' + chapterId;
 		
-		// Thêm CSRF token
+		// Thêm CSRF token (sử dụng token hiện tại)
 		const csrfToken = document.createElement('input');
 		csrfToken.type = 'hidden';
 		csrfToken.name = 'fuel_csrf_token';
-		csrfToken.value = '<?php echo \Security::fetch_token(); ?>';
+		csrfToken.value = window.currentCsrfToken || '<?php echo \Security::fetch_token(); ?>';
 		form.appendChild(csrfToken);
 		
 		document.body.appendChild(form);

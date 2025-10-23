@@ -12,6 +12,11 @@
 	</div>
 </div>
 
+<!-- Hidden form for CSRF token -->
+<form id="csrf-form" style="display: none;">
+	<input type="hidden" name="<?php echo \Config::get('security.csrf_token_key'); ?>" value="<?php echo \Security::fetch_token(); ?>">
+</form>
+
 <!-- Search and Filter Bar -->
 <div class="card mb-4">
 	<div class="card-body">
@@ -25,9 +30,9 @@
 			<div class="col-md-3">
 				<label for="status" class="form-label">Trạng thái</label>
 				<select class="form-select" id="status" name="status">
-					<option value="">Tất cả trạng thái</option>
+					<option value="all" <?php echo (isset($status) && $status === 'all') ? 'selected' : ''; ?>>Tất cả trạng thái</option>
 					<option value="active" <?php echo (isset($status) && $status === 'active') ? 'selected' : ''; ?>>Hoạt động</option>
-					<option value="deleted" <?php echo (isset($status) && $status === 'deleted') ? 'selected' : ''; ?>>Đã xóa</option>
+					<option value="inactive" <?php echo (isset($status) && $status === 'inactive') ? 'selected' : ''; ?>>Không hoạt động</option>
 				</select>
 			</div>
 			<div class="col-md-3">
@@ -97,6 +102,7 @@
 							</th>
 							<th>Tên danh mục</th>
 							<th>Mô tả</th>
+							<th>Trạng thái</th>
 							<th>Số truyện</th>
 							<th>Ngày tạo</th>
 							<th>Thao tác</th>
@@ -129,7 +135,35 @@
 								<?php endif; ?>
 							</td>
 							<td>
-								<span class="badge bg-info"><?php echo $category->story_count ?? 0; ?> truyện</span>
+								<?php if ($category->deleted_at): ?>
+									<span class="badge bg-danger">
+										<i class="fas fa-trash me-1"></i>Đã xóa
+									</span>
+								<?php else: ?>
+									<div class="form-check form-switch d-flex justify-content-center">
+										<input class="form-check-input category-toggle" 
+											   type="checkbox" 
+											   role="switch"
+											   id="category_<?php echo $category->id; ?>"
+											   data-category-id="<?php echo $category->id; ?>"
+											   data-current-active="<?php echo $category->is_active; ?>"
+											   <?php echo $category->is_active ? 'checked' : ''; ?>>
+										<label class="form-check-label visibility-text ms-2" for="category_<?php echo $category->id; ?>">
+											<?php echo $category->is_active ? 'Hoạt động' : 'Không hoạt động'; ?>
+										</label>
+									</div>
+								<?php endif; ?>
+							</td>
+							<td>
+								<?php 
+								$story_count = $category->story_count ?? 0;
+								if ($story_count > 0): ?>
+									<span class="badge bg-warning" title="Có <?php echo $story_count; ?> truyện thuộc danh mục này. Xóa danh mục sẽ ẩn tất cả truyện này.">
+										<i class="fas fa-exclamation-triangle me-1"></i><?php echo $story_count; ?> truyện
+									</span>
+								<?php else: ?>
+									<span class="badge bg-secondary">0 truyện</span>
+								<?php endif; ?>
 							</td>
 							<td><?php echo date('d/m/Y', strtotime($category->created_at)); ?></td>
 							<td>
@@ -146,11 +180,15 @@
 										<span class="btn btn-sm btn-outline-secondary" title="Đã xóa">
 											<i class="fas fa-trash-alt"></i>
 										</span>
+									<?php elseif ($category->is_active == 0): ?>
+										<button type="button" class="btn btn-sm btn-outline-warning" title="Danh mục không hoạt động - không thể xóa">
+											<i class="fas fa-ban"></i>
+										</button>
 									<?php else: ?>
 										<form method="POST" action="<?php echo Uri::base(); ?>admin/categories/delete/<?php echo $category->id; ?>" 
-											  style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn xóa danh mục này?')">
+											  style="display: inline;" onsubmit="return confirmDeleteCategory(<?php echo $story_count; ?>, '<?php echo addslashes($category->name); ?>')">
 											<input type="hidden" name="<?php echo \Config::get('security.csrf_token_key'); ?>" value="<?php echo \Security::fetch_token(); ?>">
-											<button type="submit" class="btn btn-sm btn-outline-danger" title="Xóa">
+											<button type="submit" class="btn btn-sm btn-outline-danger" title="Xóa danh mục">
 												<i class="fas fa-trash"></i>
 											</button>
 										</form>
@@ -309,5 +347,301 @@ document.addEventListener('DOMContentLoaded', function() {
 			bulkDeleteForm.submit();
 		}
 	});
+
+	// Function to confirm category deletion with story count warning
+	window.confirmDeleteCategory = function(storyCount, categoryName) {
+		if (storyCount > 0) {
+			return confirm(`⚠️ CẢNH BÁO!\n\nDanh mục "${categoryName}" có ${storyCount} truyện.\n\nKhi xóa danh mục này:\n• Tất cả ${storyCount} truyện sẽ bị ẨN\n• Các truyện sẽ không hiển thị trên website\n• Bạn có thể khôi phục bằng cách restore danh mục\n\nBạn có chắc chắn muốn tiếp tục?`);
+		} else {
+			return confirm(`Bạn có chắc chắn muốn xóa danh mục "${categoryName}"?\n\nDanh mục này không có truyện nào nên sẽ không ảnh hưởng đến nội dung.`);
+		}
+	};
+
+	// Category toggle functionality
+	const categoryToggles = document.querySelectorAll('.category-toggle');
+	categoryToggles.forEach(toggle => {
+		toggle.addEventListener('change', function() {
+			const categoryId = this.getAttribute('data-category-id');
+			const currentActive = this.getAttribute('data-current-active');
+			const switchElement = this;
+			const text = this.parentElement.querySelector('.visibility-text');
+			
+			// Disable switch during request
+			switchElement.disabled = true;
+			text.textContent = 'Đang xử lý...';
+			
+			// Prepare form data with current CSRF token
+			// Always get fresh token from meta tag first, then fallback to stored token
+			let csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+							document.querySelector('#csrf-form input[name="<?php echo \Config::get('security.csrf_token_key'); ?>"]')?.value ||
+							window.currentCsrfToken ||
+							'<?php echo \Security::fetch_token(); ?>';
+			console.log('Sending CSRF token:', csrfToken);
+			console.log('Category ID:', categoryId);
+			console.log('Is Active:', this.checked ? 1 : 0);
+			
+			const formData = new URLSearchParams();
+			formData.append('is_active', this.checked ? 1 : 0);
+			formData.append('fuel_csrf_token', csrfToken);
+			
+			// Send AJAX request
+			fetch('<?php echo Uri::base(); ?>admin/categories/toggle_status/' + categoryId, {
+				method: 'POST',
+				body: formData,
+				headers: {
+					'X-Requested-With': 'XMLHttpRequest',
+					'Content-Type': 'application/x-www-form-urlencoded'
+				}
+			})
+			.then(response => {
+				console.log('Response status:', response.status);
+				return response.json();
+			})
+			.then(data => {
+				console.log('Response data:', data);
+				if (data.success) {
+					// Update switch state
+					const newActive = data.data.is_active;
+					const newText = newActive ? 'Hoạt động' : 'Không hoạt động';
+					
+					switchElement.checked = newActive;
+					switchElement.setAttribute('data-current-active', newActive);
+					text.textContent = newText;
+					
+					// Store new CSRF token for next request
+					if (data.data.csrf_token) {
+						window.currentCsrfToken = data.data.csrf_token;
+						console.log('New CSRF token received:', data.data.csrf_token);
+					}
+					
+					// Show success message
+					showAlert('success', data.message);
+				} else {
+					// Revert switch state on error
+					switchElement.checked = !switchElement.checked;
+					text.textContent = switchElement.checked ? 'Hoạt động' : 'Không hoạt động';
+					
+					// Show error message
+					showAlert('danger', data.message || 'Có lỗi xảy ra khi cập nhật trạng thái');
+					
+					// If CSRF error, refresh token and retry
+					if (data.message && data.message.includes('CSRF')) {
+						console.log('CSRF error detected, refreshing token and retrying...');
+						refreshCsrfToken();
+						
+						// Wait a bit for token refresh, then retry the request
+						setTimeout(() => {
+							const newToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+											window.currentCsrfToken;
+							if (newToken) {
+								console.log('Retrying with fresh CSRF token:', newToken);
+								// Retry the request with fresh token
+								const retryFormData = new URLSearchParams();
+								retryFormData.append('is_active', switchElement.checked ? 1 : 0);
+								retryFormData.append('fuel_csrf_token', newToken);
+								
+								fetch('<?php echo Uri::base(); ?>admin/categories/toggle_status/' + categoryId, {
+									method: 'POST',
+									body: retryFormData,
+									headers: {
+										'X-Requested-With': 'XMLHttpRequest',
+										'Content-Type': 'application/x-www-form-urlencoded'
+									}
+								})
+								.then(response => response.json())
+								.then(retryData => {
+									if (retryData.success) {
+										// Update switch state
+										const newActive = retryData.data.is_active;
+										const newText = newActive ? 'Hoạt động' : 'Không hoạt động';
+										
+										switchElement.checked = newActive;
+										switchElement.setAttribute('data-current-active', newActive);
+										text.textContent = newText;
+										
+										// Store new CSRF token
+										if (retryData.data.csrf_token) {
+											window.currentCsrfToken = retryData.data.csrf_token;
+										}
+										
+										showAlert('success', retryData.message);
+									} else {
+										showAlert('danger', retryData.message || 'Có lỗi xảy ra khi cập nhật trạng thái');
+										// Revert switch state
+										switchElement.checked = !switchElement.checked;
+										text.textContent = switchElement.checked ? 'Hoạt động' : 'Không hoạt động';
+									}
+								})
+								.catch(retryError => {
+									console.error('Retry failed:', retryError);
+									showAlert('danger', 'Có lỗi xảy ra khi cập nhật trạng thái');
+									// Revert switch state
+									switchElement.checked = !switchElement.checked;
+									text.textContent = switchElement.checked ? 'Hoạt động' : 'Không hoạt động';
+								})
+								.finally(() => {
+									switchElement.disabled = false;
+								});
+							} else {
+								showAlert('danger', 'Không thể lấy token bảo mật mới. Vui lòng tải lại trang.');
+								// Revert switch state
+								switchElement.checked = !switchElement.checked;
+								text.textContent = switchElement.checked ? 'Hoạt động' : 'Không hoạt động';
+								switchElement.disabled = false;
+							}
+						}, 500);
+						return; // Don't show error message for CSRF, we're retrying
+					}
+				}
+			})
+			.catch(error => {
+				console.error('Error:', error);
+				// Revert switch state on error
+				switchElement.checked = !switchElement.checked;
+				text.textContent = switchElement.checked ? 'Hoạt động' : 'Không hoạt động';
+				showAlert('danger', 'Có lỗi xảy ra khi cập nhật trạng thái');
+			})
+			.finally(() => {
+				// Re-enable switch
+				switchElement.disabled = false;
+			});
+		});
+	});
+
+	// Initialize CSRF token on page load
+	window.currentCsrfToken = '<?php echo \Security::fetch_token(); ?>';
+	console.log('Initial CSRF token:', window.currentCsrfToken);
+	
+	// Update CSRF token in meta tag and hidden form when page loads
+	document.addEventListener('DOMContentLoaded', function() {
+		const metaToken = document.querySelector('meta[name="csrf-token"]');
+		const hiddenToken = document.querySelector('#csrf-form input[name="<?php echo \Config::get('security.csrf_token_key'); ?>"]');
+		
+		if (metaToken) {
+			metaToken.setAttribute('content', window.currentCsrfToken);
+		}
+		if (hiddenToken) {
+			hiddenToken.value = window.currentCsrfToken;
+		}
+	});
+	
+	// Function to refresh CSRF token
+	function refreshCsrfToken() {
+		fetch('<?php echo Uri::base(); ?>admin/categories', {
+			method: 'GET',
+			headers: {
+				'X-Requested-With': 'XMLHttpRequest'
+			}
+		})
+		.then(response => response.text())
+		.then(html => {
+			const parser = new DOMParser();
+			const doc = parser.parseFromString(html, 'text/html');
+			const newToken = doc.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+							doc.querySelector('#csrf-form input[name="<?php echo \Config::get('security.csrf_token_key'); ?>"]')?.value;
+			if (newToken) {
+				window.currentCsrfToken = newToken;
+				
+				// Update meta tag and hidden form with new token
+				const metaToken = document.querySelector('meta[name="csrf-token"]');
+				const hiddenToken = document.querySelector('#csrf-form input[name="<?php echo \Config::get('security.csrf_token_key'); ?>"]');
+				
+				if (metaToken) {
+					metaToken.setAttribute('content', newToken);
+				}
+				if (hiddenToken) {
+					hiddenToken.value = newToken;
+				}
+				
+				console.log('CSRF token refreshed:', newToken);
+			}
+		})
+		.catch(err => {
+			console.error('Failed to refresh CSRF token:', err);
+		});
+	}
+	
+	// Refresh CSRF token when page becomes visible (user returns from another page)
+	document.addEventListener('visibilitychange', function() {
+		if (!document.hidden) {
+			console.log('Page became visible, refreshing CSRF token...');
+			refreshCsrfToken();
+		}
+	});
+	
+	// Also refresh token when page gains focus
+	window.addEventListener('focus', function() {
+		console.log('Window gained focus, refreshing CSRF token...');
+		refreshCsrfToken();
+	});
+
+	// Alert function
+	function showAlert(type, message) {
+		const alertDiv = document.createElement('div');
+		alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+		alertDiv.innerHTML = `
+			<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+			${message}
+			<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+		`;
+		
+		// Insert at the top of the content
+		const content = document.querySelector('.card-body');
+		if (content) {
+			content.insertBefore(alertDiv, content.firstChild);
+			
+			// Auto remove after 5 seconds
+			setTimeout(() => {
+				if (alertDiv.parentNode) {
+					alertDiv.remove();
+				}
+			}, 5000);
+		}
+	}
 });
+
+// Custom CSS for toggle switch
+const style = document.createElement('style');
+style.textContent = `
+	.category-toggle {
+		width: 3rem !important;
+		height: 1.5rem !important;
+		background-color: #6c757d !important;
+		border: none !important;
+		border-radius: 1rem !important;
+		position: relative !important;
+		transition: background-color 0.3s ease !important;
+		cursor: pointer !important;
+	}
+	
+	.category-toggle:checked {
+		background-color: #198754 !important;
+	}
+	
+	.category-toggle:focus {
+		box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25) !important;
+	}
+	
+	.category-toggle:disabled {
+		opacity: 0.6 !important;
+		cursor: not-allowed !important;
+	}
+	
+	.category-toggle::before {
+		content: '';
+		position: absolute;
+		top: 0.125rem;
+		left: 0.125rem;
+		width: 1.25rem;
+		height: 1.25rem;
+		background-color: white;
+		border-radius: 50%;
+		transition: transform 0.3s ease;
+	}
+	
+	.category-toggle:checked::before {
+		transform: translateX(1.5rem);
+	}
+`;
+document.head.appendChild(style);
 </script>

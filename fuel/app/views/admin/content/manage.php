@@ -241,6 +241,73 @@
 </div>
 
 <script>
+// Initialize CSRF token on page load
+window.currentCsrfToken = '<?php echo \Security::fetch_token(); ?>';
+console.log('Initial CSRF token:', window.currentCsrfToken);
+
+// Update CSRF token in meta tag and hidden form when page loads
+document.addEventListener('DOMContentLoaded', function() {
+	const metaToken = document.querySelector('meta[name="csrf-token"]');
+	const hiddenTokens = document.querySelectorAll('input[name="<?php echo \Config::get('security.csrf_token_key'); ?>"]');
+	
+	if (metaToken) {
+		metaToken.setAttribute('content', window.currentCsrfToken);
+	}
+	hiddenTokens.forEach(token => {
+		token.value = window.currentCsrfToken;
+	});
+});
+
+// Function to refresh CSRF token
+function refreshCsrfToken() {
+	fetch('<?php echo Uri::base(); ?>admin/users', {
+		method: 'GET',
+		headers: {
+			'X-Requested-With': 'XMLHttpRequest'
+		}
+	})
+	.then(response => response.text())
+	.then(html => {
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(html, 'text/html');
+		const newToken = doc.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+						doc.querySelector('input[name="<?php echo \Config::get('security.csrf_token_key'); ?>"]')?.value;
+		if (newToken) {
+			window.currentCsrfToken = newToken;
+			
+			// Update meta tag and hidden forms with new token
+			const metaToken = document.querySelector('meta[name="csrf-token"]');
+			const hiddenTokens = document.querySelectorAll('input[name="<?php echo \Config::get('security.csrf_token_key'); ?>"]');
+			
+			if (metaToken) {
+				metaToken.setAttribute('content', newToken);
+			}
+			hiddenTokens.forEach(token => {
+				token.value = newToken;
+			});
+			
+			console.log('CSRF token refreshed:', newToken);
+		}
+	})
+	.catch(err => {
+		console.error('Failed to refresh CSRF token:', err);
+	});
+}
+
+// Refresh CSRF token when page becomes visible (user returns from another page)
+document.addEventListener('visibilitychange', function() {
+	if (!document.hidden) {
+		console.log('Page became visible, refreshing CSRF token...');
+		refreshCsrfToken();
+	}
+});
+
+// Also refresh token when page gains focus
+window.addEventListener('focus', function() {
+	console.log('Window gained focus, refreshing CSRF token...');
+	refreshCsrfToken();
+});
+
 // Function to show alert messages
 function showAlert(type, message) {
 	// Remove existing alerts created by JavaScript only

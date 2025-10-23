@@ -41,6 +41,7 @@ class Model_Story extends \Model
 		'is_featured',
 		'is_hot',
 		'is_visible',
+		'original_visibility',
 		'author_name',
 		'categories',
 		'created_at',
@@ -62,6 +63,7 @@ class Model_Story extends \Model
 	public $is_featured;
 	public $is_hot;
 	public $is_visible;
+	public $original_visibility;
 	public $author_name;
 	public $categories;
 	public $created_at;
@@ -84,7 +86,9 @@ class Model_Story extends \Model
 				$data = $result->current();
 				$story = new self();
 				foreach ($data as $key => $value) {
-					$story->$key = $value;
+					if (property_exists($story, $key)) {
+						$story->$key = $value;
+					}
 				}
 				return $story;
 			}
@@ -139,7 +143,9 @@ class Model_Story extends \Model
 				$data = $result->current();
 				$story = new self();
 				foreach ($data as $key => $value) {
-					$story->$key = $value;
+					if (property_exists($story, $key)) {
+						$story->$key = $value;
+					}
 				}
 				return $story;
 			}
@@ -445,11 +451,12 @@ class Model_Story extends \Model
 			$is_featured = isset($data['is_featured']) ? $data['is_featured'] : 0;
 			$is_hot = isset($data['is_hot']) ? $data['is_hot'] : 0;
 			$is_visible = isset($data['is_visible']) ? $data['is_visible'] : 1;
+			$original_visibility = $is_visible; // Set original_visibility = is_visible
 			$created_at = date('Y-m-d H:i:s');
 			$updated_at = date('Y-m-d H:i:s');
 
 			// Thêm vào database với Raw SQL
-			$query = \DB::query("INSERT INTO stories (title, slug, description, cover_image, author_id, status, views, is_featured, is_hot, is_visible, created_at, updated_at) VALUES (:title, :slug, :description, :cover_image, :author_id, :status, :views, :is_featured, :is_hot, :is_visible, :created_at, :updated_at)");
+			$query = \DB::query("INSERT INTO stories (title, slug, description, cover_image, author_id, status, views, is_featured, is_hot, is_visible, original_visibility, created_at, updated_at) VALUES (:title, :slug, :description, :cover_image, :author_id, :status, :views, :is_featured, :is_hot, :is_visible, :original_visibility, :created_at, :updated_at)");
 			$result = $query->param('title', $data['title'])
 							->param('slug', $data['slug'])
 							->param('description', $description)
@@ -460,6 +467,7 @@ class Model_Story extends \Model
 							->param('is_featured', $is_featured)
 							->param('is_hot', $is_hot)
 							->param('is_visible', $is_visible)
+							->param('original_visibility', $original_visibility)
 							->param('created_at', $created_at)
 							->param('updated_at', $updated_at)
 							->execute();
@@ -906,7 +914,10 @@ class Model_Story extends \Model
 					if (!is_string($key)) {
 						continue;
 					}
-					$story->$key = $value;
+					// Chỉ gán giá trị cho các property đã được định nghĩa
+					if (property_exists($story, $key)) {
+						$story->$key = $value;
+					}
 				}
 				
 				// Lấy categories cho story
@@ -1096,7 +1107,9 @@ class Model_Story extends \Model
 					if (!is_string($key)) {
 						continue;
 					}
-					$story->$key = $value;
+					if (property_exists($story, $key)) {
+						$story->$key = $value;
+					}
 				}
 				return $story;
 			}
@@ -1218,14 +1231,16 @@ class Model_Story extends \Model
 			$updated_at = date('Y-m-d H:i:s');
 			$new_visibility = $this->is_visible ? 0 : 1;
 			
-			$query = \DB::query("UPDATE stories SET is_visible = :is_visible, updated_at = :updated_at WHERE id = :id");
+			$query = \DB::query("UPDATE stories SET is_visible = :is_visible, original_visibility = :original_visibility, updated_at = :updated_at WHERE id = :id");
 			$result = $query->param('is_visible', $new_visibility)
+							->param('original_visibility', $new_visibility)
 							->param('updated_at', $updated_at)
 							->param('id', $this->id)
 							->execute();
 				
 			if ($result !== false) {
 				$this->is_visible = $new_visibility;
+				$this->original_visibility = $new_visibility;
 				$this->updated_at = $updated_at;
 				return true;
 			}

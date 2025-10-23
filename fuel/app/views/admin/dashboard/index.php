@@ -162,7 +162,144 @@
 			</div>
 		</div>
 		
-		<!-- System Info -->
-
+		<!-- Top Viewed Stories -->
+		<div class="card mt-3">
+			<div class="card-header">
+				<h5 class="mb-0">
+					<i class="fas fa-fire me-2"></i>Truyện hot nhất
+				</h5>
+			</div>
+			<div class="card-body">
+				<?php if (isset($chart_data['top_viewed_stories']) && !empty($chart_data['top_viewed_stories'])): ?>
+					<?php foreach ($chart_data['top_viewed_stories'] as $index => $story): ?>
+					<div class="d-flex justify-content-between align-items-center mb-2">
+						<div class="flex-grow-1">
+							<span class="badge bg-primary me-2"><?php echo $index + 1; ?></span>
+							<span class="text-truncate" style="max-width: 150px;" title="<?php echo Security::htmlentities($story['title']); ?>">
+								<?php echo Security::htmlentities($story['title']); ?>
+							</span>
+						</div>
+						<small class="text-muted"><?php echo number_format($story['views']); ?></small>
+					</div>
+					<?php endforeach; ?>
+				<?php else: ?>
+					<div class="text-center text-muted py-3">
+						<i class="fas fa-chart-line fa-2x mb-2"></i>
+						<p class="mb-0">Chưa có dữ liệu</p>
+					</div>
+				<?php endif; ?>
+			</div>
+		</div>
 	</div>
 </div>
+
+<!-- Charts Section -->
+<div class="row mt-4">
+	<!-- Stories and Chapters Trend Chart -->
+	<div class="col-lg-8 mb-4">
+		<div class="card">
+			<div class="card-header">
+				<h5 class="mb-0">
+					<i class="fas fa-chart-line me-2"></i>Xu hướng truyện và chương (7 tháng gần nhất)
+				</h5>
+			</div>
+			<div class="card-body">
+				<canvas id="trendChart" height="100"></canvas>
+			</div>
+		</div>
+	</div>
+	
+	<!-- Stories by Category Chart -->
+	<div class="col-lg-4 mb-4">
+		<div class="card">
+			<div class="card-header">
+				<h5 class="mb-0">
+					<i class="fas fa-chart-pie me-2"></i>Truyện theo danh mục
+				</h5>
+			</div>
+			<div class="card-body">
+				<canvas id="categoryChart" height="200"></canvas>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+	// Chart data from PHP
+	const chartData = <?php echo json_encode($chart_data); ?>;
+	
+	// Trend Chart (Stories and Chapters by Month)
+	const trendCtx = document.getElementById('trendChart').getContext('2d');
+	const trendChart = new Chart(trendCtx, {
+		type: 'line',
+		data: {
+			labels: chartData.stories_by_month.map(item => {
+				const date = new Date(item.month + '-01');
+				return date.toLocaleDateString('vi-VN', { month: 'short', year: 'numeric' });
+			}),
+			datasets: [{
+				label: 'Truyện mới',
+				data: chartData.stories_by_month.map(item => item.count),
+				borderColor: 'rgb(75, 192, 192)',
+				backgroundColor: 'rgba(75, 192, 192, 0.2)',
+				tension: 0.1
+			}, {
+				label: 'Chương mới',
+				data: chartData.chapters_by_month.map(item => item.count),
+				borderColor: 'rgb(255, 99, 132)',
+				backgroundColor: 'rgba(255, 99, 132, 0.2)',
+				tension: 0.1
+			}]
+		},
+		options: {
+			responsive: true,
+			maintainAspectRatio: false,
+			plugins: {
+				legend: {
+					position: 'top',
+				},
+				title: {
+					display: false
+				}
+			},
+			scales: {
+				y: {
+					beginAtZero: true
+				}
+			}
+		}
+	});
+	
+	// Category Chart (Pie Chart)
+	const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+	const categoryChart = new Chart(categoryCtx, {
+		type: 'doughnut',
+		data: {
+			labels: chartData.stories_by_category.map(item => item.name),
+			datasets: [{
+				data: chartData.stories_by_category.map(item => item.count),
+				backgroundColor: chartData.stories_by_category.map(item => item.color),
+				borderWidth: 2,
+				borderColor: '#fff'
+			}]
+		},
+		options: {
+			responsive: true,
+			maintainAspectRatio: false,
+			plugins: {
+				legend: {
+					position: 'bottom',
+					labels: {
+						padding: 20,
+						usePointStyle: true
+					}
+				}
+			}
+		}
+	});
+});
+</script>

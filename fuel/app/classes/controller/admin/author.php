@@ -275,6 +275,12 @@ class Controller_Admin_Author extends Controller_Admin_Base
 			Response::redirect('admin/authors');
 		}
 
+		// Kiểm tra CSRF token
+		if (!Security::check_token()) {
+			Session::set_flash('error', 'Token bảo mật không hợp lệ. Vui lòng thử lại.');
+			Response::redirect('admin/authors');
+		}
+
 		if (empty($id)) {
 			\Session::set_flash('error', 'ID không hợp lệ.');
 			\Response::redirect('admin/authors');

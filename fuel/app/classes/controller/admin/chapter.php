@@ -279,6 +279,11 @@ class Controller_Admin_Chapter extends Controller_Admin_Base
 			Response::redirect('admin/stories');
 		}
 
+		// Kiểm tra CSRF token
+		if (!Security::check_token()) {
+			return $this->error_response('Token bảo mật không hợp lệ. Vui lòng thử lại.');
+		}
+
 		if (empty($id)) {
 			return $this->error_response('ID không hợp lệ.');
 		}
@@ -385,6 +390,11 @@ class Controller_Admin_Chapter extends Controller_Admin_Base
 
 		if (Input::method() !== 'POST') {
 			return $this->error_response('Phương thức không hợp lệ.');
+		}
+
+		// Kiểm tra CSRF token
+		if (!Security::check_token()) {
+			return $this->error_response('Token bảo mật không hợp lệ. Vui lòng thử lại.');
 		}
 
 		if (empty($id)) {

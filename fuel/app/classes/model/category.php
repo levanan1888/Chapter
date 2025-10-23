@@ -68,8 +68,8 @@ class Model_Category extends \Model
 	public static function find($id)
 	{
 		try {
-			$query = \DB::query("SELECT * FROM categories WHERE id = :id AND is_active = :is_active");
-			$result = $query->param('id', $id)->param('is_active', 1)->execute();
+			$query = \DB::query("SELECT * FROM categories WHERE id = :id");
+			$result = $query->param('id', $id)->execute();
 
 			if ($result->count() > 0) {
 				$data = $result->current();
@@ -194,29 +194,36 @@ class Model_Category extends \Model
 				$whereParts[] = 'is_active = :is_active';
 				$params['is_active'] = 0;
 			}
+			// For 'all' status, we don't add any is_active filter
 
-			if ($keyword !== null && $keyword !== '') {
-				$whereParts[] = '(name LIKE :kw OR slug LIKE :kw)';
-				$params['kw'] = '%' . $keyword . '%';
-			}
+		if ($keyword !== null && $keyword !== '') {
+			$whereParts[] = '(c.name LIKE :kw OR c.slug LIKE :kw)';
+			$params['kw'] = '%' . $keyword . '%';
+		}
 
 			$sql = 'SELECT c.*, COUNT(s.id) as story_count FROM categories c LEFT JOIN story_categories sc ON c.id = sc.category_id LEFT JOIN stories s ON sc.story_id = s.id AND s.deleted_at IS NULL';
+			$whereParts[] = 'c.deleted_at IS NULL'; // Chỉ hiển thị danh mục chưa bị xóa
 			if (!empty($whereParts)) {
 				$sql .= ' WHERE ' . implode(' AND ', $whereParts);
 			}
 			$sql .= ' GROUP BY c.id';
 			
-			// Add sorting
-			$sort_parts = explode('_', $sort);
-			$sort_field = $sort_parts[0];
-			$sort_direction = strtoupper($sort_parts[1]);
-			
-			$allowed_fields = array('name', 'created_at', 'sort_order');
-			if (in_array($sort_field, $allowed_fields)) {
-				$sql .= ' ORDER BY ' . $sort_field . ' ' . $sort_direction;
-			} else {
-				$sql .= ' ORDER BY created_at DESC';
-			}
+            // Add sorting (robustly parse values like "created_at_desc")
+            $parts = explode('_', (string) $sort);
+            $sort_direction = strtoupper(array_pop($parts));
+            $sort_field = implode('_', $parts);
+
+            $allowed_fields = array('name', 'created_at', 'sort_order');
+            $allowed_directions = array('ASC', 'DESC');
+
+            if (!in_array($sort_field, $allowed_fields)) {
+                $sort_field = 'created_at';
+            }
+            if (!in_array($sort_direction, $allowed_directions)) {
+                $sort_direction = 'DESC';
+            }
+
+            $sql .= ' ORDER BY ' . $sort_field . ' ' . $sort_direction;
 			
 			$sql .= ' LIMIT ' . (int) $limit . ' OFFSET ' . (int) $offset;
 
@@ -268,13 +275,15 @@ class Model_Category extends \Model
 				$whereParts[] = 'is_active = :is_active';
 				$params['is_active'] = 0;
 			}
+			// For 'all' status, we don't add any is_active filter
 
-			if ($keyword !== null && $keyword !== '') {
-				$whereParts[] = '(name LIKE :kw OR slug LIKE :kw)';
-				$params['kw'] = '%' . $keyword . '%';
-			}
+		if ($keyword !== null && $keyword !== '') {
+			$whereParts[] = '(c.name LIKE :kw OR c.slug LIKE :kw)';
+			$params['kw'] = '%' . $keyword . '%';
+		}
 
 			$sql = 'SELECT COUNT(*) as total FROM categories';
+			$whereParts[] = 'deleted_at IS NULL'; // Chỉ đếm danh mục chưa bị xóa
 			if (!empty($whereParts)) {
 				$sql .= ' WHERE ' . implode(' AND ', $whereParts);
 			}
@@ -376,6 +385,13 @@ class Model_Category extends \Model
 	public function update_category(array $data)
 	{
 		try {
+			// Kiểm tra xem có thay đổi is_active không
+			$old_is_active = $this->is_active;
+			$is_active_changed = isset($data['is_active']) && $data['is_active'] != $old_is_active;
+			$new_is_active = isset($data['is_active']) ? $data['is_active'] : $old_is_active;
+			
+			\Log::info("Category {$this->id} update_category: old_is_active = {$old_is_active}, new_is_active = {$new_is_active}, changed = " . ($is_active_changed ? 'true' : 'false'));
+			
 			$updated_at = date('Y-m-d H:i:s');
 			$set_parts = array();
 			$params = array('id' => $this->id, 'updated_at' => $updated_at);
@@ -425,25 +441,42 @@ class Model_Category extends \Model
 					$this->$key = $value;
 				}
 				$this->updated_at = $updated_at;
+
+				// Nếu thay đổi trạng thái is_active, áp dụng cascade effect
+				if ($is_active_changed) {
+					\Log::info("Category {$this->id} is_active changed from {$old_is_active} to {$new_is_active}, applying cascade effect");
+					
+					// Cập nhật trạng thái hiển thị của các truyện liên quan
+					if ($new_is_active == 0) {
+						$this->hide_related_stories();
+					} else {
+						$this->show_related_stories();
+					}
+				}
+
 				return true;
 			}
 			return false;
 		} catch (\Exception $e) {
+			\Log::error('Model_Category::update_category error: ' . $e->getMessage());
 			return false;
 		}
 	}
 
 	/**
-	 * Xóa category (soft delete)
+	 * Xóa category (soft delete) với cascade effect
 	 * 
 	 * @return bool
 	 */
 	public function soft_delete()
 	{
 		try {
+			\DB::start_transaction();
+			
 			$updated_at = date('Y-m-d H:i:s');
 			$deleted_at = date('Y-m-d H:i:s');
 			
+			// 1. Xóa danh mục (soft delete)
 			$query = \DB::query("UPDATE categories SET is_active = :is_active, deleted_at = :deleted_at, updated_at = :updated_at WHERE id = :id");
 			$result = $query->param('is_active', 0)
 							->param('deleted_at', $deleted_at)
@@ -451,59 +484,97 @@ class Model_Category extends \Model
 							->param('id', $this->id)
 							->execute();
 				
-			if ($result !== false) {
-				$this->is_active = 0;
-				$this->deleted_at = $deleted_at;
-				$this->updated_at = $updated_at;
-				return true;
+			if ($result === false) {
+				\DB::rollback_transaction();
+				return false;
 			}
-			return false;
+
+			// 2. Ẩn tất cả truyện thuộc danh mục này
+			$this->hide_related_stories();
+
+			// 3. Xóa liên kết trong bảng story_categories
+			$this->remove_story_category_links();
+
+			\DB::commit_transaction();
+			
+			$this->is_active = 0;
+			$this->deleted_at = $deleted_at;
+			$this->updated_at = $updated_at;
+			return true;
 		} catch (\Exception $e) {
+			\DB::rollback_transaction();
+			\Log::error('Model_Category::soft_delete error: ' . $e->getMessage());
 			return false;
 		}
 	}
 
 	/**
-	 * Khôi phục category từ thùng rác
+	 * Khôi phục category từ thùng rác với cascade effect
 	 * 
 	 * @return bool
 	 */
 	public function restore()
 	{
 		try {
+			\DB::start_transaction();
+			
 			$updated_at = date('Y-m-d H:i:s');
 			
+			// 1. Khôi phục danh mục
 			$query = \DB::query("UPDATE categories SET is_active = :is_active, deleted_at = NULL, updated_at = :updated_at WHERE id = :id");
 			$result = $query->param('is_active', 1)
 							->param('updated_at', $updated_at)
 							->param('id', $this->id)
 							->execute();
 				
-			if ($result !== false) {
-				$this->is_active = 1;
-				$this->deleted_at = null;
-				$this->updated_at = $updated_at;
-				return true;
+			if ($result === false) {
+				\DB::rollback_transaction();
+				return false;
 			}
-			return false;
+
+			// 2. Hiển thị lại các truyện thuộc danh mục này (nếu chúng không bị ẩn vì lý do khác)
+			$this->show_related_stories();
+
+			\DB::commit_transaction();
+			
+			$this->is_active = 1;
+			$this->deleted_at = null;
+			$this->updated_at = $updated_at;
+			return true;
 		} catch (\Exception $e) {
+			\DB::rollback_transaction();
+			\Log::error('Model_Category::restore error: ' . $e->getMessage());
 			return false;
 		}
 	}
 
 	/**
-	 * Xóa vĩnh viễn category
+	 * Xóa vĩnh viễn category với cascade effect
 	 * 
 	 * @return bool
 	 */
 	public function force_delete()
 	{
 		try {
+			\DB::start_transaction();
+			
+			// 1. Xóa liên kết trong bảng story_categories
+			$this->remove_story_category_links();
+			
+			// 2. Xóa vĩnh viễn danh mục
 			$query = \DB::query("DELETE FROM categories WHERE id = :id");
 			$result = $query->param('id', $this->id)->execute();
-			return $result !== false;
+			
+			if ($result === false) {
+				\DB::rollback_transaction();
+				return false;
+			}
+
+			\DB::commit_transaction();
+			return true;
 		} catch (\Exception $e) {
-			\Log::error('Error force deleting category: ' . $e->getMessage());
+			\DB::rollback_transaction();
+			\Log::error('Model_Category::force_delete error: ' . $e->getMessage());
 			return false;
 		}
 	}
@@ -518,7 +589,7 @@ class Model_Category extends \Model
 	public static function get_deleted_categories($limit = null, $offset = 0, $search = '', $sort = 'deleted_at_desc')
 	{
 		try {
-			$sql = "SELECT * FROM categories WHERE (is_active = 0 OR deleted_at IS NOT NULL)";
+			$sql = "SELECT * FROM categories WHERE deleted_at IS NOT NULL";
 			$params = array();
 			
 			// Tìm kiếm theo tên
@@ -585,7 +656,7 @@ class Model_Category extends \Model
 	public static function count_deleted($search = '')
 	{
 		try {
-			$sql = "SELECT COUNT(*) as total FROM categories WHERE (is_active = 0 OR deleted_at IS NOT NULL)";
+			$sql = "SELECT COUNT(*) as total FROM categories WHERE deleted_at IS NOT NULL";
 			$params = array();
 			
 			if (!empty($search)) {
@@ -716,6 +787,129 @@ class Model_Category extends \Model
 			return $result->as_array();
 		} catch (\Exception $e) {
 			return array();
+		}
+	}
+
+	/**
+	 * Ẩn tất cả truyện thuộc danh mục này
+	 * Lưu trạng thái hiển thị ban đầu trước khi ẩn
+	 * 
+	 * @return bool
+	 */
+	private function hide_related_stories()
+	{
+		try {
+			// Bước 1: Lưu trạng thái hiển thị ban đầu vào original_visibility
+			$query1 = \DB::query("UPDATE stories s 
+									INNER JOIN story_categories sc ON s.id = sc.story_id 
+									SET s.original_visibility = s.is_visible, s.updated_at = :updated_at 
+									WHERE sc.category_id = :category_id AND s.deleted_at IS NULL");
+			$result1 = $query1->param('category_id', $this->id)
+							  ->param('updated_at', date('Y-m-d H:i:s'))
+							  ->execute();
+			
+			// Bước 2: Ẩn tất cả truyện thuộc danh mục
+			$query2 = \DB::query("UPDATE stories s 
+									INNER JOIN story_categories sc ON s.id = sc.story_id 
+									SET s.is_visible = 0, s.updated_at = :updated_at 
+									WHERE sc.category_id = :category_id AND s.deleted_at IS NULL");
+			$result2 = $query2->param('category_id', $this->id)
+							  ->param('updated_at', date('Y-m-d H:i:s'))
+							  ->execute();
+			
+			\Log::info("Hidden stories for category {$this->id}, saved original visibility: {$result1}, hidden stories: {$result2}");
+			return true;
+		} catch (\Exception $e) {
+			\Log::error('Model_Category::hide_related_stories error: ' . $e->getMessage());
+			return false;
+		}
+	}
+
+	/**
+	 * Hiển thị lại các truyện thuộc danh mục này
+	 * Khôi phục trạng thái hiển thị ban đầu của từng truyện
+	 * 
+	 * @return bool
+	 */
+	private function show_related_stories()
+	{
+		try {
+			$query = \DB::query("UPDATE stories s 
+									INNER JOIN story_categories sc ON s.id = sc.story_id 
+									SET s.is_visible = s.original_visibility, s.updated_at = :updated_at 
+									WHERE sc.category_id = :category_id AND s.deleted_at IS NULL");
+			$result = $query->param('category_id', $this->id)
+							->param('updated_at', date('Y-m-d H:i:s'))
+							->execute();
+			
+			\Log::info("Restored stories visibility for category {$this->id}, affected rows: " . $result);
+			return true;
+		} catch (\Exception $e) {
+			\Log::error('Model_Category::show_related_stories error: ' . $e->getMessage());
+			return false;
+		}
+	}
+
+	/**
+	 * Xóa liên kết trong bảng story_categories
+	 * 
+	 * @return bool
+	 */
+	private function remove_story_category_links()
+	{
+		try {
+			$query = \DB::query("DELETE FROM story_categories WHERE category_id = :category_id");
+			$result = $query->param('category_id', $this->id)->execute();
+			
+			\Log::info("Removed story-category links for category {$this->id}, affected rows: " . $result);
+			return true;
+		} catch (\Exception $e) {
+			\Log::error('Model_Category::remove_story_category_links error: ' . $e->getMessage());
+			return false;
+		}
+	}
+
+	/**
+	 * Cập nhật trạng thái hiển thị của danh mục với cascade effect
+	 * 
+	 * @param int $is_active 1 = hiển thị, 0 = ẩn
+	 * @return bool
+	 */
+	public function update_visibility($is_active)
+	{
+		try {
+			\DB::start_transaction();
+			
+			$updated_at = date('Y-m-d H:i:s');
+			
+			// 1. Cập nhật trạng thái danh mục
+			$query = \DB::query("UPDATE categories SET is_active = :is_active, updated_at = :updated_at WHERE id = :id");
+			$result = $query->param('is_active', $is_active)
+							->param('updated_at', $updated_at)
+							->param('id', $this->id)
+							->execute();
+				
+			if ($result === false) {
+				\DB::rollback_transaction();
+				return false;
+			}
+
+			// 2. Cập nhật trạng thái hiển thị của các truyện liên quan
+			if ($is_active == 0) {
+				$this->hide_related_stories();
+			} else {
+				$this->show_related_stories();
+			}
+
+			\DB::commit_transaction();
+			
+			$this->is_active = $is_active;
+			$this->updated_at = $updated_at;
+			return true;
+		} catch (\Exception $e) {
+			\DB::rollback_transaction();
+			\Log::error('Model_Category::update_visibility error: ' . $e->getMessage());
+			return false;
 		}
 	}
 }
