@@ -32,9 +32,10 @@
 					</div>
 
 					<div class="mb-3">
-						<label for="chapter_number" class="form-label">Số chương *</label>
+						<label for="chapter_number" class="form-label">Thứ tự *</label>
 						<input type="number" class="form-control" id="chapter_number" name="chapter_number" 
 							   value="<?php echo isset($chapter) ? $chapter->chapter_number : ''; ?>" required>
+						<div class="form-text">Thứ tự hiển thị của chương trong truyện (1, 2, 3...)</div>
 					</div>
 				</div>
 
@@ -376,13 +377,22 @@ document.addEventListener('DOMContentLoaded', function() {
         // Clear existing hidden inputs
         hiddenInputsContainer.innerHTML = '';
         
-        // Create hidden inputs for each selected image
-        selectedImages.forEach((imageData, index) => {
-            const hiddenInput = document.createElement('input');
-            hiddenInput.type = 'hidden';
-            hiddenInput.name = 'images[]';
-            hiddenInput.value = imageData.file.name;
-            hiddenInputsContainer.appendChild(hiddenInput);
+        // Create file inputs for each selected image in the correct order
+        const order = JSON.parse(imageOrderInput.value || '[]');
+        order.forEach(key => {
+            if (typeof key === 'string' && key.startsWith('new:')) {
+                const id = key.substring('new:'.length);
+                const slot = document.getElementById(`image-slot-${id}`);
+                if (slot) {
+                    const fileInput = slot.querySelector('input[type="file"]');
+                    if (fileInput && fileInput.files[0]) {
+                        // Clone the file input and add it to the form
+                        const clonedInput = fileInput.cloneNode(true);
+                        clonedInput.name = 'images[]';
+                        hiddenInputsContainer.appendChild(clonedInput);
+                    }
+                }
+            }
         });
     }
 
@@ -448,49 +458,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Handle form submission
     document.querySelector('form').addEventListener('submit', function(e) {
-        e.preventDefault();
+        // Don't prevent default - let the form submit normally
+        // The server will handle the redirect after processing
         
-        // Create FormData manually to ensure proper data
-        const formData = new FormData();
-        
-        // Add basic form fields
-        formData.append('title', document.getElementById('title').value);
-        formData.append('chapter_number', document.getElementById('chapter_number').value);
-        formData.append('image_order', imageOrderInput.value);
-        formData.append('<?php echo \Config::get('security.csrf_token_key'); ?>', '<?php echo \Security::fetch_token(); ?>');
-        
-        // Add files in correct order
-        const order = JSON.parse(imageOrderInput.value || '[]');
-        order.forEach(key => {
-            if (typeof key === 'string' && key.startsWith('new:')) {
-                const id = key.substring('new:'.length);
-                const slot = document.getElementById(`image-slot-${id}`);
-                if (slot) {
-                    const fileInput = slot.querySelector('input[type="file"]');
-                    if (fileInput && fileInput.files[0]) {
-                        formData.append('images[]', fileInput.files[0]);
-                    }
-                }
-            }
-        });
-        
-        // Submit form with FormData
-        
-        // Create new form submission
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', this.action, true);
-        
-        xhr.onload = function() {
-            if (xhr.status === 200) {
-                // Handle success
-                window.location.href = window.location.href.replace('/edit/', '/');
-            } else {
-                // Handle error
-                alert('Có lỗi xảy ra khi cập nhật chương');
-            }
-        };
-        
-        xhr.send(formData);
+        // Just ensure the image order is set before submission
+        updateImageOrder();
     });
 });
 </script>

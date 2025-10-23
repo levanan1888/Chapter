@@ -157,7 +157,12 @@ class Controller_Admin_Chapter extends Controller_Admin_Base
 			Response::redirect('admin/stories');
 		}
 
-		$data['story'] = $data['chapter']->get_story();
+		$data['story'] = Model_Story::find_admin($data['chapter']->story_id);
+		
+		if (!$data['story']) {
+			Session::set_flash('error', 'Không tìm thấy truyện.');
+			Response::redirect('admin/stories');
+		}
 
 		// Xử lý form sửa chương
 		if (Input::method() === 'POST') {

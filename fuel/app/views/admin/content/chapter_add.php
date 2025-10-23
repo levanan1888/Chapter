@@ -32,9 +32,10 @@
 					</div>
 
 					<div class="mb-3">
-						<label for="chapter_number" class="form-label">Số chương *</label>
+						<label for="chapter_number" class="form-label">Thứ tự *</label>
 						<input type="number" class="form-control" id="chapter_number" name="chapter_number" 
 							   value="<?php echo isset($form_data['chapter_number']) ? $form_data['chapter_number'] : ''; ?>" required>
+						<div class="form-text">Thứ tự hiển thị của chương trong truyện (1, 2, 3...)</div>
 					</div>
 				</div>
 

@@ -1,3 +1,18 @@
+<!-- Success/Error Messages -->
+<?php if (Session::get_flash('success')): ?>
+	<div class="alert alert-success">
+		<i class="fas fa-check-circle me-2"></i>
+		<?php echo Session::get_flash('success'); ?>
+	</div>
+<?php endif; ?>
+
+<?php if (Session::get_flash('error')): ?>
+	<div class="alert alert-danger">
+		<i class="fas fa-exclamation-triangle me-2"></i>
+		<?php echo Session::get_flash('error'); ?>
+	</div>
+<?php endif; ?>
+
 <?php if (isset($error_message) && !empty($error_message)): ?>
 	<div class="alert alert-danger">
 		<i class="fas fa-exclamation-triangle me-2"></i>
@@ -41,7 +56,7 @@
 					<thead>
 						<tr>
 							<th width="5%">#</th>
-							<th width="15%">Chương</th>
+							<th width="15%">Thứ tự</th>
 							<th width="30%">Tiêu đề</th>
 							<th width="15%">Số ảnh</th>
 							<th width="15%">Lượt xem</th>
@@ -54,7 +69,7 @@
 							<tr>
 								<td><?php echo $chapter->id; ?></td>
 								<td>
-									<span class="badge bg-primary">Chapter <?php echo $chapter->chapter_number; ?></span>
+									<span class="badge bg-primary"><?php echo $chapter->chapter_number; ?></span>
 								</td>
 								<td>
 									<strong><?php echo htmlspecialchars($chapter->title); ?></strong>
