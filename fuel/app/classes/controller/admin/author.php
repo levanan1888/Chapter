@@ -562,14 +562,22 @@ class Controller_Admin_Author extends Controller_Admin_Base
 		}
 
 		if ($deleted_count > 0) {
-			Session::set_flash('success', "Đã xóa thành công {$deleted_count} tác giả.");
+			// Tạo CSRF token mới sau khi xử lý thành công
+			$new_csrf_token = Security::fetch_token();
+			
+			$data = array(
+				'affected' => (int) $deleted_count,
+				'csrf_token' => $new_csrf_token
+			);
+			
+			return $this->success_response("Đã xóa thành công {$deleted_count} tác giả.", $data);
 		}
 		
 		if ($error_count > 0) {
-			Session::set_flash('error', "Có {$error_count} tác giả không thể xóa.");
+			return $this->error_response("Có {$error_count} tác giả không thể xóa.");
 		}
-
-		Response::redirect('admin/authors');
+		
+		return $this->error_response('Không có tác giả nào được xóa.');
 	}
 
 	/**

@@ -266,13 +266,57 @@ class Model_Admin extends \Model
 	 * 
 	 * @param int $limit Giới hạn số lượng
 	 * @param int $offset Vị trí bắt đầu
+	 * @param string $search Từ khóa tìm kiếm
+	 * @param string $status Trạng thái filter
+	 * @param string $sort Sắp xếp
 	 * @return array
 	 */
-	public static function get_all_admins($limit = 10, $offset = 0)
+	public static function get_all_admins($limit = 10, $offset = 0, $search = '', $status = '', $sort = 'created_at_desc')
 	{
 		try {
-			$query = \DB::query("SELECT * FROM admins WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT :limit OFFSET :offset");
-			$results = $query->param('limit', $limit)->param('offset', $offset)->execute();
+			$where_conditions = array("deleted_at IS NULL");
+			$params = array('limit' => $limit, 'offset' => $offset);
+			
+			// Thêm điều kiện tìm kiếm
+			if (!empty($search)) {
+				$where_conditions[] = "(username LIKE :search OR email LIKE :search OR full_name LIKE :search)";
+				$params['search'] = '%' . $search . '%';
+			}
+			
+			// Thêm điều kiện trạng thái
+			if ($status === 'active') {
+				$where_conditions[] = "is_active = 1";
+			} elseif ($status === 'inactive') {
+				$where_conditions[] = "is_active = 0";
+			}
+			
+			// Xây dựng ORDER BY
+			$order_by = "ORDER BY ";
+			switch ($sort) {
+				case 'created_at_asc':
+					$order_by .= "created_at ASC";
+					break;
+				case 'username_asc':
+					$order_by .= "username ASC";
+					break;
+				case 'username_desc':
+					$order_by .= "username DESC";
+					break;
+				case 'last_login_desc':
+					$order_by .= "last_login DESC";
+					break;
+				default:
+					$order_by .= "created_at DESC";
+			}
+			
+			$sql = "SELECT * FROM admins WHERE " . implode(' AND ', $where_conditions) . " " . $order_by . " LIMIT :limit OFFSET :offset";
+			$query = \DB::query($sql);
+			
+			foreach ($params as $key => $value) {
+				$query->param($key, $value);
+			}
+			
+			$results = $query->execute();
 			$admins = array();
 
 			foreach ($results as $result) {
@@ -292,12 +336,36 @@ class Model_Admin extends \Model
 	/**
 	 * Đếm tổng số admin
 	 * 
+	 * @param string $search Từ khóa tìm kiếm
+	 * @param string $status Trạng thái filter
 	 * @return int
 	 */
-	public static function count_all()
+	public static function count_all($search = '', $status = '')
 	{
 		try {
-			$query = \DB::query("SELECT COUNT(*) as total FROM admins WHERE deleted_at IS NULL");
+			$where_conditions = array("deleted_at IS NULL");
+			$params = array();
+			
+			// Thêm điều kiện tìm kiếm
+			if (!empty($search)) {
+				$where_conditions[] = "(username LIKE :search OR email LIKE :search OR full_name LIKE :search)";
+				$params['search'] = '%' . $search . '%';
+			}
+			
+			// Thêm điều kiện trạng thái
+			if ($status === 'active') {
+				$where_conditions[] = "is_active = 1";
+			} elseif ($status === 'inactive') {
+				$where_conditions[] = "is_active = 0";
+			}
+			
+			$sql = "SELECT COUNT(*) as total FROM admins WHERE " . implode(' AND ', $where_conditions);
+			$query = \DB::query($sql);
+			
+			foreach ($params as $key => $value) {
+				$query->param($key, $value);
+			}
+			
 			$result = $query->execute();
 			return (int) $result->current()['total'];
 		} catch (\Exception $e) {
@@ -310,13 +378,46 @@ class Model_Admin extends \Model
 	 *
 	 * @param int $limit
 	 * @param int $offset
+	 * @param string $search
+	 * @param string $sort
 	 * @return array
 	 */
-	public static function get_deleted_admins($limit = 10, $offset = 0)
+	public static function get_deleted_admins($limit = 10, $offset = 0, $search = '', $sort = 'deleted_at_desc')
 	{
 		try {
-			$query = \DB::query("SELECT * FROM admins WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC LIMIT :limit OFFSET :offset");
-			$results = $query->param('limit', $limit)->param('offset', $offset)->execute();
+			$where_conditions = array("deleted_at IS NOT NULL");
+			$params = array('limit' => $limit, 'offset' => $offset);
+			
+			// Thêm điều kiện tìm kiếm
+			if (!empty($search)) {
+				$where_conditions[] = "(username LIKE :search OR email LIKE :search OR full_name LIKE :search)";
+				$params['search'] = '%' . $search . '%';
+			}
+			
+			// Xây dựng ORDER BY
+			$order_by = "ORDER BY ";
+			switch ($sort) {
+				case 'deleted_at_asc':
+					$order_by .= "deleted_at ASC";
+					break;
+				case 'username_asc':
+					$order_by .= "username ASC";
+					break;
+				case 'username_desc':
+					$order_by .= "username DESC";
+					break;
+				default:
+					$order_by .= "deleted_at DESC";
+			}
+			
+			$sql = "SELECT * FROM admins WHERE " . implode(' AND ', $where_conditions) . " " . $order_by . " LIMIT :limit OFFSET :offset";
+			$query = \DB::query($sql);
+			
+			foreach ($params as $key => $value) {
+				$query->param($key, $value);
+			}
+			
+			$results = $query->execute();
 			$admins = array();
 
 			foreach ($results as $result) {
@@ -336,12 +437,28 @@ class Model_Admin extends \Model
 	/**
 	 * Đếm tổng số admin đã xóa (soft delete)
 	 *
+	 * @param string $search
 	 * @return int
 	 */
-	public static function count_deleted()
+	public static function count_deleted($search = '')
 	{
 		try {
-			$query = \DB::query("SELECT COUNT(*) as total FROM admins WHERE deleted_at IS NOT NULL");
+			$where_conditions = array("deleted_at IS NOT NULL");
+			$params = array();
+			
+			// Thêm điều kiện tìm kiếm
+			if (!empty($search)) {
+				$where_conditions[] = "(username LIKE :search OR email LIKE :search OR full_name LIKE :search)";
+				$params['search'] = '%' . $search . '%';
+			}
+			
+			$sql = "SELECT COUNT(*) as total FROM admins WHERE " . implode(' AND ', $where_conditions);
+			$query = \DB::query($sql);
+			
+			foreach ($params as $key => $value) {
+				$query->param($key, $value);
+			}
+			
 			$result = $query->execute();
 			return (int) $result->current()['total'];
 		} catch (\Exception $e) {

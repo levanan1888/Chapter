@@ -229,21 +229,41 @@
 	</div>
 </div>
 
-<!-- Bulk Delete Form -->
-<form id="bulk-delete-form" method="POST" action="<?php echo Uri::base(); ?>admin/authors/bulk-delete" style="display: none;">
-	<input type="hidden" name="<?php echo \Config::get('security.csrf_token_key'); ?>" value="<?php echo \Security::fetch_token(); ?>">
-	<div id="bulk-delete-ids"></div>
-</form>
 
 <script>
+// Function to show alert messages
+function showAlert(type, message) {
+	// Remove existing alerts
+	const existingAlerts = document.querySelectorAll('.alert');
+	existingAlerts.forEach(alert => alert.remove());
+	
+	// Create new alert
+	const alertDiv = document.createElement('div');
+	alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+	alertDiv.innerHTML = `
+		<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+		${message}
+		<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+	`;
+	
+	// Insert at the top of card-body
+	const cardBody = document.querySelector('.card-body');
+	cardBody.insertBefore(alertDiv, cardBody.firstChild);
+	
+	// Auto remove after 5 seconds
+	setTimeout(() => {
+		if (alertDiv.parentNode) {
+			alertDiv.remove();
+		}
+	}, 5000);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
 	const selectAllCheckbox = document.getElementById('select-all');
 	const selectAllHeaderCheckbox = document.getElementById('select-all-header');
 	const authorCheckboxes = document.querySelectorAll('.author-checkbox');
 	const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
 	const selectedCountSpan = document.getElementById('selected-count');
-	const bulkDeleteForm = document.getElementById('bulk-delete-form');
-	const bulkDeleteIds = document.getElementById('bulk-delete-ids');
 
 	// Function to update selected count
 	function updateSelectedCount() {
@@ -296,25 +316,57 @@ document.addEventListener('DOMContentLoaded', function() {
 	bulkDeleteBtn.addEventListener('click', function() {
 		const checkedBoxes = document.querySelectorAll('.author-checkbox:checked');
 		if (checkedBoxes.length === 0) {
-			alert('Vui lòng chọn ít nhất một tác giả để xóa.');
+			showAlert('warning', 'Vui lòng chọn ít nhất một tác giả để xóa.');
 			return;
 		}
 
 		if (confirm(`Bạn có chắc chắn muốn xóa ${checkedBoxes.length} tác giả đã chọn?`)) {
-			// Clear previous IDs
-			bulkDeleteIds.innerHTML = '';
+			// Use stored token if available, otherwise use initial token
+			const csrfToken = window.currentCsrfToken || '<?php echo \Security::fetch_token(); ?>';
+			console.log('Sending CSRF token:', csrfToken);
 			
-			// Add selected IDs as hidden inputs
+			const formData = new FormData();
 			checkedBoxes.forEach(checkbox => {
-				const hiddenInput = document.createElement('input');
-				hiddenInput.type = 'hidden';
-				hiddenInput.name = 'author_ids[]';
-				hiddenInput.value = checkbox.value;
-				bulkDeleteIds.appendChild(hiddenInput);
+				formData.append('author_ids[]', checkbox.value);
 			});
+			formData.append('<?php echo \Config::get("security.csrf_token_key"); ?>', csrfToken);
 			
-			// Submit form
-			bulkDeleteForm.submit();
+			fetch('<?php echo Uri::base(); ?>admin/authors/bulk-delete', {
+				method: 'POST',
+				headers: {
+					'X-Requested-With': 'XMLHttpRequest'
+				},
+				body: formData
+			})
+			.then(response => response.json())
+			.then(data => {
+				if (data.success) {
+					// Store new CSRF token for next request
+					if (data.data && data.data.csrf_token) {
+						window.currentCsrfToken = data.data.csrf_token;
+						console.log('New CSRF token received:', data.data.csrf_token);
+					}
+					
+					// Chỉ xóa các row nếu thực sự có tác giả được xóa
+					if (data.data && data.data.affected > 0) {
+						// Xóa các row ngay lập tức
+						checkedBoxes.forEach(checkbox => {
+							const row = checkbox.closest('tr');
+							if (row) {
+								row.remove();
+							}
+						});
+					}
+					
+					showAlert('success', data.message);
+				} else {
+					showAlert('danger', data.message);
+				}
+			})
+			.catch(error => {
+				console.error('Error:', error);
+				showAlert('danger', 'Có lỗi xảy ra khi xóa tác giả.');
+			});
 		}
 	});
 });

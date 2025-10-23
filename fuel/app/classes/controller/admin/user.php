@@ -21,19 +21,29 @@ class Controller_Admin_User extends Controller_Admin_Base
 
 		$data = array();
 		
-		// Phân trang
+		// Lấy tham số từ URL
 		$page = Input::get('page', 1);
-		$limit = 10;
+		$limit = 20; // Cố định limit như các màn hình khác
+		$search = Input::get('search', '');
+		$status = Input::get('status', '');
+		$sort = Input::get('sort', 'created_at_desc');
+		
 		$offset = ($page - 1) * $limit;
 
-		// Lấy danh sách admin
-		$data['admins'] = Model_Admin::get_all_admins($limit, $offset);
-		$data['total_admins'] = Model_Admin::count_all();
+		// Lấy danh sách admin với filter
+		$data['admins'] = Model_Admin::get_all_admins($limit, $offset, $search, $status, $sort);
+		$data['total_admins'] = Model_Admin::count_all($search, $status);
 		$data['current_page'] = $page;
 		$data['total_pages'] = ceil($data['total_admins'] / $limit);
+		
+		// Truyền tham số filter về view
+		$data['search'] = $search;
+		$data['status'] = $status;
+		$data['sort'] = $sort;
 
 		$data['title'] = 'Quản lý Admin';
 		$data['content'] = View::forge('admin/content/manage', $data, false);
+	
 		return View::forge('layouts/admin', $data);
 	}
 
@@ -207,8 +217,19 @@ class Controller_Admin_User extends Controller_Admin_Base
 		}
 
 		if ($admin->soft_delete()) {
-			return $this->success_response('Xóa admin thành công!');
+			\Log::info('Admin deleted successfully: ID ' . $admin->id);
+			
+			// Tạo CSRF token mới sau khi xử lý thành công
+			$new_csrf_token = Security::fetch_token();
+			
+			$data = array(
+				'admin_id' => $admin->id,
+				'csrf_token' => $new_csrf_token
+			);
+			
+			return $this->success_response('Xóa admin thành công!', $data);
 		} else {
+			\Log::error('Failed to delete admin: ID ' . $admin->id);
 			return $this->error_response('Có lỗi xảy ra khi xóa admin.');
 		}
 	}
@@ -224,13 +245,19 @@ class Controller_Admin_User extends Controller_Admin_Base
 
 		$data = array();
 		$page = Input::get('page', 1);
-		$limit = 10;
+		$limit = 20; // Cố định limit như các màn hình khác
+		$search = Input::get('search', '');
+		$sort = Input::get('sort', 'deleted_at_desc');
 		$offset = ($page - 1) * $limit;
 
-		$data['admins'] = Model_Admin::get_deleted_admins($limit, $offset);
-		$data['total_admins'] = Model_Admin::count_deleted();
+		$data['admins'] = Model_Admin::get_deleted_admins($limit, $offset, $search, $sort);
+		$data['total_admins'] = Model_Admin::count_deleted($search);
 		$data['current_page'] = $page;
 		$data['total_pages'] = ceil($data['total_admins'] / $limit);
+		
+		// Truyền tham số filter về view
+		$data['search'] = $search;
+		$data['sort'] = $sort;
 
 		$data['title'] = 'Admin đã xóa';
 		$data['content'] = View::forge('admin/content/deleted', $data, false);
@@ -268,7 +295,15 @@ class Controller_Admin_User extends Controller_Admin_Base
 					$admin->$key = $value;
 				}
 				if ($admin->restore()) {
-					return $this->success_response('Khôi phục admin thành công!');
+					// Tạo CSRF token mới sau khi xử lý thành công
+					$new_csrf_token = Security::fetch_token();
+					
+					$data = array(
+						'admin_id' => $admin->id,
+						'csrf_token' => $new_csrf_token
+					);
+					
+					return $this->success_response('Khôi phục admin thành công!', $data);
 				} else {
 					return $this->error_response('Khôi phục thất bại.');
 				}
@@ -308,7 +343,15 @@ class Controller_Admin_User extends Controller_Admin_Base
 					$admin->$key = $value; 
 				}
 				if ($admin->hard_delete()) {
-					return $this->success_response('Đã xóa vĩnh viễn!');
+					// Tạo CSRF token mới sau khi xử lý thành công
+					$new_csrf_token = Security::fetch_token();
+					
+					$data = array(
+						'admin_id' => $admin->id,
+						'csrf_token' => $new_csrf_token
+					);
+					
+					return $this->success_response('Đã xóa vĩnh viễn!', $data);
 				} else {
 					return $this->error_response('Xóa vĩnh viễn thất bại.');
 				}
@@ -334,8 +377,27 @@ class Controller_Admin_User extends Controller_Admin_Base
 			$ids = array();
 		}
 
+		// Loại trừ chính mình khỏi danh sách xóa
+		$current_admin_id = Session::get('admin_id');
+		$ids = array_filter($ids, function($id) use ($current_admin_id) {
+			return $id != $current_admin_id;
+		});
+
+		if (empty($ids)) {
+			return $this->error_response('Không thể xóa chính mình.');
+		}
+
 		$count = Model_Admin::bulk_soft_delete($ids);
-		return $this->success_response('Đã xóa '.(int)$count.' admin', array('affected' => (int) $count));
+		
+		// Tạo CSRF token mới sau khi xử lý thành công
+		$new_csrf_token = Security::fetch_token();
+		
+		$data = array(
+			'affected' => (int) $count,
+			'csrf_token' => $new_csrf_token
+		);
+		
+		return $this->success_response('Đã xóa '.(int)$count.' admin', $data);
 	}
 
 	/**
@@ -355,7 +417,16 @@ class Controller_Admin_User extends Controller_Admin_Base
 		}
 
 		$count = Model_Admin::bulk_restore($ids);
-		return $this->success_response('Đã khôi phục '.(int)$count.' admin', array('affected' => (int) $count));
+		
+		// Tạo CSRF token mới sau khi xử lý thành công
+		$new_csrf_token = Security::fetch_token();
+		
+		$data = array(
+			'affected' => (int) $count,
+			'csrf_token' => $new_csrf_token
+		);
+		
+		return $this->success_response('Đã khôi phục '.(int)$count.' admin', $data);
 	}
 
 	/**
@@ -375,6 +446,15 @@ class Controller_Admin_User extends Controller_Admin_Base
 		}
 
 		$count = Model_Admin::bulk_hard_delete($ids);
-		return $this->success_response('Đã xóa vĩnh viễn '.(int)$count.' admin', array('affected' => (int) $count));
+		
+		// Tạo CSRF token mới sau khi xử lý thành công
+		$new_csrf_token = Security::fetch_token();
+		
+		$data = array(
+			'affected' => (int) $count,
+			'csrf_token' => $new_csrf_token
+		);
+		
+		return $this->success_response('Đã xóa vĩnh viễn '.(int)$count.' admin', $data);
 	}
 }
