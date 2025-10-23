@@ -220,12 +220,28 @@ class Seed_fake_data
 
 	public function down()
 	{
-		// Xóa tất cả dữ liệu
-		\DB::delete('chapters')->execute();
-		\DB::delete('story_categories')->execute();
-		\DB::delete('stories')->execute();
-		\DB::delete('authors')->execute();
-		\DB::delete('categories')->execute();
-		\DB::delete('admins')->where('username', '=', 'admin')->execute();
+		// Xóa tất cả dữ liệu (an toàn khi bảng có thể đã bị drop ở migration khác)
+		try {
+			if (\DBUtil::table_exists('chapters')) {
+				\DB::delete('chapters')->execute();
+			}
+			if (\DBUtil::table_exists('story_categories')) {
+				\DB::delete('story_categories')->execute();
+			}
+			if (\DBUtil::table_exists('stories')) {
+				\DB::delete('stories')->execute();
+			}
+			if (\DBUtil::table_exists('authors')) {
+				\DB::delete('authors')->execute();
+			}
+			if (\DBUtil::table_exists('categories')) {
+				\DB::delete('categories')->execute();
+			}
+			if (\DBUtil::table_exists('admins')) {
+				\DB::delete('admins')->where('username', '=', 'admin')->execute();
+			}
+		} catch (\Exception $e) {
+			\Log::error('Migration 007 down() failed to cleanup: ' . $e->getMessage());
+		}
 	}
 }
