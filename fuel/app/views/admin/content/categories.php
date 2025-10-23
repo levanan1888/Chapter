@@ -168,10 +168,10 @@
 							<td><?php echo date('d/m/Y', strtotime($category->created_at)); ?></td>
 							<td>
 								<div class="btn-group" role="group">
-									<a href="<?php echo Uri::base(); ?>admin/categories/view/<?php echo $category->id; ?>" 
+									<!-- <a href="<?php echo Uri::base(); ?>admin/categories/view/<?php echo $category->id; ?>" 
 									   class="btn btn-sm btn-outline-info" title="Xem chi tiết">
 										<i class="fas fa-eye"></i>
-									</a>
+									</a> -->
 									<a href="<?php echo Uri::base(); ?>admin/categories/edit/<?php echo $category->id; ?>" 
 									   class="btn btn-sm btn-outline-primary" title="Sửa">
 										<i class="fas fa-edit"></i>
@@ -371,14 +371,9 @@ document.addEventListener('DOMContentLoaded', function() {
 			text.textContent = 'Đang xử lý...';
 			
 			// Prepare form data with current CSRF token
-			// Always get fresh token from meta tag first, then fallback to stored token
-			let csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
-							document.querySelector('#csrf-form input[name="<?php echo \Config::get('security.csrf_token_key'); ?>"]')?.value ||
-							window.currentCsrfToken ||
-							'<?php echo \Security::fetch_token(); ?>';
+			// Use stored token if available, otherwise use initial token
+			const csrfToken = window.currentCsrfToken || '<?php echo \Security::fetch_token(); ?>';
 			console.log('Sending CSRF token:', csrfToken);
-			console.log('Category ID:', categoryId);
-			console.log('Is Active:', this.checked ? 1 : 0);
 			
 			const formData = new URLSearchParams();
 			formData.append('is_active', this.checked ? 1 : 0);
@@ -393,12 +388,8 @@ document.addEventListener('DOMContentLoaded', function() {
 					'Content-Type': 'application/x-www-form-urlencoded'
 				}
 			})
-			.then(response => {
-				console.log('Response status:', response.status);
-				return response.json();
-			})
+			.then(response => response.json())
 			.then(data => {
-				console.log('Response data:', data);
 				if (data.success) {
 					// Update switch state
 					const newActive = data.data.is_active;
@@ -423,75 +414,6 @@ document.addEventListener('DOMContentLoaded', function() {
 					
 					// Show error message
 					showAlert('danger', data.message || 'Có lỗi xảy ra khi cập nhật trạng thái');
-					
-					// If CSRF error, refresh token and retry
-					if (data.message && data.message.includes('CSRF')) {
-						console.log('CSRF error detected, refreshing token and retrying...');
-						refreshCsrfToken();
-						
-						// Wait a bit for token refresh, then retry the request
-						setTimeout(() => {
-							const newToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
-											window.currentCsrfToken;
-							if (newToken) {
-								console.log('Retrying with fresh CSRF token:', newToken);
-								// Retry the request with fresh token
-								const retryFormData = new URLSearchParams();
-								retryFormData.append('is_active', switchElement.checked ? 1 : 0);
-								retryFormData.append('fuel_csrf_token', newToken);
-								
-								fetch('<?php echo Uri::base(); ?>admin/categories/toggle_status/' + categoryId, {
-									method: 'POST',
-									body: retryFormData,
-									headers: {
-										'X-Requested-With': 'XMLHttpRequest',
-										'Content-Type': 'application/x-www-form-urlencoded'
-									}
-								})
-								.then(response => response.json())
-								.then(retryData => {
-									if (retryData.success) {
-										// Update switch state
-										const newActive = retryData.data.is_active;
-										const newText = newActive ? 'Hoạt động' : 'Không hoạt động';
-										
-										switchElement.checked = newActive;
-										switchElement.setAttribute('data-current-active', newActive);
-										text.textContent = newText;
-										
-										// Store new CSRF token
-										if (retryData.data.csrf_token) {
-											window.currentCsrfToken = retryData.data.csrf_token;
-										}
-										
-										showAlert('success', retryData.message);
-									} else {
-										showAlert('danger', retryData.message || 'Có lỗi xảy ra khi cập nhật trạng thái');
-										// Revert switch state
-										switchElement.checked = !switchElement.checked;
-										text.textContent = switchElement.checked ? 'Hoạt động' : 'Không hoạt động';
-									}
-								})
-								.catch(retryError => {
-									console.error('Retry failed:', retryError);
-									showAlert('danger', 'Có lỗi xảy ra khi cập nhật trạng thái');
-									// Revert switch state
-									switchElement.checked = !switchElement.checked;
-									text.textContent = switchElement.checked ? 'Hoạt động' : 'Không hoạt động';
-								})
-								.finally(() => {
-									switchElement.disabled = false;
-								});
-							} else {
-								showAlert('danger', 'Không thể lấy token bảo mật mới. Vui lòng tải lại trang.');
-								// Revert switch state
-								switchElement.checked = !switchElement.checked;
-								text.textContent = switchElement.checked ? 'Hoạt động' : 'Không hoạt động';
-								switchElement.disabled = false;
-							}
-						}, 500);
-						return; // Don't show error message for CSRF, we're retrying
-					}
 				}
 			})
 			.catch(error => {
@@ -515,14 +437,14 @@ document.addEventListener('DOMContentLoaded', function() {
 	// Update CSRF token in meta tag and hidden form when page loads
 	document.addEventListener('DOMContentLoaded', function() {
 		const metaToken = document.querySelector('meta[name="csrf-token"]');
-		const hiddenToken = document.querySelector('#csrf-form input[name="<?php echo \Config::get('security.csrf_token_key'); ?>"]');
+		const hiddenTokens = document.querySelectorAll('input[name="<?php echo \Config::get('security.csrf_token_key'); ?>"]');
 		
 		if (metaToken) {
 			metaToken.setAttribute('content', window.currentCsrfToken);
 		}
-		if (hiddenToken) {
-			hiddenToken.value = window.currentCsrfToken;
-		}
+		hiddenTokens.forEach(token => {
+			token.value = window.currentCsrfToken;
+		});
 	});
 	
 	// Function to refresh CSRF token
@@ -538,20 +460,20 @@ document.addEventListener('DOMContentLoaded', function() {
 			const parser = new DOMParser();
 			const doc = parser.parseFromString(html, 'text/html');
 			const newToken = doc.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
-							doc.querySelector('#csrf-form input[name="<?php echo \Config::get('security.csrf_token_key'); ?>"]')?.value;
+							doc.querySelector('input[name="<?php echo \Config::get('security.csrf_token_key'); ?>"]')?.value;
 			if (newToken) {
 				window.currentCsrfToken = newToken;
 				
-				// Update meta tag and hidden form with new token
+				// Update meta tag and hidden forms with new token
 				const metaToken = document.querySelector('meta[name="csrf-token"]');
-				const hiddenToken = document.querySelector('#csrf-form input[name="<?php echo \Config::get('security.csrf_token_key'); ?>"]');
+				const hiddenTokens = document.querySelectorAll('input[name="<?php echo \Config::get('security.csrf_token_key'); ?>"]');
 				
 				if (metaToken) {
 					metaToken.setAttribute('content', newToken);
 				}
-				if (hiddenToken) {
-					hiddenToken.value = newToken;
-				}
+				hiddenTokens.forEach(token => {
+					token.value = newToken;
+				});
 				
 				console.log('CSRF token refreshed:', newToken);
 			}
@@ -575,8 +497,13 @@ document.addEventListener('DOMContentLoaded', function() {
 		refreshCsrfToken();
 	});
 
-	// Alert function
+	// Function to show alert messages
 	function showAlert(type, message) {
+		// Remove existing alerts
+		const existingAlerts = document.querySelectorAll('.alert');
+		existingAlerts.forEach(alert => alert.remove());
+		
+		// Create new alert
 		const alertDiv = document.createElement('div');
 		alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
 		alertDiv.innerHTML = `
@@ -585,18 +512,16 @@ document.addEventListener('DOMContentLoaded', function() {
 			<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 		`;
 		
-		// Insert at the top of the content
-		const content = document.querySelector('.card-body');
-		if (content) {
-			content.insertBefore(alertDiv, content.firstChild);
-			
-			// Auto remove after 5 seconds
-			setTimeout(() => {
-				if (alertDiv.parentNode) {
-					alertDiv.remove();
-				}
-			}, 5000);
-		}
+		// Insert at the top of the card body
+		const cardBody = document.querySelector('.card-body');
+		cardBody.insertBefore(alertDiv, cardBody.firstChild);
+		
+		// Auto dismiss after 5 seconds
+		setTimeout(() => {
+			if (alertDiv.parentNode) {
+				alertDiv.remove();
+			}
+		}, 5000);
 	}
 });
 

@@ -190,8 +190,7 @@
 										   id="visibility_<?php echo $story->id; ?>"
 										   data-story-id="<?php echo $story->id; ?>"
 										   data-current-visibility="<?php echo $story->is_visible; ?>"
-										   <?php echo $story->is_visible ? 'checked' : ''; ?>
-										   style="transform: scale(1.2);">
+										   <?php echo $story->is_visible ? 'checked' : ''; ?>>
 									<label class="form-check-label ms-2" for="visibility_<?php echo $story->id; ?>">
 										<span class="visibility-text"><?php echo $story->is_visible ? 'Hiển thị' : 'Ẩn'; ?></span>
 									</label>
@@ -559,7 +558,7 @@ style.textContent = `
 		border: none !important;
 		border-radius: 1rem !important;
 		position: relative !important;
-		transition: all 0.3s ease !important;
+		transition: background-color 0.3s ease !important;
 		cursor: pointer !important;
 	}
 	
