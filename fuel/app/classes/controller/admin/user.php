@@ -74,7 +74,7 @@ class Controller_Admin_User extends Controller_Admin_Base
 				$data['error_message'] = 'Vui lòng nhập đầy đủ thông tin bắt buộc.';
 			} else {
 				// Kiểm tra username và email đã tồn tại chưa
-				$existing_admin = Model_Admin::find_by_username_or_email($username);
+				$existing_admin = Model_Admin::find_by_username_or_email_any_status($username);
 				if ($existing_admin) {
 					\Log::warning('Admin creation failed: Username/Email already exists - Username: ' . $username . ', Email: ' . $email);
 					$data['error_message'] = 'Username hoặc email đã tồn tại.';
@@ -134,7 +134,7 @@ class Controller_Admin_User extends Controller_Admin_Base
 		$data = array();
 		$data['success_message'] = '';
 		$data['error_message'] = '';
-		$data['admin'] = Model_Admin::find($id);
+		$data['admin'] = Model_Admin::find_by_id($id);
 
 		if (!$data['admin']) {
 			Session::set_flash('error', 'Không tìm thấy admin.');
@@ -156,12 +156,12 @@ class Controller_Admin_User extends Controller_Admin_Base
 				$data['error_message'] = 'Vui lòng nhập đầy đủ thông tin bắt buộc.';
 			} else {
 				// Kiểm tra username và email đã tồn tại chưa (trừ admin hiện tại)
-				$existing_admin = Model_Admin::find_by_username_or_email($username);
+				$existing_admin = Model_Admin::find_by_username_or_email_any_status($username);
 				if ($existing_admin && $existing_admin->id != $id) {
 					\Log::warning('Admin update failed: Username already exists - ID: ' . $id . ', Username: ' . $username);
 					$data['error_message'] = 'Username đã tồn tại.';
 				} else {
-					$existing_admin = Model_Admin::find_by_username_or_email($email);
+					$existing_admin = Model_Admin::find_by_username_or_email_any_status($email);
 					if ($existing_admin && $existing_admin->id != $id) {
 						\Log::warning('Admin update failed: Email already exists - ID: ' . $id . ', Email: ' . $email);
 						$data['error_message'] = 'Email đã tồn tại.';
@@ -222,7 +222,7 @@ class Controller_Admin_User extends Controller_Admin_Base
 			return $this->error_response('ID không hợp lệ.');
 		}
 
-		$admin = Model_Admin::find($id);
+		$admin = Model_Admin::find_by_id($id);
 		
 		if (!$admin) {
 			return $this->error_response('Không tìm thấy admin.');

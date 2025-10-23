@@ -77,6 +77,33 @@ class Model_Admin extends \Model
 	);
 
 	/**
+	 * Tìm admin theo ID (không quan tâm đến trạng thái active/inactive)
+	 * 
+	 * @param int $id ID của admin
+	 * @return Model_Admin|null
+	 */
+	public static function find_by_id($id)
+	{
+		try {
+			$query = \DB::query("SELECT * FROM admins WHERE id = :id AND deleted_at IS NULL");
+			$result = $query->param('id', $id)->execute();
+
+			if ($result->count() > 0) {
+				$data = $result->current();
+				$admin = new self();
+				foreach ($data as $key => $value) {
+					$admin->$key = $value;
+				}
+				return $admin;
+			}
+
+			return null;
+		} catch (\Exception $e) {
+			return null;
+		}
+	}
+
+	/**
 	 * Tìm admin theo ID
 	 * 
 	 * @param int $id ID của admin
@@ -87,6 +114,33 @@ class Model_Admin extends \Model
 		try {
 			$query = \DB::query("SELECT * FROM admins WHERE id = :id AND is_active = :is_active AND deleted_at IS NULL");
 			$result = $query->param('id', $id)->param('is_active', 1)->execute();
+
+			if ($result->count() > 0) {
+				$data = $result->current();
+				$admin = new self();
+				foreach ($data as $key => $value) {
+					$admin->$key = $value;
+				}
+				return $admin;
+			}
+
+			return null;
+		} catch (\Exception $e) {
+			return null;
+		}
+	}
+
+	/**
+	 * Tìm admin theo username hoặc email (không quan tâm đến trạng thái active/inactive)
+	 * 
+	 * @param string $username_or_email Username hoặc email
+	 * @return Model_Admin|null
+	 */
+	public static function find_by_username_or_email_any_status($username_or_email)
+	{
+		try {
+			$query = \DB::query("SELECT * FROM admins WHERE (username = :username_or_email OR email = :username_or_email) AND deleted_at IS NULL");
+			$result = $query->param('username_or_email', $username_or_email)->execute();
 
 			if ($result->count() > 0) {
 				$data = $result->current();
