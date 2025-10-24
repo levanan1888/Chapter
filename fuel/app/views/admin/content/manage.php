@@ -86,7 +86,7 @@
 				</div>
 				<div class="col-md-6 text-end">
 					<small class="text-muted">
-						<span id="selected-count">0</span> mục đã chọn
+						<span id="selected-count">0</span> mục đã chọn / Tổng: <strong><?php echo isset($total_admins) ? number_format($total_admins) : 0; ?></strong> admin
 					</small>
 				</div>
 			</div>

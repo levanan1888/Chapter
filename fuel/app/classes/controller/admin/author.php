@@ -58,16 +58,21 @@ class Controller_Admin_Author extends Controller_Admin_Base
 		try {
 			$this->require_login();
 
-			$data = array();
-			$data['success_message'] = '';
-			$data['error_message'] = '';
-			$data['form_data'] = array();
+		$data = array();
+		$data['success_message'] = '';
+		$data['error_message'] = '';
+		$data['form_data'] = array();
 
-			// Xử lý form thêm tác giả
-			if (Input::method() === 'POST') {
+		// Xử lý form thêm tác giả
+		if (Input::method() === 'POST') {
+			// Kiểm tra CSRF token
+			if (!Security::check_token()) {
+				$data['error_message'] = 'Token bảo mật không hợp lệ. Vui lòng thử lại.';
+			} else {
 				$name = Input::post('name', '');
 				$description = Input::post('description', '');
-				$is_active = Input::post('is_active', 1);
+				// Xử lý checkbox - nếu có trong POST thì là 1, không có thì là 0
+				$is_active = Input::post('is_active') ? 1 : 0;
 
 				// Tạo slug từ tên tác giả
 				$slug = $this->create_slug($name);
@@ -80,13 +85,8 @@ class Controller_Admin_Author extends Controller_Admin_Base
 					'is_active' => $is_active
 				);
 
-				// Validation
-				$validation = Validation::forge();
-				$validation->add_callable('Validation_Custom');
-				$validation->add_field('name', 'Tên tác giả', 'required|custom_name|custom_category');
-				$validation->add_field('description', 'Mô tả', 'custom_category');
-
-				if ($validation->run()) {
+				// Validation đơn giản - chỉ kiểm tra required
+				if (!empty($name)) {
 					// Xử lý upload avatar
 					$avatar = null;
 					if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
@@ -116,33 +116,14 @@ class Controller_Admin_Author extends Controller_Admin_Base
 						}
 					}
 				} else {
-					// Xử lý lỗi validation
-					$errors = $validation->error();
-					$error_messages = array();
-					
-					foreach ($errors as $field => $error) {
-						if ($field === 'name') {
-							if ($error->rule === 'custom_name') {
-								$error_messages[] = 'Tên tác giả không được để trống và phải có ít nhất 2 ký tự.';
-							}
-							if ($error->rule === 'custom_category') {
-								$error_messages[] = 'Tên tác giả chỉ được chứa chữ cái và khoảng trắng.';
-							}
-						}
-						if ($field === 'description') {
-							if ($error->rule === 'custom_category') {
-								$error_messages[] = 'Mô tả chỉ được chứa chữ cái và khoảng trắng.';
-							}
-						}
-					}
-					
-					$data['error_message'] = implode(' ', $error_messages);
+					$data['error_message'] = 'Tên tác giả không được để trống.';
 				}
 			}
+		}
 
-			$data['title'] = 'Thêm Tác giả';
-			$data['content'] = View::forge('admin/content/author_add', $data, false);
-			return View::forge('layouts/admin', $data);
+		$data['title'] = 'Thêm Tác giả';
+		$data['content'] = View::forge('admin/content/author_add', $data, false);
+		return View::forge('layouts/admin', $data);
 		
 		} catch (\Exception $e) {
 			// Log error
@@ -181,17 +162,17 @@ class Controller_Admin_Author extends Controller_Admin_Base
 
 		// Xử lý form sửa tác giả
 		if (Input::method() === 'POST') {
-			$name = Input::post('name', '');
-			$description = Input::post('description', '');
-			$is_active = Input::post('is_active', 1);
+			// Kiểm tra CSRF token
+			if (!Security::check_token()) {
+				$data['error_message'] = 'Token bảo mật không hợp lệ. Vui lòng thử lại.';
+			} else {
+				$name = Input::post('name', '');
+				$description = Input::post('description', '');
+				// Xử lý checkbox - nếu có trong POST thì là 1, không có thì là 0
+				$is_active = Input::post('is_active') ? 1 : 0;
 
-			// Validation
-			$validation = Validation::forge();
-			$validation->add_callable('Validation_Custom');
-			$validation->add_field('name', 'Tên tác giả', 'required|custom_name|custom_category');
-			$validation->add_field('description', 'Mô tả', 'custom_category');
-
-			if ($validation->run()) {
+			// Validation đơn giản - chỉ kiểm tra required
+			if (!empty($name)) {
 				// Xử lý upload avatar
 				$avatar = $data['author']->avatar; // Giữ avatar cũ
 				if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
@@ -233,28 +214,9 @@ class Controller_Admin_Author extends Controller_Admin_Base
 						$data['error_message'] = 'Có lỗi xảy ra khi cập nhật tác giả.';
 					}
 				}
-			} else {
-				// Xử lý lỗi validation
-				$errors = $validation->error();
-				$error_messages = array();
-				
-				foreach ($errors as $field => $error) {
-					if ($field === 'name') {
-						if ($error->rule === 'custom_name') {
-							$error_messages[] = 'Tên tác giả không được để trống và phải có ít nhất 2 ký tự.';
-						}
-						if ($error->rule === 'custom_category') {
-							$error_messages[] = 'Tên tác giả chỉ được chứa chữ cái và khoảng trắng.';
-						}
-					}
-					if ($field === 'description') {
-						if ($error->rule === 'custom_category') {
-							$error_messages[] = 'Mô tả chỉ được chứa chữ cái và khoảng trắng.';
-						}
-					}
+				} else {
+					$data['error_message'] = 'Tên tác giả không được để trống.';
 				}
-				
-				$data['error_message'] = implode(' ', $error_messages);
 			}
 		}
 

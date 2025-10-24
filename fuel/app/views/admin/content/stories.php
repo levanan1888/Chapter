@@ -43,6 +43,7 @@
 					<option value="ongoing" <?php echo (isset($selected_status) && $selected_status == 'ongoing') ? 'selected' : ''; ?>>Đang cập nhật</option>
 					<option value="completed" <?php echo (isset($selected_status) && $selected_status == 'completed') ? 'selected' : ''; ?>>Hoàn thành</option>
 					<option value="paused" <?php echo (isset($selected_status) && $selected_status == 'paused') ? 'selected' : ''; ?>>Tạm dừng</option>
+					<option value="hidden" <?php echo (isset($selected_status) && $selected_status == 'hidden') ? 'selected' : ''; ?>>Đã ẩn</option>
 				</select>
 			</div>
 			<div class="col-md-2">
@@ -99,7 +100,7 @@
 				</div>
 				<div class="col-md-6 text-end">
 					<small class="text-muted">
-						<span id="selected-count">0</span> mục đã chọn
+						<span id="selected-count">0</span> mục đã chọn / Tổng: <strong><?php echo isset($total_stories) ? number_format($total_stories) : 0; ?></strong> truyện
 					</small>
 				</div>
 			</div>

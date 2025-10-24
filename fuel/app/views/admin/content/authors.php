@@ -27,7 +27,7 @@
 				<select class="form-select" id="status" name="status">
 					<option value="">Tất cả trạng thái</option>
 					<option value="active" <?php echo (isset($status) && $status === 'active') ? 'selected' : ''; ?>>Hoạt động</option>
-					<option value="deleted" <?php echo (isset($status) && $status === 'deleted') ? 'selected' : ''; ?>>Đã xóa</option>
+					<option value="inactive" <?php echo (isset($status) && $status === 'inactive') ? 'selected' : ''; ?>>Không hoạt động</option>
 				</select>
 			</div>
 			<div class="col-md-3">
@@ -85,7 +85,7 @@
 				</div>
 				<div class="col-md-6 text-end">
 					<small class="text-muted">
-						<span id="selected-count">0</span> mục đã chọn
+						<span id="selected-count">0</span> mục đã chọn / Tổng: <strong><?php echo isset($total_authors) ? number_format($total_authors) : 0; ?></strong> tác giả
 					</small>
 				</div>
 			</div>
@@ -100,6 +100,7 @@
 							<th>Tên tác giả</th>
 							<th>Mô tả</th>
 							<th>Số truyện</th>
+							<th>Trạng thái</th>
 							<th>Ngày tạo</th>
 							<th>Thao tác</th>
 						</tr>
@@ -139,6 +140,13 @@
 							</td>
 							<td>
 								<span class="badge bg-info"><?php echo $author->story_count ?? 0; ?> truyện</span>
+							</td>
+							<td>
+								<?php if ($author->is_active): ?>
+									<span class="badge bg-success">Hoạt động</span>
+								<?php else: ?>
+									<span class="badge bg-secondary">Không hoạt động</span>
+								<?php endif; ?>
 							</td>
 							<td><?php echo date('d/m/Y', strtotime($author->created_at)); ?></td>
 							<td>
