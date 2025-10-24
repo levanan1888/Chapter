@@ -620,8 +620,12 @@ class Controller_User extends Controller
 							$email_sent = $email_service->send_password_reset($email, $reset_token->token, $user->full_name);
 
 							if ($email_sent) {
-								$data['success_message'] = 'Chúng tôi đã gửi mã xác thực đến email của bạn. Vui lòng kiểm tra hộp thư và làm theo hướng dẫn.';
+								// Lưu email vào session để sử dụng ở trang verify token
+								Session::set('reset_password_email', $email);
+								
+								// Redirect đến trang nhập mã token
 								\Log::info('Password reset email sent to: ' . $email);
+								Response::redirect('user/verify-token');
 							} else {
 								$data['error_message'] = 'Không thể gửi email. Vui lòng thử lại sau.';
 								\Log::error('Failed to send password reset email to: ' . $email);
@@ -660,8 +664,9 @@ class Controller_User extends Controller
 		// Nếu đã đăng nhập thì redirect đến trang chủ
 		$this->redirect_if_logged_in();
 
-		$email = Input::get('email', '');
-		$token = Input::get('token', '');
+		// Lấy email và token từ session
+		$email = Session::get('reset_password_email', '');
+		$token = Session::get('reset_password_token', '');
 
 		$data = array();
 		$data['error_message'] = '';
@@ -669,19 +674,13 @@ class Controller_User extends Controller
 		$data['form_data'] = array();
 		$data['valid_token'] = false;
 
-		// Kiểm tra email và token
+		// Kiểm tra email và token trong session
 		if (empty($email) || empty($token)) {
-			$data['error_message'] = 'Link đặt lại mật khẩu không hợp lệ.';
+			$data['error_message'] = 'Phiên làm việc đã hết hạn. Vui lòng yêu cầu đặt lại mật khẩu mới.';
 		} else {
-			$reset_token = Model_PasswordResetToken::find_by_email_and_token($email, $token);
-
-			if ($reset_token) {
-				$data['valid_token'] = true;
-				$data['email'] = $email;
-				$data['token'] = $token;
-			} else {
-				$data['error_message'] = 'Mã xác thực không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu đặt lại mật khẩu mới.';
-			}
+			$data['valid_token'] = true;
+			$data['email'] = $email;
+			$data['token'] = $token;
 		}
 
 		// Xử lý form đặt lại mật khẩu
@@ -709,8 +708,9 @@ class Controller_User extends Controller
 						$update_data = array('password' => $new_password);
 						
 						if ($user->update_admin($update_data)) {
-							// Xóa token đã sử dụng
-							$reset_token->delete();
+							// Xóa session reset password
+							Session::delete('reset_password_email');
+							Session::delete('reset_password_token');
 
 							// Gửi email thông báo thành công
 							$email_service = new Service_Email();
@@ -732,6 +732,80 @@ class Controller_User extends Controller
 
 		$data['title'] = 'Đặt lại mật khẩu';
 		$data['content'] = View::forge('user/reset_password', $data, false);
+		return View::forge('layouts/client', $data);
+	}
+
+	/**
+	 * Trang xác thực mã token
+	 * 
+	 * @return void
+	 */
+	public function action_verify_token()
+	{
+		// Nếu đã đăng nhập thì redirect đến trang chủ
+		$this->redirect_if_logged_in();
+
+		$data = array();
+		$data['error_message'] = '';
+		$data['success_message'] = '';
+		$data['form_data'] = array();
+		$data['email'] = '';
+
+		// Lấy email từ session hoặc POST
+		if (Input::method() === 'POST') {
+			$email = Input::post('email', '');
+		} else {
+			$email = Session::get('reset_password_email', '');
+		}
+
+		$data['email'] = $email;
+
+		if (Input::method() === 'POST') {
+			// Kiểm tra CSRF token
+			if (!Security::check_token()) {
+				$data['error_message'] = 'Token không hợp lệ. Vui lòng thử lại.';
+			} else {
+				$token = Input::post('token', '');
+
+				// Kiểm tra dữ liệu đầu vào
+				if (empty($email)) {
+					$data['error_message'] = 'Email không hợp lệ. Vui lòng thử lại.';
+				} elseif (empty($token)) {
+					$data['error_message'] = 'Vui lòng nhập mã xác thực.';
+				} else {
+					// Tìm token trong database
+					$reset_token = Model_PasswordResetToken::find_by_email_and_token($email, $token);
+
+					if ($reset_token) {
+						// Token hợp lệ, lưu vào session và redirect đến trang đặt lại mật khẩu
+						Session::set('reset_password_email', $email);
+						Session::set('reset_password_token', $token);
+						
+						// Xóa token đã sử dụng
+						$reset_token->delete();
+						
+						\Log::info('Token verified successfully for: ' . $email);
+						
+						// Redirect đến trang đặt lại mật khẩu
+						Response::redirect('user/reset-password');
+					} else {
+						$data['error_message'] = 'Mã xác thực không đúng hoặc đã hết hạn. Vui lòng thử lại.';
+						\Log::warning('Invalid token attempted for: ' . $email);
+					}
+				}
+
+				// Lưu lại dữ liệu form nếu lỗi
+				if (!empty($data['error_message'])) {
+					$data['form_data'] = array(
+						'email' => $email,
+						'token' => $token,
+					);
+				}
+			}
+		}
+
+		$data['title'] = 'Xác thực mã';
+		$data['content'] = View::forge('user/verify_token', $data, false);
 		return View::forge('layouts/client', $data);
 	}
 }

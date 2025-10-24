@@ -38,10 +38,8 @@ class Service_Email
     public function send_password_reset($email, $token, $username = '')
     {
         try {
-            $reset_url = Uri::base() . 'user/reset-password?email=' . urlencode($email) . '&token=' . urlencode($token);
-            
-            $subject = 'Đặt lại mật khẩu - ComicHub';
-            $message = $this->get_password_reset_template($username, $reset_url, $token);
+            $subject = 'Mã xác thực đặt lại mật khẩu - ComicHub';
+            $message = $this->get_password_reset_template($username, $token);
             
             return $this->send_email($email, $subject, $message);
         } catch (\Exception $e) {
@@ -163,11 +161,10 @@ class Service_Email
      * Template email đặt lại mật khẩu
      * 
      * @param string $username Tên người dùng
-     * @param string $reset_url URL đặt lại mật khẩu
      * @param string $token Token
      * @return string
      */
-    protected function get_password_reset_template($username, $reset_url, $token)
+    protected function get_password_reset_template($username, $token)
     {
         $display_name = !empty($username) ? $username : 'Bạn';
         
@@ -200,8 +197,7 @@ class Service_Email
                     <p><strong>Mã xác thực của bạn là:</strong></p>
                     <div class="code">' . htmlspecialchars($token) . '</div>
                     
-                    <p>Hoặc bạn có thể click vào link bên dưới để đặt lại mật khẩu:</p>
-                    <a href="' . htmlspecialchars($reset_url) . '" class="button">Đặt lại mật khẩu</a>
+                    <p>Vui lòng quay lại trang web và nhập mã xác thực này để đặt lại mật khẩu của bạn.</p>
                     
                     <p><strong>Lưu ý quan trọng:</strong></p>
                     <ul>

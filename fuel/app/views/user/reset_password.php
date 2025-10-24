@@ -29,8 +29,23 @@
                         <?php endif; ?>
                     </div>
 
-                    <?php if (isset($valid_token) && $valid_token): ?>
-                        <form method="POST" action="<?php echo Uri::base(); ?>user/reset-password?email=<?php echo urlencode($email); ?>&token=<?php echo urlencode($token); ?>">
+                    <?php if (isset($success_message) && !empty($success_message)): ?>
+                        <!-- Hiển thị khi thành công -->
+                        <div class="text-center">
+                            <div class="mb-4">
+                                <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
+                            </div>
+                            <h4 class="text-success mb-3">Thành công!</h4>
+                            <p class="text-muted mb-4">
+                                Mật khẩu của bạn đã được đặt lại thành công.
+                            </p>
+                            <a href="<?php echo Uri::base(); ?>user/login" class="btn btn-primary btn-lg">
+                                <i class="fas fa-sign-in-alt me-2"></i>Đăng nhập ngay
+                            </a>
+                        </div>
+                    <?php elseif (isset($valid_token) && $valid_token): ?>
+                        <!-- Hiển thị form đặt lại mật khẩu -->
+                        <form method="POST" action="<?php echo Uri::base(); ?>user/reset-password">
                             <?php echo Form::csrf(); ?>
                             
                             <div class="mb-3">
@@ -64,6 +79,7 @@
                             </button>
                         </form>
                     <?php else: ?>
+                        <!-- Hiển thị khi token không hợp lệ -->
                         <div class="text-center">
                             <div class="mb-4">
                                 <i class="fas fa-exclamation-circle text-warning" style="font-size: 4rem;"></i>
@@ -87,32 +103,6 @@
                 </div>
             </div>
             
-            <!-- Thông tin bảo mật -->
-            <div class="card mt-4">
-                <div class="card-body">
-                    <h5 class="card-title">
-                        <i class="fas fa-shield-alt me-2"></i>Mẹo tạo mật khẩu an toàn
-                    </h5>
-                    <ul class="list-unstyled mb-0">
-                        <li class="mb-2">
-                            <i class="fas fa-check text-success me-2"></i>
-                            Sử dụng ít nhất 8 ký tự
-                        </li>
-                        <li class="mb-2">
-                            <i class="fas fa-check text-success me-2"></i>
-                            Kết hợp chữ hoa, chữ thường và số
-                        </li>
-                        <li class="mb-2">
-                            <i class="fas fa-check text-success me-2"></i>
-                            Thêm ký tự đặc biệt (!@#$%^&*)
-                        </li>
-                        <li class="mb-0">
-                            <i class="fas fa-check text-success me-2"></i>
-                            Không sử dụng thông tin cá nhân
-                        </li>
-                    </ul>
-                </div>
-            </div>
         </div>
     </div>
 </div>
