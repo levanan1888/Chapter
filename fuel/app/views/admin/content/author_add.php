@@ -68,7 +68,7 @@
 						<label class="form-label">Trạng thái</label>
 						<div class="form-check">
 							<input class="form-check-input" type="checkbox" name="is_active" value="1" 
-								   id="is_active" <?php echo (isset($form_data['is_active']) && $form_data['is_active']) ? 'checked' : 'checked'; ?>>
+								   id="is_active" <?php echo (isset($form_data['is_active']) && $form_data['is_active']) ? 'checked' : ''; ?>>
 							<label class="form-check-label" for="is_active">
 								Hoạt động
 							</label>

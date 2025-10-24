@@ -158,11 +158,13 @@ class Model_Author extends \Model
 			// Filter theo trạng thái
 			if ($status === 'active') {
 				$sql .= " AND a.is_active = 1 AND a.deleted_at IS NULL";
+			} elseif ($status === 'inactive') {
+				$sql .= " AND a.is_active = 0 AND a.deleted_at IS NULL";
 			} elseif ($status === 'deleted') {
-				$sql .= " AND (a.is_active = 0 OR a.deleted_at IS NOT NULL)";
+				$sql .= " AND a.deleted_at IS NOT NULL";
 			} else {
-				// Mặc định chỉ hiển thị active
-				$sql .= " AND a.is_active = 1 AND a.deleted_at IS NULL";
+				// Mặc định hiển thị cả active và inactive (không bao gồm deleted)
+				$sql .= " AND a.deleted_at IS NULL";
 			}
 			
 			// Tìm kiếm theo tên
@@ -236,11 +238,13 @@ class Model_Author extends \Model
 			// Filter theo trạng thái
 			if ($status === 'active') {
 				$sql .= " AND is_active = 1 AND deleted_at IS NULL";
+			} elseif ($status === 'inactive') {
+				$sql .= " AND is_active = 0 AND deleted_at IS NULL";
 			} elseif ($status === 'deleted') {
-				$sql .= " AND (is_active = 0 OR deleted_at IS NOT NULL)";
+				$sql .= " AND deleted_at IS NOT NULL";
 			} else {
-				// Mặc định chỉ đếm active
-				$sql .= " AND is_active = 1 AND deleted_at IS NULL";
+				// Mặc định đếm cả active và inactive (không bao gồm deleted)
+				$sql .= " AND deleted_at IS NULL";
 			}
 			
 			// Tìm kiếm theo tên
@@ -285,7 +289,7 @@ class Model_Author extends \Model
 			// Đặt giá trị mặc định
 			$description = isset($data['description']) ? $data['description'] : '';
 			$avatar = isset($data['avatar']) ? $data['avatar'] : null;
-			$is_active = isset($data['is_active']) ? $data['is_active'] : 1;
+			$is_active = isset($data['is_active']) ? (int) $data['is_active'] : 1;
 			$created_at = date('Y-m-d H:i:s');
 			$updated_at = date('Y-m-d H:i:s');
 
@@ -473,7 +477,7 @@ class Model_Author extends \Model
 	public static function get_deleted_authors($limit = null, $offset = 0, $search = '', $sort = 'deleted_at_desc')
 	{
 		try {
-			$sql = "SELECT a.*, COUNT(s.id) as story_count FROM authors a LEFT JOIN stories s ON a.id = s.author_id AND s.deleted_at IS NULL WHERE (a.is_active = 0 OR a.deleted_at IS NOT NULL)";
+			$sql = "SELECT a.*, COUNT(s.id) as story_count FROM authors a LEFT JOIN stories s ON a.id = s.author_id AND s.deleted_at IS NULL WHERE a.deleted_at IS NOT NULL";
 			$params = array();
 			
 			// Tìm kiếm theo tên
@@ -540,7 +544,7 @@ class Model_Author extends \Model
 	public static function count_deleted($search = '')
 	{
 		try {
-			$sql = "SELECT COUNT(*) as total FROM authors WHERE (is_active = 0 OR deleted_at IS NOT NULL)";
+			$sql = "SELECT COUNT(*) as total FROM authors WHERE deleted_at IS NOT NULL";
 			$params = array();
 			
 			// Tìm kiếm theo tên

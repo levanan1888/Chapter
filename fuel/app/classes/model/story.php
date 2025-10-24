@@ -874,8 +874,14 @@ class Model_Story extends \Model
 			
 			// Lọc theo trạng thái
 			if (!empty($status)) {
-				$sql .= " AND s.status = :status";
-				$params['status'] = $status;
+				if ($status === 'hidden') {
+					// Lọc theo trạng thái ẩn (is_visible = 0)
+					$sql .= " AND s.is_visible = 0";
+				} else {
+					// Lọc theo trạng thái khác (status field)
+					$sql .= " AND s.status = :status";
+					$params['status'] = $status;
+				}
 			}
 			
 			// Sắp xếp
@@ -971,8 +977,14 @@ class Model_Story extends \Model
 			}
 			
 			if (!empty($status)) {
-				$sql .= " AND s.status = :status";
-				$params['status'] = $status;
+				if ($status === 'hidden') {
+					// Lọc theo trạng thái ẩn (is_visible = 0)
+					$sql .= " AND s.is_visible = 0";
+				} else {
+					// Lọc theo trạng thái khác (status field)
+					$sql .= " AND s.status = :status";
+					$params['status'] = $status;
+				}
 			}
 			
 			$query = \DB::query($sql);
