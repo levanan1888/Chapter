@@ -105,7 +105,7 @@ class Controller_User extends Controller
 							$data['error_message'] = 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.';
 							$data['account_locked'] = true;
 						} elseif ($user->is_active == 0) {
-							$data['error_message'] = 'Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.';
+							$data['error_message'] = 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.';
 							$data['account_locked'] = true;
 						} elseif ($user->check_password($password)) {
 							// Đăng nhập thành công
@@ -321,7 +321,7 @@ class Controller_User extends Controller
 				Session::set_flash('account_locked', true);
 				Response::redirect('user/login');
 			} elseif ($user->is_active == 0) {
-				Session::set_flash('error', 'Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.');
+				Session::set_flash('error', 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.');
 				Session::set_flash('account_locked', true);
 				Response::redirect('user/login');
 			}
@@ -577,6 +577,162 @@ class Controller_User extends Controller
 		Response::forge(json_encode($response), 200, array(
 			'Content-Type' => 'application/json'
 		))->send();
+	}
+
+	/**
+	 * Trang quên mật khẩu
+	 * 
+	 * @return void
+	 */
+	public function action_forgot_password()
+	{
+		// Nếu đã đăng nhập thì redirect đến trang chủ
+		$this->redirect_if_logged_in();
+
+		$data = array();
+		$data['error_message'] = '';
+		$data['success_message'] = '';
+		$data['form_data'] = array();
+
+		if (Input::method() === 'POST') {
+			// Kiểm tra CSRF token
+			if (!Security::check_token()) {
+				$data['error_message'] = 'Token không hợp lệ. Vui lòng thử lại.';
+			} else {
+				$email = Input::post('email', '');
+
+				// Kiểm tra dữ liệu đầu vào
+				if (empty($email)) {
+					$data['error_message'] = 'Vui lòng nhập địa chỉ email.';
+				} elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+					$data['error_message'] = 'Địa chỉ email không hợp lệ.';
+				} else {
+					// Tìm user theo email
+					$user = $this->find_user_by_email($email);
+
+					if ($user) {
+						// Tạo token đặt lại mật khẩu
+						$reset_token = Model_PasswordResetToken::create_reset_token($email);
+
+						if ($reset_token) {
+							// Gửi email đặt lại mật khẩu
+							$email_service = new Service_Email();
+							$email_sent = $email_service->send_password_reset($email, $reset_token->token, $user->full_name);
+
+							if ($email_sent) {
+								$data['success_message'] = 'Chúng tôi đã gửi mã xác thực đến email của bạn. Vui lòng kiểm tra hộp thư và làm theo hướng dẫn.';
+								\Log::info('Password reset email sent to: ' . $email);
+							} else {
+								$data['error_message'] = 'Không thể gửi email. Vui lòng thử lại sau.';
+								\Log::error('Failed to send password reset email to: ' . $email);
+							}
+						} else {
+							$data['error_message'] = 'Không thể tạo mã xác thực. Vui lòng thử lại.';
+						}
+					} else {
+						// Không tìm thấy user nhưng vẫn hiển thị thông báo thành công để bảo mật
+						$data['success_message'] = 'Nếu email tồn tại trong hệ thống, chúng tôi đã gửi mã xác thực đến email của bạn.';
+						\Log::info('Password reset requested for non-existent email: ' . $email);
+					}
+				}
+
+				// Lưu lại dữ liệu form nếu lỗi
+				if (!empty($data['error_message'])) {
+					$data['form_data'] = array(
+						'email' => $email,
+					);
+				}
+			}
+		}
+
+		$data['title'] = 'Quên mật khẩu';
+		$data['content'] = View::forge('user/forgot_password', $data, false);
+		return View::forge('layouts/client', $data);
+	}
+
+	/**
+	 * Trang đặt lại mật khẩu
+	 * 
+	 * @return void
+	 */
+	public function action_reset_password()
+	{
+		// Nếu đã đăng nhập thì redirect đến trang chủ
+		$this->redirect_if_logged_in();
+
+		$email = Input::get('email', '');
+		$token = Input::get('token', '');
+
+		$data = array();
+		$data['error_message'] = '';
+		$data['success_message'] = '';
+		$data['form_data'] = array();
+		$data['valid_token'] = false;
+
+		// Kiểm tra email và token
+		if (empty($email) || empty($token)) {
+			$data['error_message'] = 'Link đặt lại mật khẩu không hợp lệ.';
+		} else {
+			$reset_token = Model_PasswordResetToken::find_by_email_and_token($email, $token);
+
+			if ($reset_token) {
+				$data['valid_token'] = true;
+				$data['email'] = $email;
+				$data['token'] = $token;
+			} else {
+				$data['error_message'] = 'Mã xác thực không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu đặt lại mật khẩu mới.';
+			}
+		}
+
+		// Xử lý form đặt lại mật khẩu
+		if (Input::method() === 'POST' && $data['valid_token']) {
+			// Kiểm tra CSRF token
+			if (!Security::check_token()) {
+				$data['error_message'] = 'Token không hợp lệ. Vui lòng thử lại.';
+			} else {
+				$new_password = Input::post('password', '');
+				$confirm_password = Input::post('confirm_password', '');
+
+				// Kiểm tra dữ liệu đầu vào
+				if (empty($new_password)) {
+					$data['error_message'] = 'Vui lòng nhập mật khẩu mới.';
+				} elseif (strlen($new_password) < 6) {
+					$data['error_message'] = 'Mật khẩu phải có ít nhất 6 ký tự.';
+				} elseif ($new_password !== $confirm_password) {
+					$data['error_message'] = 'Mật khẩu xác nhận không khớp.';
+				} else {
+					// Tìm user và cập nhật mật khẩu
+					$user = $this->find_user_by_email($email);
+
+					if ($user) {
+						// Cập nhật mật khẩu
+						$update_data = array('password' => $new_password);
+						
+						if ($user->update_admin($update_data)) {
+							// Xóa token đã sử dụng
+							$reset_token->delete();
+
+							// Gửi email thông báo thành công
+							$email_service = new Service_Email();
+							$email_service->send_password_reset_success($email, $user->full_name);
+
+							$data['success_message'] = 'Mật khẩu đã được đặt lại thành công! Bạn có thể đăng nhập với mật khẩu mới.';
+							$data['valid_token'] = false; // Ẩn form sau khi thành công
+							
+							\Log::info('Password reset successful for user: ' . $email);
+						} else {
+							$data['error_message'] = 'Không thể cập nhật mật khẩu. Vui lòng thử lại.';
+						}
+					} else {
+						$data['error_message'] = 'Không tìm thấy tài khoản.';
+					}
+				}
+			}
+		}
+
+		$data['title'] = 'Đặt lại mật khẩu';
+		$data['content'] = View::forge('user/reset_password', $data, false);
+		return View::forge('layouts/client', $data);
 	}
 }
 

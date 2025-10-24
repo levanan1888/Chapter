@@ -40,11 +40,6 @@
 		<i class="fas fa-sign-in-alt me-2"></i>Đăng nhập
 	</button>
 	
-	<div class="text-center">
-		<a href="<?php echo Uri::base(); ?>admin/google_login" class="btn btn-outline-danger">
-			<i class="fab fa-google me-2"></i>Đăng nhập với Google
-		</a>
-	</div>
 	
 	<div class="text-center mt-3">
 		<small class="text-muted">

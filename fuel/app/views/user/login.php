@@ -97,6 +97,12 @@
                         
                         <div class="text-center">
                             <small class="text-muted">
+                                <a href="<?php echo Uri::base(); ?>user/forgot-password">Quên mật khẩu?</a>
+                            </small>
+                        </div>
+                        
+                        <div class="text-center mt-2">
+                            <small class="text-muted">
                                 Chưa có tài khoản? <a href="<?php echo Uri::base(); ?>user/register">Đăng ký ngay</a>
                             </small>
                         </div>

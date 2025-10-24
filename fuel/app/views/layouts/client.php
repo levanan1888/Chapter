@@ -197,22 +197,6 @@
 							<i class="fas fa-list me-1"></i>Danh sách
 						</a>
 					</li>
-					<li class="nav-item dropdown">
-						<a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-							<i class="fas fa-th-large me-1"></i>Danh mục
-						</a>
-						<ul class="dropdown-menu">
-							<?php if (isset($categories) && !empty($categories)): ?>
-								<?php foreach ($categories as $category): ?>
-									<li>
-										<a class="dropdown-item" href="<?php echo Uri::base(); ?>client/category/<?php echo $category->slug; ?>">
-											<?php echo $category->name; ?>
-										</a>
-									</li>
-								<?php endforeach; ?>
-							<?php endif; ?>
-						</ul>
-					</li>
 				</ul>
 				
 				<!-- Search Box -->
@@ -266,11 +250,6 @@
 							</a>
 						</li>
 					<?php endif; ?>
-					<li class="nav-item">
-						<a class="nav-link" href="<?php echo Uri::base(); ?>admin">
-							<i class="fas fa-cog me-1"></i>Admin
-						</a>
-					</li>
 				</ul>
 			</div>
 		</div>

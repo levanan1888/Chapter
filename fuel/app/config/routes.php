@@ -52,8 +52,6 @@ return array(
 	'admin' => 'admin/dashboard/index',
 	'admin/login' => 'admin/auth/login',
 	'admin/register' => 'admin/auth/register',
-	'admin/google_login' => 'admin/auth/google_login',
-	'admin/google_callback' => 'admin/auth/google_callback',
 	'admin/logout' => 'admin/auth/logout',
 	
 	// Admin dashboard routes
@@ -174,4 +172,6 @@ return array(
 	'user/google_login' => 'user/google_login',
 	'user/google_callback' => 'user/google_callback',
 	'user/check_status' => 'user/check_status',
+	'user/forgot-password' => 'user/forgot_password',
+	'user/reset-password' => 'user/reset_password',
 );

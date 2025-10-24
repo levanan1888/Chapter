@@ -156,13 +156,13 @@ class Controller_Admin_User extends Controller_Admin_Base
 				$data['error_message'] = 'Vui lòng nhập đầy đủ thông tin bắt buộc.';
 			} else {
 				// Kiểm tra username và email đã tồn tại chưa (trừ admin hiện tại)
-				$existing_admin = Model_Admin::find_by_username_or_email_any_status($username);
-				if ($existing_admin && $existing_admin->id != $id) {
+				$existing_admin = $this->find_admin_by_username_exclude_id($username, $id);
+				if ($existing_admin) {
 					\Log::warning('Admin update failed: Username already exists - ID: ' . $id . ', Username: ' . $username);
 					$data['error_message'] = 'Username đã tồn tại.';
 				} else {
-					$existing_admin = Model_Admin::find_by_username_or_email_any_status($email);
-					if ($existing_admin && $existing_admin->id != $id) {
+					$existing_admin = $this->find_admin_by_email_exclude_id($email, $id);
+					if ($existing_admin) {
 						\Log::warning('Admin update failed: Email already exists - ID: ' . $id . ', Email: ' . $email);
 						$data['error_message'] = 'Email đã tồn tại.';
 					} else {
@@ -505,5 +505,65 @@ class Controller_Admin_User extends Controller_Admin_Base
 		);
 		
 		return $this->success_response('Đã xóa vĩnh viễn '.(int)$count.' admin', $data);
+	}
+
+	/**
+	 * Tìm admin theo username loại trừ ID cụ thể
+	 * 
+	 * @param string $username Username cần tìm
+	 * @param int $exclude_id ID cần loại trừ
+	 * @return Model_Admin|null
+	 */
+	protected function find_admin_by_username_exclude_id($username, $exclude_id)
+	{
+		try {
+			$query = \DB::query("SELECT * FROM admins WHERE username = :username AND id != :exclude_id AND deleted_at IS NULL");
+			$result = $query->param('username', $username)
+							->param('exclude_id', $exclude_id)
+							->execute();
+
+			if ($result->count() > 0) {
+				$data = $result->current();
+				$admin = new Model_Admin();
+				foreach ($data as $key => $value) {
+					$admin->$key = $value;
+				}
+				return $admin;
+			}
+
+			return null;
+		} catch (\Exception $e) {
+			return null;
+		}
+	}
+
+	/**
+	 * Tìm admin theo email loại trừ ID cụ thể
+	 * 
+	 * @param string $email Email cần tìm
+	 * @param int $exclude_id ID cần loại trừ
+	 * @return Model_Admin|null
+	 */
+	protected function find_admin_by_email_exclude_id($email, $exclude_id)
+	{
+		try {
+			$query = \DB::query("SELECT * FROM admins WHERE email = :email AND id != :exclude_id AND deleted_at IS NULL");
+			$result = $query->param('email', $email)
+							->param('exclude_id', $exclude_id)
+							->execute();
+
+			if ($result->count() > 0) {
+				$data = $result->current();
+				$admin = new Model_Admin();
+				foreach ($data as $key => $value) {
+					$admin->$key = $value;
+				}
+				return $admin;
+			}
+
+			return null;
+		} catch (\Exception $e) {
+			return null;
+		}
 	}
 }

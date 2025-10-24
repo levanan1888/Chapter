@@ -14,19 +14,19 @@ return array(
 	 * Google OAuth Client ID
 	 * Lấy từ Google Cloud Console
 	 */
-	'client_id' => '474636792697-0arujfll4d9h05mr8hbt73hfotb7ckjv.apps.googleusercontent.com',
+	'client_id' => '474636792697-5oc8o8b6ndlcnkvi15pldl3nut9rqrgd.apps.googleusercontent.com',
 	
 	/**
 	 * Google OAuth Client Secret
 	 * Lấy từ Google Cloud Console
 	 */
-	'client_secret' => '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',
+	'client_secret' => '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',
 	
 	/**
 	 * Redirect URI sau khi xác thực Google
 	 * Thay đổi URL này nếu bạn chạy trên domain khác
 	 */
-	'redirect_uri' => 'http://localhost/project-story/admin/google_callback',
+	'redirect_uri' => 'http://localhost/project-story/user/google_callback',
 	
 	/**
 	 * Các scope cần thiết cho Google OAuth

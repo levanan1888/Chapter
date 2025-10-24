@@ -45,20 +45,29 @@ class Controller_Admin_Auth extends Controller_Admin_Base
 			if (empty($username) || empty($password)) {
 				$data['error_message'] = 'Vui lòng nhập đầy đủ thông tin đăng nhập.';
 			} else {
-				// Tìm admin theo username hoặc email
-				$admin = Model_Admin::find_by_username_or_email($username);
+				// Tìm user theo username hoặc email (bao gồm cả tài khoản bị soft delete)
+				$user = Model_Admin::find_by_username_or_email_any_status($username);
 
-				if ($admin && $admin->check_password($password)) {
-					// Đăng nhập thành công
-					Session::set('admin_id', $admin->id);
-					Session::set('admin_username', $admin->username);
-					Session::set('admin_full_name', $admin->full_name);
+				if ($user && $user->check_password($password)) {
+					// Kiểm tra tài khoản có bị soft delete không
+					if ($user->deleted_at !== null) {
+						$data['error_message'] = 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.';
+					} elseif ($user->is_active == 0) {
+						$data['error_message'] = 'Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.';
+					} elseif ($user->user_type !== 'admin') {
+						$data['error_message'] = 'Bạn không đủ quyền đăng nhập vào hệ thống quản trị.';
+					} else {
+						// Đăng nhập thành công - chỉ admin mới được phép
+						Session::set('admin_id', $user->id);
+						Session::set('admin_username', $user->username);
+						Session::set('admin_full_name', $user->full_name);
 
-					// Cập nhật thời gian đăng nhập cuối
-					$admin->update_last_login();
+						// Cập nhật thời gian đăng nhập cuối
+						$user->update_last_login();
 
-					// Redirect đến dashboard
-					Response::redirect('admin/dashboard');
+						// Redirect đến dashboard
+						Response::redirect('admin/dashboard');
+					}
 				} else {
 					$data['error_message'] = 'Tên đăng nhập hoặc mật khẩu không đúng.';
 				}
@@ -158,87 +167,6 @@ class Controller_Admin_Auth extends Controller_Admin_Base
 		Response::redirect('admin/login');
 	}
 
-	/**
-	 * Google OAuth login
-	 * 
-	 * @return void
-	 */
-	public function action_google_login()
-	{
-		// Nếu đã đăng nhập thì redirect đến dashboard
-		$this->redirect_if_logged_in();
-		
-		$google_oauth = new Service_Googleoauth();
-		$auth_url = $google_oauth->get_auth_url();
-		
-		Response::redirect($auth_url);
-	}
-	
-	/**
-	 * Google OAuth callback
-	 * 
-	 * @return void
-	 */
-	public function action_google_callback()
-	{
-		// Nếu đã đăng nhập thì redirect đến dashboard
-		$this->redirect_if_logged_in();
-		
-		$code = Input::get('code');
-		$state = Input::get('state');
-		
-		if (empty($code) || empty($state)) {
-			Session::set_flash('error', 'Lỗi xác thực Google. Vui lòng thử lại.');
-			Response::redirect('admin/login');
-		}
-		
-		$google_oauth = new Service_Googleoauth();
-		$user_info = $google_oauth->handle_callback($code, $state);
-		
-		if (!$user_info) {
-			Session::set_flash('error', 'Không thể xác thực với Google. Vui lòng thử lại.');
-			Response::redirect('admin/login');
-		}
-		
-		// Kiểm tra email có tồn tại trong hệ thống không
-		$admin = Model_Admin::find_by_email($user_info['email']);
-		
-		if (!$admin) {
-			// Tạo admin mới từ thông tin Google
-			$admin_data = array(
-				'username' => $user_info['email'],
-				'email' => $user_info['email'],
-				'password' => $this->generate_random_password(),
-				'full_name' => $user_info['name'],
-				'is_active' => 1,
-				'google_id' => $user_info['id']
-			);
-			
-			$admin = Model_Admin::create_admin($admin_data);
-			
-			if (!$admin) {
-				Session::set_flash('error', 'Không thể tạo tài khoản từ Google. Vui lòng thử lại.');
-				Response::redirect('admin/login');
-			}
-		} else {
-			// Cập nhật Google ID nếu chưa có
-			if (empty($admin->google_id)) {
-				$admin->google_id = $user_info['id'];
-				$admin->save();
-			}
-		}
-		
-		// Đăng nhập thành công
-		Session::set('admin_id', $admin->id);
-		Session::set('admin_username', $admin->username);
-		Session::set('admin_full_name', $admin->full_name);
-		
-		// Cập nhật thời gian đăng nhập cuối
-		$admin->update_last_login();
-		
-		// Redirect đến dashboard
-		Response::redirect('admin/dashboard');
-	}
 	
 	/**
 	 * Tạo mật khẩu ngẫu nhiên
