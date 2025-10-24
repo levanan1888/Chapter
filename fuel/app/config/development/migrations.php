@@ -3,8 +3,22 @@ return array (
   'version' => array(  
     'app' => array(    
       'default' => array(      
-        0 => '016_add_password_reset_fields_to_admins',
-        1 => '016_create_password_resets_table',
+        0 => '001_create_admins_table',
+        1 => '002_create_categories_table',
+        2 => '003_create_authors_table',
+        3 => '004_create_stories_table',
+        4 => '005_create_story_categories_table',
+        5 => '006_create_chapters_table',
+        6 => '007_seed_fake_data',
+        7 => '008_seed_fake_data_with_faker',
+        8 => '009_add_slug_is_active_to_categories',
+        9 => '011_alter_categories_add_missing_fields',
+        10 => '012_add_is_visible_to_stories',
+        11 => '013_add_user_type_to_admins',
+        12 => '014_update_stories_visibility_for_cascade',
+        13 => '015_add_original_visibility_to_stories',
+        14 => '016_add_password_reset_fields_to_admins',
+        15 => '016_create_password_resets_table',
       ),
     ),
     'module' => array(    

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Admin Login</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 50px; }
+        .form-group { margin: 10px 0; }
+        label { display: block; margin-bottom: 5px; }
+        input[type="text"], input[type="password"] { width: 300px; padding: 8px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .info { background: #f8f9fa; padding: 15px; margin: 20px 0; border-left: 4px solid #007bff; }
+    </style>
+</head>
+<body>
+    <h1>Test Admin Login</h1>
+    
+    <div class="info">
+        <h3>Thông tin test:</h3>
+        <p><strong>Email:</strong> admin@example.com</p>
+        <p><strong>Password:</strong> admin123</p>
+        <p><strong>URL:</strong> <a href="http://localhost/project-story/admin/login" target="_blank">http://localhost/project-story/admin/login</a></p>
+    </div>
+    
+    <h3>Hướng dẫn test:</h3>
+    <ol>
+        <li>Mở link đăng nhập admin ở trên</li>
+        <li>Nhập email: <code>admin@example.com</code></li>
+        <li>Nhập password: <code>admin123</code></li>
+        <li>Nhấn "Đăng nhập"</li>
+        <li>Kiểm tra xem có redirect đến dashboard không</li>
+        <li>Nếu bị báo "không phải admin", hãy kiểm tra log trong <code>fuel/app/logs/2025/10/24.php</code></li>
+    </ol>
+    
+    <h3>Debug steps:</h3>
+    <ol>
+        <li>Kiểm tra session có được lưu không</li>
+        <li>Kiểm tra redirect có hoạt động không</li>
+        <li>Kiểm tra dashboard controller có nhận được session không</li>
+        <li>Kiểm tra Model_Admin::find() có trả về admin không</li>
+    </ol>
+    
+    <div class="info">
+        <h3>Log file location:</h3>
+        <p><code>fuel/app/logs/2025/10/24.php</code></p>
+        <p>Mở file này để xem debug messages</p>
+    </div>
+</body>
+</html>
+
