@@ -183,10 +183,6 @@
 										   class="btn btn-sm btn-outline-primary" title="Sửa">
 											<i class="fas fa-edit"></i>
 										</a>
-										<a href="<?php echo Uri::base(); ?>admin/chapters/images/<?php echo $chapter->id; ?>" 
-										   class="btn btn-sm btn-outline-secondary" title="Quản lý ảnh">
-											<i class="fas fa-images"></i>
-										</a>
 									</div>
 								</td>
 							</tr>

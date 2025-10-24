@@ -176,10 +176,6 @@
                                            class="btn btn-sm btn-outline-primary" title="Sửa">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <a href="<?php echo Uri::base(); ?>admin/chapters/images/<?php echo $chapter->id; ?>" 
-                                           class="btn btn-sm btn-outline-info" title="Quản lý ảnh">
-                                            <i class="fas fa-images"></i>
-                                        </a>
                                         <?php if (empty($chapter->deleted_at)): ?>
                                             <button type="button" class="btn btn-sm btn-outline-danger" title="Xóa"
                                                     onclick="softDeleteChapter(<?php echo $chapter->id; ?>)">

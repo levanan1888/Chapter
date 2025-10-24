@@ -102,9 +102,6 @@ return array(
 	'admin/chapters/force-delete/(:num)' => 'admin/chapter/force_delete/$1',
 	'admin/chapters/bulk-restore' => 'admin/chapter/bulk_restore',
 	'admin/chapters/bulk-force-delete' => 'admin/chapter/bulk_force_delete',
-	'admin/chapters/images/(:num)' => 'admin/chapter/images/$1',
-	'admin/chapters/upload/(:num)' => 'admin/chapter/upload_image/$1',
-	'admin/chapters/delete-image/(:num)' => 'admin/chapter/delete_image/$1',
 	'admin/chapters/api/list/(:num)' => 'admin/chapter/api_list/$1',
 	
 	// Category management routes

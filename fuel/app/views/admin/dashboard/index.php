@@ -136,34 +136,9 @@
 		</div>
 	</div>
 	
-	<!-- Quick Actions -->
+	<!-- Top Viewed Stories -->
 	<div class="col-lg-4 mb-4">
 		<div class="card">
-			<div class="card-header">
-				<h5 class="mb-0">
-					<i class="fas fa-bolt me-2"></i>Thao tác nhanh
-				</h5>
-			</div>
-			<div class="card-body">
-				<div class="d-grid gap-2">
-					<a href="<?php echo Uri::base(); ?>admin/stories/add" class="btn btn-primary">
-						<i class="fas fa-plus me-2"></i>Thêm truyện mới
-					</a>
-					<a href="<?php echo Uri::base(); ?>admin/categories/add" class="btn btn-success">
-						<i class="fas fa-tag me-2"></i>Thêm danh mục
-					</a>
-					<a href="<?php echo Uri::base(); ?>admin/authors/add" class="btn btn-info">
-						<i class="fas fa-user-plus me-2"></i>Thêm tác giả
-					</a>
-					<a href="<?php echo Uri::base(); ?>admin/users/add" class="btn btn-warning">
-						<i class="fas fa-user-cog me-2"></i>Thêm admin
-					</a>
-				</div>
-			</div>
-		</div>
-		
-		<!-- Top Viewed Stories -->
-		<div class="card mt-3">
 			<div class="card-header">
 				<h5 class="mb-0">
 					<i class="fas fa-fire me-2"></i>Truyện hot nhất
@@ -196,7 +171,7 @@
 <!-- Charts Section -->
 <div class="row mt-4">
 	<!-- Stories and Chapters Trend Chart -->
-	<div class="col-lg-8 mb-4">
+	<div class="col-12 mb-4">
 		<div class="card">
 			<div class="card-header">
 				<h5 class="mb-0">
@@ -209,19 +184,6 @@
 		</div>
 	</div>
 	
-	<!-- Stories by Category Chart -->
-	<div class="col-lg-4 mb-4">
-		<div class="card">
-			<div class="card-header">
-				<h5 class="mb-0">
-					<i class="fas fa-chart-pie me-2"></i>Truyện theo danh mục
-				</h5>
-			</div>
-			<div class="card-body">
-				<canvas id="categoryChart" height="200"></canvas>
-			</div>
-		</div>
-	</div>
 </div>
 
 <!-- Chart.js CDN -->
@@ -274,32 +236,5 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 	});
 	
-	// Category Chart (Pie Chart)
-	const categoryCtx = document.getElementById('categoryChart').getContext('2d');
-	const categoryChart = new Chart(categoryCtx, {
-		type: 'doughnut',
-		data: {
-			labels: chartData.stories_by_category.map(item => item.name),
-			datasets: [{
-				data: chartData.stories_by_category.map(item => item.count),
-				backgroundColor: chartData.stories_by_category.map(item => item.color),
-				borderWidth: 2,
-				borderColor: '#fff'
-			}]
-		},
-		options: {
-			responsive: true,
-			maintainAspectRatio: false,
-			plugins: {
-				legend: {
-					position: 'bottom',
-					labels: {
-						padding: 20,
-						usePointStyle: true
-					}
-				}
-			}
-		}
-	});
 });
 </script>

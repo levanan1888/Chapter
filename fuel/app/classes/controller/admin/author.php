@@ -81,7 +81,8 @@ class Controller_Admin_Author extends Controller_Admin_Base
 				);
 
 				// Validation
-				$validation = Validation_Custom::forge();
+				$validation = Validation::forge();
+				$validation->add_callable('Validation_Custom');
 				$validation->add_field('name', 'Tên tác giả', 'required|custom_name|custom_category');
 				$validation->add_field('description', 'Mô tả', 'custom_category');
 
@@ -185,7 +186,8 @@ class Controller_Admin_Author extends Controller_Admin_Base
 			$is_active = Input::post('is_active', 1);
 
 			// Validation
-			$validation = Validation_Custom::forge();
+			$validation = Validation::forge();
+			$validation->add_callable('Validation_Custom');
 			$validation->add_field('name', 'Tên tác giả', 'required|custom_name|custom_category');
 			$validation->add_field('description', 'Mô tả', 'custom_category');
 

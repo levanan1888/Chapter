@@ -147,8 +147,6 @@ class Controller_Admin_Dashboard extends Controller_Admin_Base
 		// Dữ liệu chương theo tháng (7 tháng gần nhất)
 		$chart_data['chapters_by_month'] = $this->get_chapters_by_month();
 		
-		// Dữ liệu truyện theo danh mục
-		$chart_data['stories_by_category'] = $this->get_stories_by_category();
 		
 		// Dữ liệu lượt xem truyện top 5
 		$chart_data['top_viewed_stories'] = $this->get_top_viewed_stories();
@@ -223,43 +221,6 @@ class Controller_Admin_Dashboard extends Controller_Admin_Base
 		}
 	}
 
-	/**
-	 * Lấy số lượng truyện theo danh mục
-	 * 
-	 * @return array
-	 */
-	private function get_stories_by_category()
-	{
-		try {
-			$query = \DB::query("
-				SELECT 
-					c.name as category_name,
-					c.color as category_color,
-					COUNT(sc.story_id) as count
-				FROM categories c
-				LEFT JOIN story_categories sc ON c.id = sc.category_id
-				LEFT JOIN stories s ON sc.story_id = s.id
-				WHERE c.is_active = 1
-				GROUP BY c.id, c.name, c.color
-				ORDER BY count DESC
-				LIMIT 10
-			");
-			$results = $query->execute();
-			
-			$data = array();
-			foreach ($results as $result) {
-				$data[] = array(
-					'name' => $result['category_name'],
-					'count' => (int) $result['count'],
-					'color' => $result['category_color'] ?: '#007bff'
-				);
-			}
-			
-			return $data;
-		} catch (\Exception $e) {
-			return array();
-		}
-	}
 
 	/**
 	 * Lấy top truyện được xem nhiều nhất

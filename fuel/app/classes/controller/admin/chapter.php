@@ -611,128 +611,8 @@ class Controller_Admin_Chapter extends Controller_Admin_Base
 		}
 	}
 
-	/**
-	 * Quản lý ảnh chương
-	 * 
-	 * @param int $id ID của chương
-	 * @return void
-	 */
-	public function action_images($id = null)
-	{
-		$this->require_login();
 
-		if (empty($id)) {
-			Response::redirect('admin/stories');
-		}
 
-		$chapter = Model_Chapter::find($id);
-		if (!$chapter) {
-			Session::set_flash('error', 'Không tìm thấy chương.');
-			Response::redirect('admin/stories');
-		}
-
-		$data = array();
-		$data['chapter'] = $chapter;
-		$data['story'] = $chapter->get_story();
-		$data['images'] = $chapter->get_images();
-
-		$data['title'] = 'Quản lý Ảnh - ' . $chapter->title;
-		$data['content'] = View::forge('admin/content/chapter_images', $data, false);
-		return View::forge('layouts/admin', $data);
-	}
-
-	/**
-	 * Upload ảnh chương (AJAX)
-	 * 
-	 * @param int $id ID của chương
-	 * @return Response
-	 */
-	public function action_upload_image($id = null)
-	{
-		$this->require_login();
-
-		if (Input::method() !== 'POST') {
-			return $this->error_response('Phương thức không hợp lệ.');
-		}
-
-		if (empty($id)) {
-			return $this->error_response('ID không hợp lệ.');
-		}
-
-		$chapter = Model_Chapter::find($id);
-		if (!$chapter) {
-			return $this->error_response('Không tìm thấy chương.');
-		}
-
-		// Xử lý upload file
-		$upload = Upload::forge('image', array(
-			'path' => DOCROOT . 'uploads/chapters/',
-			'randomize' => true,
-			'ext_whitelist' => array('jpg', 'jpeg', 'png', 'gif', 'webp'),
-			'max_size' => 10 * 1024 * 1024, // 10MB
-		));
-
-		if ($upload->run()) {
-			$file_path = 'uploads/chapters/' . $upload->data('saved_as');
-			
-			// Thêm ảnh vào chương
-			if ($chapter->add_image($file_path)) {
-				return $this->success_response('Upload ảnh thành công!', array(
-					'image_path' => $file_path
-				));
-			} else {
-				return $this->error_response('Có lỗi xảy ra khi lưu ảnh.');
-			}
-		} else {
-			return $this->error_response('Upload ảnh thất bại: ' . implode(', ', $upload->errors()));
-		}
-	}
-
-	/**
-	 * Xóa ảnh chương (AJAX)
-	 * 
-	 * @param int $id ID của chương
-	 * @return Response
-	 */
-	public function action_delete_image($id = null)
-	{
-		$this->require_login();
-
-		if (Input::method() !== 'POST') {
-			return $this->error_response('Phương thức không hợp lệ.');
-		}
-
-		// Kiểm tra CSRF token
-		if (!Security::check_token()) {
-			return $this->error_response('Token bảo mật không hợp lệ. Vui lòng thử lại.');
-		}
-
-		if (empty($id)) {
-			return $this->error_response('ID không hợp lệ.');
-		}
-
-		$chapter = Model_Chapter::find($id);
-		if (!$chapter) {
-			return $this->error_response('Không tìm thấy chương.');
-		}
-
-		$image_path = Input::post('image_path', '');
-		if (empty($image_path)) {
-			return $this->error_response('Đường dẫn ảnh không hợp lệ.');
-		}
-
-		if ($chapter->remove_image($image_path)) {
-			// Xóa file vật lý
-			$full_path = DOCROOT . $image_path;
-			if (file_exists($full_path)) {
-				unlink($full_path);
-			}
-			
-			return $this->success_response('Xóa ảnh thành công!');
-		} else {
-			return $this->error_response('Có lỗi xảy ra khi xóa ảnh.');
-		}
-	}
 
 	/**
 	 * API lấy danh sách chương (AJAX)
@@ -916,15 +796,24 @@ class Controller_Admin_Chapter extends Controller_Admin_Base
 			}
 
 			$allowed_types = array('image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/pjpeg');
+			$max_file_size = 10 * 1024 * 1024; // 10MB
 
 			// Xử lý multiple files
 			$file_count = count($files['name']);
 			$temp_images = array();
+			$upload_errors = array();
+			
+			\Log::info('Processing chapter images', array(
+				'story_id' => $story_id,
+				'file_count' => $file_count,
+				'image_order' => $image_order
+			));
 			
 			for ($i = 0; $i < $file_count; $i++) {
 				if ($files['error'][$i] == 0) {
 					// Validate file type
 					if (!in_array($files['type'][$i], $allowed_types)) {
+						$upload_errors[] = "File {$files['name'][$i]}: Loại file không được hỗ trợ ({$files['type'][$i]})";
 						\Log::warning('Chapter image skipped due to invalid mime type', array(
 							'index' => $i,
 							'type' => $files['type'][$i],
@@ -933,8 +822,9 @@ class Controller_Admin_Chapter extends Controller_Admin_Base
 						continue;
 					}
 
-					// Validate file size (10MB)
-					if ($files['size'][$i] > 10 * 1024 * 1024) {
+					// Validate file size
+					if ($files['size'][$i] > $max_file_size) {
+						$upload_errors[] = "File {$files['name'][$i]}: Kích thước vượt quá 10MB";
 						\Log::warning('Chapter image skipped due to size > 10MB', array(
 							'index' => $i,
 							'size' => $files['size'][$i],
@@ -943,15 +833,25 @@ class Controller_Admin_Chapter extends Controller_Admin_Base
 						continue;
 					}
 
-					// Generate filename
+					// Generate unique filename with timestamp and index
 					$extension = pathinfo($files['name'][$i], PATHINFO_EXTENSION);
-					$filename = 'chapter_' . time() . '_' . $i . '.' . $extension;
+					$timestamp = time();
+					$filename = 'chapter_' . $timestamp . '_' . $i . '.' . $extension;
 					$filepath = $upload_dir . $filename;
 
 					// Move uploaded file
 					if (move_uploaded_file($files['tmp_name'][$i], $filepath)) {
-						$temp_images[$i] = 'uploads/chapters/story_' . $story_id . '/' . $filename;
+						$relative_path = 'uploads/chapters/story_' . $story_id . '/' . $filename;
+						$temp_images[$i] = $relative_path;
+						
+						\Log::info('Chapter image uploaded successfully', array(
+							'index' => $i,
+							'filename' => $filename,
+							'relative_path' => $relative_path,
+							'size' => $files['size'][$i]
+						));
 					} else {
+						$upload_errors[] = "File {$files['name'][$i]}: Không thể lưu file";
 						\Log::error('Failed to move uploaded chapter image', array(
 							'index' => $i,
 							'tmp_name' => $files['tmp_name'][$i],
@@ -960,30 +860,75 @@ class Controller_Admin_Chapter extends Controller_Admin_Base
 							'name' => $files['name'][$i]
 						));
 					}
+				} else {
+					$upload_errors[] = "File {$files['name'][$i]}: Lỗi upload (code: {$files['error'][$i]})";
+					\Log::warning('Chapter image upload error', array(
+						'index' => $i,
+						'error_code' => $files['error'][$i],
+						'name' => $files['name'][$i]
+					));
 				}
 			}
 
-			// Sắp xếp: FormData đã gửi file theo thứ tự mong muốn, fallback an toàn
+			// Log upload errors if any
+			if (!empty($upload_errors)) {
+				\Log::warning('Chapter image upload errors', array(
+					'errors' => $upload_errors,
+					'successful_uploads' => count($temp_images)
+				));
+			}
+
+			// Sắp xếp ảnh theo thứ tự
 			$uploaded_images = array_values($temp_images);
 			if (!empty($image_order)) {
 				$order_array = json_decode($image_order, true);
-				// Chỉ thử sắp xếp lại nếu order là mảng số nguyên khớp index
-				if (is_array($order_array) && !empty($order_array) && is_int(reset($order_array))) {
-					$reordered = array();
-					foreach ($order_array as $index) {
-						if (isset($temp_images[$index])) {
-							$reordered[] = $temp_images[$index];
+				if (is_array($order_array) && !empty($order_array)) {
+					// Handle new format with image IDs
+					if (is_string(reset($order_array))) {
+						$reordered = array();
+						foreach ($order_array as $image_id) {
+							// Find the image by ID in temp_images
+							foreach ($temp_images as $index => $path) {
+								if (strpos($image_id, 'image_') === 0) {
+									// This is a new image ID, keep original order
+									$reordered[] = $path;
+									unset($temp_images[$index]);
+									break;
+								}
+							}
 						}
-					}
-					if (!empty($reordered)) {
+						// Add any remaining images
+						$reordered = array_merge($reordered, array_values($temp_images));
 						$uploaded_images = $reordered;
+					} 
+					// Handle legacy format with numeric indices
+					elseif (is_int(reset($order_array))) {
+						$reordered = array();
+						foreach ($order_array as $index) {
+							if (isset($temp_images[$index])) {
+								$reordered[] = $temp_images[$index];
+							}
+						}
+						if (!empty($reordered)) {
+							$uploaded_images = $reordered;
+						}
 					}
 				}
 			}
 
+			\Log::info('Chapter images processing completed', array(
+				'total_files' => $file_count,
+				'successful_uploads' => count($uploaded_images),
+				'upload_errors' => count($upload_errors),
+				'final_images' => $uploaded_images
+			));
+
 			return $uploaded_images;
 		} catch (\Exception $e) {
-			\Log::error('Process chapter images failed: ' . $e->getMessage());
+			\Log::error('Process chapter images failed: ' . $e->getMessage(), array(
+				'trace' => $e->getTraceAsString(),
+				'story_id' => $story_id
+			));
 			return array();
 		}
 	}

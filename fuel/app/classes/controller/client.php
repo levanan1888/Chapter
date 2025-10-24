@@ -160,6 +160,11 @@ class Controller_Client extends Controller
 			Response::redirect('client/index');
 		}
 
+		// Kiểm tra truyện có đang hiển thị không
+		if (!$story->is_visible()) {
+			Response::redirect('client/index');
+		}
+
 		$data = array();
 		$data['story'] = $story;
 		
@@ -216,6 +221,11 @@ class Controller_Client extends Controller
 
 		$story = Model_Story::find_by_slug($story_slug);
 		if (!$story) {
+			Response::redirect('client/index');
+		}
+
+		// Kiểm tra truyện có đang hiển thị không
+		if (!$story->is_visible()) {
 			Response::redirect('client/index');
 		}
 

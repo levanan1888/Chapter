@@ -46,11 +46,25 @@
                             <div class="row" id="image-upload-grid">
                                 <!-- Images will be added here -->
                             </div>
-                            <button type="button" class="btn btn-outline-primary mt-3" id="add-image-btn">
-                                <i class="fas fa-plus me-2"></i>Thêm ảnh
-                            </button>
+                            <div class="d-flex gap-2 mt-3 flex-wrap">
+                                <button type="button" class="btn btn-outline-primary" id="add-image-btn">
+                                    <i class="fas fa-plus me-2"></i>Thêm ảnh
+                                </button>
+                                <button type="button" class="btn btn-outline-success" id="add-multiple-images-btn">
+                                    <i class="fas fa-images me-2"></i>Thêm nhiều ảnh
+                                </button>
+                                <button type="button" class="btn btn-outline-warning" id="clear-all-images-btn" style="display: none;">
+                                    <i class="fas fa-trash-alt me-2"></i>Xóa tất cả ảnh mới
+                                </button>
+                            </div>
                         </div>
-                        <div class="form-text">Chọn ảnh (JPG, PNG, GIF - tối đa 2MB mỗi ảnh). Có thể sắp xếp cả ảnh cũ và mới.</div>
+                        <div class="form-text">Chọn ảnh (JPG, PNG, GIF, WebP - tối đa 10MB mỗi ảnh). Có thể sắp xếp cả ảnh cũ và mới.</div>
+                        <div id="upload-progress" class="mt-2" style="display: none;">
+                            <div class="progress">
+                                <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                            </div>
+                            <small class="text-muted">Đang xử lý ảnh...</small>
+                        </div>
                     </div>
                     <?php $existing_images = isset($chapter) ? $chapter->get_images() : array(); ?>
                 </div>
@@ -106,11 +120,24 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize CSRF token from meta tag
-    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-    document.getElementById('csrf-token').value = csrfToken;
+    // Initialize CSRF token on page load
+    window.currentCsrfToken = '<?php echo \Security::fetch_token(); ?>';
+    console.log('Initial CSRF token:', window.currentCsrfToken);
+    
+    // Update CSRF token in meta tag and hidden form when page loads
+    const metaToken = document.querySelector('meta[name="csrf-token"]');
+    const hiddenTokens = document.querySelectorAll('input[name="<?php echo \Config::get('security.csrf_token_key'); ?>"]');
+    
+    if (metaToken) {
+        metaToken.setAttribute('content', window.currentCsrfToken);
+    }
+    hiddenTokens.forEach(token => {
+        token.value = window.currentCsrfToken;
+    });
     
     const addImageBtn = document.getElementById('add-image-btn');
+    const addMultipleImagesBtn = document.getElementById('add-multiple-images-btn');
+    const clearAllImagesBtn = document.getElementById('clear-all-images-btn');
     const imageUploadGrid = document.getElementById('image-upload-grid');
     const hiddenInputsContainer = document.getElementById('hidden-inputs-container');
     const imageOrderInput = document.getElementById('image-order');
@@ -118,10 +145,150 @@ document.addEventListener('DOMContentLoaded', function() {
     let imageCounter = 0;
     let selectedImages = [];
 
+    // Function to refresh CSRF token
+    function refreshCsrfToken() {
+        fetch('<?php echo Uri::base(); ?>admin/chapters/edit/<?php echo isset($chapter) ? $chapter->id : ''; ?>', {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.text())
+        .then(html => {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const newToken = doc.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+                            doc.querySelector('input[name="<?php echo \Config::get('security.csrf_token_key'); ?>"]')?.value;
+            if (newToken) {
+                window.currentCsrfToken = newToken;
+                
+                // Update meta tag and hidden forms with new token
+                const metaToken = document.querySelector('meta[name="csrf-token"]');
+                const hiddenTokens = document.querySelectorAll('input[name="<?php echo \Config::get('security.csrf_token_key'); ?>"]');
+                
+                if (metaToken) {
+                    metaToken.setAttribute('content', newToken);
+                }
+                hiddenTokens.forEach(token => {
+                    token.value = newToken;
+                });
+                
+                console.log('CSRF token refreshed:', newToken);
+            }
+        })
+        .catch(err => {
+            console.error('Failed to refresh CSRF token:', err);
+        });
+    }
+    
+    // Refresh CSRF token when page becomes visible (user returns from another page)
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            console.log('Page became visible, refreshing CSRF token...');
+            refreshCsrfToken();
+        }
+    });
+    
+    // Also refresh token when page gains focus
+    window.addEventListener('focus', function() {
+        console.log('Window gained focus, refreshing CSRF token...');
+        refreshCsrfToken();
+    });
+
     // Add image button click
     addImageBtn.addEventListener('click', function() {
         addImageSlot();
     });
+
+    // Add multiple images button click
+    addMultipleImagesBtn.addEventListener('click', function() {
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.multiple = true;
+        fileInput.accept = 'image/*';
+        fileInput.style.display = 'none';
+        
+        fileInput.addEventListener('change', function(e) {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+            
+            // Validate files
+            const validFiles = [];
+            const errors = [];
+            
+            files.forEach((file, index) => {
+                if (!file.type.startsWith('image/')) {
+                    errors.push(`File ${index + 1}: Không phải là file ảnh`);
+                    return;
+                }
+                
+                if (file.size > 10 * 1024 * 1024) {
+                    errors.push(`File ${index + 1}: Kích thước vượt quá 10MB`);
+                    return;
+                }
+                
+                validFiles.push(file);
+            });
+            
+            if (errors.length > 0) {
+                alert('Một số file không hợp lệ:\n' + errors.join('\n'));
+            }
+            
+            if (validFiles.length > 0) {
+                // Show progress indicator
+                const progressContainer = document.getElementById('upload-progress');
+                const progressBar = progressContainer.querySelector('.progress-bar');
+                const progressText = progressContainer.querySelector('small');
+                
+                progressContainer.style.display = 'block';
+                progressBar.style.width = '0%';
+                progressText.textContent = `Đang xử lý ${validFiles.length} ảnh...`;
+                
+                // Process files with progress
+                let processedCount = 0;
+                validFiles.forEach((file, index) => {
+                    setTimeout(() => {
+                        addImageSlotWithFile(file);
+                        processedCount++;
+                        
+                        const progress = Math.round((processedCount / validFiles.length) * 100);
+                        progressBar.style.width = progress + '%';
+                        progressText.textContent = `Đã xử lý ${processedCount}/${validFiles.length} ảnh`;
+                        
+                        if (processedCount === validFiles.length) {
+                            setTimeout(() => {
+                                progressContainer.style.display = 'none';
+                            }, 1000);
+                        }
+                    }, index * 100); // Stagger processing for better UX
+                });
+            }
+        });
+        
+        document.body.appendChild(fileInput);
+        fileInput.click();
+        document.body.removeChild(fileInput);
+    });
+
+    // Clear all new images button
+    clearAllImagesBtn.addEventListener('click', function() {
+        if (confirm('Bạn có chắc chắn muốn xóa tất cả ảnh mới đã chọn?')) {
+            // Remove only new image slots (not existing ones)
+            const newImageSlots = document.querySelectorAll('.image-upload-slot:not([data-existing-path])');
+            newImageSlots.forEach(slot => {
+                slot.closest('.col-lg-4, .col-md-6, .col-sm-12').remove();
+            });
+            
+            // Clear selected images
+            selectedImages = [];
+            imageCounter = 0;
+            
+            // Update UI
+            updateBulkActionButtons();
+            updateImageOrder();
+        }
+    });
+
 
     function addImageSlot() {
         const imageId = `new_${imageCounter}`;
@@ -172,6 +339,65 @@ document.addEventListener('DOMContentLoaded', function() {
         setupImageSlot(col, imageId);
     }
 
+    function addImageSlotWithFile(file) {
+        const imageId = `new_${imageCounter}`;
+        imageCounter++;
+
+        const col = document.createElement('div');
+        col.className = 'col-lg-4 col-md-6 col-sm-12 mb-3';
+        col.id = `image-slot-${imageId}`;
+        
+        col.innerHTML = `
+            <div class="card image-upload-slot" style="min-height: 300px;">
+                <div class="card-body d-flex flex-column justify-content-center align-items-center text-center p-4">
+                    <div class="image-preview-container" style="display: none;">
+                        <img class="img-fluid rounded" style="max-height: 250px; width: 100%; object-fit: contain;" alt="Preview">
+                    </div>
+                    <div class="image-placeholder">
+                        <i class="fas fa-image fa-3x text-muted mb-3"></i>
+                        <p class="text-muted mb-3">Nhấn để chọn ảnh</p>
+                        <input type="file" class="d-none" accept="image/*" data-image-id="${imageId}">
+                        <button type="button" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-upload me-2"></i>Chọn ảnh
+                        </button>
+                    </div>
+                    <div class="image-actions mt-3" style="display: none;">
+                        <div class="d-flex justify-content-between align-items-center w-100">
+                            <small class="text-muted">Trang <span class="page-number">1</span></small>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary move-up-btn" title="Di chuyển lên">
+                                    <i class="fas fa-arrow-up"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary move-down-btn" title="Di chuyển xuống">
+                                    <i class="fas fa-arrow-down"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-info view-full-btn" title="Xem full size">
+                                    <i class="fas fa-expand"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-image-btn" title="Xóa ảnh">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        imageUploadGrid.appendChild(col);
+        setupImageSlot(col, imageId);
+        
+        // Set the file directly
+        const fileInput = col.querySelector('input[type="file"]');
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        fileInput.files = dt.files;
+        
+        // Trigger the file change event
+        const event = new Event('change', { bubbles: true });
+        fileInput.dispatchEvent(event);
+    }
+
     function setupImageSlot(slot, imageId) {
         const fileInput = slot.querySelector('input[type="file"]');
         const placeholder = slot.querySelector('.image-placeholder');
@@ -197,8 +423,8 @@ document.addEventListener('DOMContentLoaded', function() {
         fileInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file && file.type.startsWith('image/')) {
-                if (file.size > 2 * 1024 * 1024) {
-                    alert('Kích thước ảnh không được vượt quá 2MB');
+                if (file.size > 10 * 1024 * 1024) {
+                    alert('Kích thước ảnh không được vượt quá 10MB');
                     return;
                 }
 
@@ -224,6 +450,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                     
                     updateImageOrder();
+                    updateBulkActionButtons();
                 };
                 reader.readAsDataURL(file);
             }
@@ -240,6 +467,7 @@ document.addEventListener('DOMContentLoaded', function() {
             selectedImages = selectedImages.filter(img => img.id !== imageId);
             updatePageNumbers();
             updateImageOrder();
+            updateBulkActionButtons();
         });
 
         // Move up
@@ -344,6 +572,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             updateImageOrder();
+            updateBulkActionButtons();
         } catch (e) {
             // ignore
         }
@@ -375,6 +604,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         imageOrderInput.value = JSON.stringify(order);
         updateHiddenInputs();
+    }
+
+    function updateBulkActionButtons() {
+        const newImageSlots = document.querySelectorAll('.image-upload-slot:not([data-existing-path]) .image-preview-container[style*="block"]');
+        const hasNewImages = newImageSlots.length > 0;
+        
+        clearAllImagesBtn.style.display = hasNewImages ? 'inline-block' : 'none';
     }
 
     function updateHiddenInputs() {
@@ -435,38 +671,17 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Delete existing image via AJAX
-    document.querySelectorAll('.delete-existing').forEach(btn => {
-        btn.addEventListener('click', function() {
-            if (!confirm('Bạn có chắc chắn muốn xóa ảnh này?')) return;
-
-            const imagePath = this.dataset.imagePath;
-            const url = '<?php echo Uri::base(); ?>admin/chapters/delete-image/<?php echo isset($chapter) ? $chapter->id : 0; ?>';
-            const formData = new FormData();
-            formData.append('image_path', imagePath);
-            formData.append('<?php echo \Config::get('security.csrf_token_key'); ?>', csrfToken);
-
-            fetch(url, { method: 'POST', body: formData })
-                .then(res => res.json())
-                .then(json => {
-                    if (json && json.success) {
-                        const cardCol = document.querySelector(`[data-image-path="${CSS.escape(imagePath)}"]`);
-                        if (cardCol) cardCol.remove();
-                    } else {
-                        alert(json && json.message ? json.message : 'Không thể xóa ảnh');
-                    }
-                })
-                .catch(() => alert('Không thể xóa ảnh'));
-        });
-    });
 
     // Handle form submission
     document.querySelector('form').addEventListener('submit', function(e) {
-        // Don't prevent default - let the form submit normally
-        // The server will handle the redirect after processing
+        // Refresh CSRF token before submission
+        refreshCsrfToken();
         
         // Just ensure the image order is set before submission
         updateImageOrder();
+        
+        // Don't prevent default - let the form submit normally
+        // The server will handle the redirect after processing
     });
 });
 </script>

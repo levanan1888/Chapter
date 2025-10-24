@@ -72,7 +72,8 @@ class Controller_Admin_Category extends Controller_Admin_Base
 			require_once APPPATH . 'classes/validation/custom.php';
 			
 			// Thiết lập validation
-			$validation = Validation_Custom::forge();
+			$validation = Validation::forge();
+			$validation->add_callable('Validation_Custom');
 			// Thêm trường 'name' với các quy tắc validation:
 			// - required: bắt buộc phải có
 			// - custom_name: kiểm tra tên cơ bản (không rỗng, tối thiểu 2 ký tự)
@@ -183,7 +184,8 @@ class Controller_Admin_Category extends Controller_Admin_Base
 			require_once APPPATH . 'classes/validation/custom.php';
 			
 			// Thiết lập validation
-			$validation = Validation_Custom::forge();
+			$validation = Validation::forge();
+			$validation->add_callable('Validation_Custom');
 			$validation->add_field('name', 'Tên danh mục', 'required|custom_name|custom_category');
 			$validation->add_field('description', 'Mô tả', 'custom_category');
 
