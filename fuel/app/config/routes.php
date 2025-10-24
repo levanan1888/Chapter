@@ -157,4 +157,21 @@ return array(
 	// Client API routes
 	'client/api/stories' => 'client/api_stories',
 	'client/api/search' => 'client/api_search',
+	
+	/**
+	 * -------------------------------------------------------------------------
+	 *  User Authentication routes
+	 * -------------------------------------------------------------------------
+	 *
+	 *  Routes cho đăng nhập, đăng ký người dùng
+	 *
+	 */
+	// User authentication routes
+	'user/login' => 'user/login',
+	'user/register' => 'user/register',
+	'user/logout' => 'user/logout',
+	'user/profile' => 'user/profile',
+	'user/google_login' => 'user/google_login',
+	'user/google_callback' => 'user/google_callback',
+	'user/check_status' => 'user/check_status',
 );

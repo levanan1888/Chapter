@@ -18,7 +18,14 @@ abstract class Controller_Admin_Base extends Controller
 	 */
 	protected function is_logged_in()
 	{
-		return Session::get('admin_id') !== null;
+		$admin_id = Session::get('admin_id');
+		if (!$admin_id) {
+			return false;
+		}
+		
+		// Kiểm tra user có phải là admin không
+		$admin = Model_Admin::find($admin_id);
+		return $admin && $admin->user_type === 'admin';
 	}
 
 	/**
@@ -28,7 +35,21 @@ abstract class Controller_Admin_Base extends Controller
 	 */
 	protected function require_login()
 	{
-		if (!$this->is_logged_in()) {
+		$admin_id = Session::get('admin_id');
+		if (!$admin_id) {
+			Response::redirect('admin/login');
+		}
+		
+		// Kiểm tra user có phải là admin không
+		$admin = Model_Admin::find($admin_id);
+		if (!$admin || $admin->user_type !== 'admin') {
+			// Xóa session nếu user không phải admin
+			Session::delete('admin_id');
+			Session::delete('admin_username');
+			Session::delete('admin_full_name');
+			Session::delete('user_id');
+			Session::delete('user_username');
+			Session::delete('user_full_name');
 			Response::redirect('admin/login');
 		}
 	}
@@ -54,7 +75,11 @@ abstract class Controller_Admin_Base extends Controller
 	{
 		$admin_id = Session::get('admin_id');
 		if ($admin_id) {
-			return Model_Admin::find($admin_id);
+			$admin = Model_Admin::find($admin_id);
+			// Chỉ trả về admin nếu user_type là 'admin'
+			if ($admin && $admin->user_type === 'admin') {
+				return $admin;
+			}
 		}
 		return null;
 	}
