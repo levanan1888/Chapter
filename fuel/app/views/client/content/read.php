@@ -24,15 +24,15 @@
 							style="border-color: rgba(255, 255, 255, 0.3) !important; color: #ffffff !important; background: rgba(255, 255, 255, 0.1) !important;">
 						<i class="fas fa-list me-2"></i>Danh sách chương
 					</button>
-					<div class="dropdown-menu dropdown-menu-end" style="max-height: 500px; overflow-y: auto; min-width: 280px; background: rgba(30, 41, 59, 0.98); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(51, 65, 85, 0.5);">
+					<div class="dropdown-menu dropdown-menu-end" style="max-height: 500px; overflow-y: auto; width: 100%; max-width: 320px; min-width: 250px; background: rgba(30, 41, 59, 0.98); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(51, 65, 85, 0.5);">
 						<?php if (isset($all_chapters) && !empty($all_chapters)): ?>
 							<?php foreach ($all_chapters as $ch): ?>
 								<a class="dropdown-item <?php echo ($ch->chapter_number == $chapter->chapter_number) ? 'active' : ''; ?>" 
 								   href="<?php echo Uri::base(); ?>client/read/<?php echo $story->slug; ?>/<?php echo $ch->chapter_number; ?>"
-								   style="color: #e2e8f0; padding: 0.75rem 1.25rem; border-radius: 8px; margin: 0.25rem;">
-									<div class="d-flex justify-content-between align-items-center">
-										<span class="fw-semibold">Chương <?php echo $ch->chapter_number; ?></span>
-										<small class="text-muted" style="color: #64748b;"><?php echo Security::htmlentities($ch->title); ?></small>
+								   style="color: #e2e8f0; padding: 0.75rem 1rem; border-radius: 8px; margin: 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+									<div class="d-flex justify-content-between align-items-center" style="min-width: 0;">
+										<span class="fw-semibold" style="flex-shrink: 0;">Chương <?php echo $ch->chapter_number; ?></span>
+										<small class="text-muted ms-2" style="color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px;"><?php echo Security::htmlentities($ch->title); ?></small>
 									</div>
 								</a>
 							<?php endforeach; ?>
@@ -1082,5 +1082,47 @@ html {
 .reply-form textarea:-moz-placeholder {
 	color: #ffffff !important;
 	opacity: 0.8;
+}
+
+/* Chapter list dropdown improvements */
+.dropdown-menu {
+	overflow-x: hidden !important;
+	word-wrap: break-word;
+}
+
+.dropdown-item {
+	overflow: hidden !important;
+	text-overflow: ellipsis !important;
+	white-space: nowrap !important;
+}
+
+/* Mobile responsiveness for chapter list */
+@media (max-width: 768px) {
+	.dropdown-menu {
+		max-width: calc(100vw - 40px) !important;
+		min-width: 200px !important;
+		left: auto !important;
+		right: 0 !important;
+	}
+	
+	.dropdown-item small {
+		max-width: 100px !important;
+	}
+}
+
+@media (max-width: 480px) {
+	.dropdown-menu {
+		max-width: calc(100vw - 20px) !important;
+		min-width: 180px !important;
+	}
+	
+	.dropdown-item {
+		padding: 0.5rem 0.75rem !important;
+	}
+	
+	.dropdown-item small {
+		max-width: 80px !important;
+		font-size: 0.7rem !important;
+	}
 }
 </style>
