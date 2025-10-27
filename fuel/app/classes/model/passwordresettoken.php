@@ -199,7 +199,7 @@ class Model_PasswordResetToken extends \Model
      */
     protected static function generate_token()
     {
-        return bin2hex(random_bytes(32));
+        return bin2hex(random_bytes(6));
     }
 
     /**
