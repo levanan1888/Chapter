@@ -73,16 +73,15 @@ class Controller_Admin_Comment extends Controller_Admin_Base
             
             // Build WHERE conditions
             $where_conditions = array("c.parent_id IS NULL");
-            $params = array();
             
             if (!empty($search)) {
-                $where_conditions[] = "(c.content LIKE :search OR a.username LIKE :search OR a.full_name LIKE :search)";
-                $params['search'] = '%' . $search . '%';
+                $search_escaped = DB::escape('%' . $search . '%');
+                $where_conditions[] = "(c.content LIKE $search_escaped OR a.username LIKE $search_escaped OR a.full_name LIKE $search_escaped)";
             }
             
             if (!empty($story_id)) {
-                $where_conditions[] = "c.story_id = :story_id";
-                $params['story_id'] = $story_id;
+                $story_id_escaped = DB::escape($story_id);
+                $where_conditions[] = "c.story_id = $story_id_escaped";
             }
             
             if ($status === 'approved') {
@@ -103,11 +102,20 @@ class Controller_Admin_Comment extends Controller_Admin_Base
                     ORDER BY c.created_at DESC 
                     LIMIT " . intval($per_page) . " OFFSET " . intval($offset);
             
+            // Debug SQL
+            Log::info('Comments SQL: ' . $sql);
+            
             $result = DB::query($sql)->execute();
             $comments = array();
             
             // Debug: Check if we have results
-            Log::info('Comments query result count: ' . count($result));
+            if ($result === false) {
+                Log::error('Comments query failed - SQL: ' . $sql);
+                Log::error('Comments query failed - Params: ' . print_r($params, true));
+                $result = array();
+            } else {
+                Log::info('Comments query result count: ' . count($result));
+            }
             
             foreach ($result as $row) {
                 $comment = new stdClass();
@@ -140,6 +148,8 @@ class Controller_Admin_Comment extends Controller_Admin_Base
                 
                 // Get replies recursively for this parent comment
                 $comment->replies = $this->get_replies_recursive($comment->id);
+
+                
                 $comments[] = $comment;
             }
             
@@ -148,15 +158,20 @@ class Controller_Admin_Comment extends Controller_Admin_Base
                          LEFT JOIN admins a ON c.user_id = a.id 
                          WHERE " . $where_clause;
             $total_result = DB::query($count_sql)->execute();
-            $total_comments = isset($total_result[0]['total']) ? $total_result[0]['total'] : 0;
+            $total_comments = 0;
+            if ($total_result !== false && isset($total_result[0]['total'])) {
+                $total_comments = (int)$total_result[0]['total'];
+            }
             $total_pages = ceil($total_comments / $per_page);
             
             // Get stories list for filter dropdown
-            $stories_sql = "SELECT id, title FROM stories ORDER BY title";
+            $stories_sql = "SELECT id, title FROM stories WHERE is_visible = 1 ORDER BY title";
             $stories_result = DB::query($stories_sql)->execute();
             $stories = array();
-            foreach ($stories_result as $story_row) {
-                $stories[] = (object) $story_row;
+            if ($stories_result !== false) {
+                foreach ($stories_result as $story_row) {
+                    $stories[] = (object) $story_row;
+                }
             }
             
             $data = array(

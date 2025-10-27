@@ -35,6 +35,12 @@ class Controller_Admin_Dashboard extends Controller_Admin_Base
 		$data['total_chapters'] = Model_Chapter::count_all();
 		$data['total_categories'] = Model_Category::count_all();
 		$data['total_authors'] = Model_Author::count_all();
+		
+		// Thống kê comment
+		$data['total_comments'] = Model_Comment::count_all();
+		$data['approved_comments'] = Model_Comment::count_approved();
+		$data['pending_comments'] = Model_Comment::count_pending();
+		$data['recent_comments'] = Model_Comment::get_recent_comments(5);
 
 		// Truyện mới nhất
 		$data['latest_stories'] = Model_Story::get_latest_stories(5);
@@ -150,6 +156,15 @@ class Controller_Admin_Dashboard extends Controller_Admin_Base
 		
 		// Dữ liệu lượt xem truyện top 5
 		$chart_data['top_viewed_stories'] = $this->get_top_viewed_stories();
+		
+		// Dữ liệu comment theo tháng
+		$chart_data['comments_by_month'] = $this->get_comments_by_month();
+		
+		// Dữ liệu comment theo trạng thái
+		$chart_data['comment_status_stats'] = $this->get_comment_status_stats();
+		
+		// Dữ liệu comment theo truyện
+		$chart_data['comments_by_story'] = $this->get_comments_by_story();
 
 		return $chart_data;
 	}
@@ -246,6 +261,108 @@ class Controller_Admin_Dashboard extends Controller_Admin_Base
 				$data[] = array(
 					'title' => $result['title'],
 					'views' => (int) $result['views']
+				);
+			}
+			
+			return $data;
+		} catch (\Exception $e) {
+			return array();
+		}
+	}
+
+	/**
+	 * Lấy số lượng comment theo tháng
+	 * 
+	 * @return array
+	 */
+	private function get_comments_by_month()
+	{
+		try {
+			$query = \DB::query("
+				SELECT 
+					DATE_FORMAT(created_at, '%Y-%m') as month,
+					COUNT(*) as count
+				FROM comments 
+				WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 MONTH)
+				GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+				ORDER BY month ASC
+			");
+			$results = $query->execute();
+			
+			$data = array();
+			foreach ($results as $result) {
+				$data[] = array(
+					'month' => $result['month'],
+					'count' => (int) $result['count']
+				);
+			}
+			
+			return $data;
+		} catch (\Exception $e) {
+			return array();
+		}
+	}
+
+	/**
+	 * Lấy thống kê comment theo trạng thái
+	 * 
+	 * @return array
+	 */
+	private function get_comment_status_stats()
+	{
+		try {
+			$query = \DB::query("
+				SELECT 
+					CASE 
+						WHEN is_approved = 1 THEN 'approved'
+						ELSE 'pending'
+					END as status,
+					COUNT(*) as count
+				FROM comments 
+				GROUP BY is_approved
+			");
+			$results = $query->execute();
+			
+			$data = array();
+			foreach ($results as $result) {
+				$data[] = array(
+					'status' => $result['status'],
+					'count' => (int) $result['count']
+				);
+			}
+			
+			return $data;
+		} catch (\Exception $e) {
+			return array();
+		}
+	}
+
+	/**
+	 * Lấy comment theo truyện (top 5)
+	 * 
+	 * @return array
+	 */
+	private function get_comments_by_story()
+	{
+		try {
+			$query = \DB::query("
+				SELECT 
+					s.title,
+					COUNT(c.id) as comment_count
+				FROM stories s
+				LEFT JOIN comments c ON s.id = c.story_id
+				WHERE s.is_visible = 1
+				GROUP BY s.id, s.title
+				ORDER BY comment_count DESC
+				LIMIT 5
+			");
+			$results = $query->execute();
+			
+			$data = array();
+			foreach ($results as $result) {
+				$data[] = array(
+					'title' => $result['title'],
+					'comment_count' => (int) $result['comment_count']
 				);
 			}
 			

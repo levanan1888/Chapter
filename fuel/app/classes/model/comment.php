@@ -372,4 +372,51 @@ class Model_Comment extends \Model
             return date('d/m/Y H:i', $time);
         }
     }
+    
+    /**
+     * Count all comments
+     * 
+     * @return int
+     */
+    public static function count_all()
+    {
+        $result = \DB::query("SELECT COUNT(*) as total FROM comments")->execute();
+        return isset($result[0]['total']) ? (int)$result[0]['total'] : 0;
+    }
+    
+    /**
+     * Count approved comments
+     * 
+     * @return int
+     */
+    public static function count_approved()
+    {
+        $result = \DB::query("SELECT COUNT(*) as total FROM comments WHERE is_approved = 1")->execute();
+        return isset($result[0]['total']) ? (int)$result[0]['total'] : 0;
+    }
+    
+    /**
+     * Count pending comments
+     * 
+     * @return int
+     */
+    public static function count_pending()
+    {
+        $result = \DB::query("SELECT COUNT(*) as total FROM comments WHERE is_approved = 0")->execute();
+        return isset($result[0]['total']) ? (int)$result[0]['total'] : 0;
+    }
+    
+    /**
+     * Get recent comments
+     * 
+     * @param int $limit
+     * @return array
+     */
+    public static function get_recent_comments($limit = 5)
+    {
+        return self::find('all', array(
+            'order_by' => array('created_at' => 'desc'),
+            'limit' => $limit
+        ));
+    }
 }

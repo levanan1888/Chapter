@@ -63,81 +63,103 @@
 			</div>
 		</div>
 	</div>
+	
+	<div class="col-lg-3 col-md-6 mb-4">
+		<div class="card bg-secondary text-white">
+			<div class="card-body">
+				<div class="d-flex justify-content-between">
+					<div>
+						<h4 class="card-title"><?php echo isset($total_comments) ? $total_comments : 0; ?></h4>
+						<p class="card-text">Bình luận</p>
+					</div>
+					<div class="align-self-center">
+						<i class="fas fa-comments fa-2x"></i>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	<div class="col-lg-3 col-md-6 mb-4">
+		<div class="card bg-success text-white">
+			<div class="card-body">
+				<div class="d-flex justify-content-between">
+					<div>
+						<h4 class="card-title"><?php echo isset($approved_comments) ? $approved_comments : 0; ?></h4>
+						<p class="card-text">Đã duyệt</p>
+					</div>
+					<div class="align-self-center">
+						<i class="fas fa-check-circle fa-2x"></i>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	<div class="col-lg-3 col-md-6 mb-4">
+		<div class="card bg-danger text-white">
+			<div class="card-body">
+				<div class="d-flex justify-content-between">
+					<div>
+						<h4 class="card-title"><?php echo isset($pending_comments) ? $pending_comments : 0; ?></h4>
+						<p class="card-text">Chờ duyệt</p>
+					</div>
+					<div class="align-self-center">
+						<i class="fas fa-clock fa-2x"></i>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 </div>
 
 <div class="row">
-	<!-- Latest Stories -->
-	<div class="col-lg-8 mb-4">
+	<!-- Comment Status Pie Chart -->
+	<div class="col-lg-4 mb-4">
 		<div class="card">
-			<div class="card-header d-flex justify-content-between align-items-center">
+			<div class="card-header">
 				<h5 class="mb-0">
-					<i class="fas fa-clock me-2"></i>Truyện mới nhất
+					<i class="fas fa-chart-pie me-2"></i>Trạng thái bình luận
 				</h5>
-				<a href="<?php echo Uri::base(); ?>admin/stories" class="btn btn-sm btn-outline-primary">
-					Xem tất cả
-				</a>
 			</div>
 			<div class="card-body">
-				<?php if (isset($latest_stories) && !empty($latest_stories)): ?>
-					<div class="table-responsive">
-						<table class="table table-hover">
-							<thead>
-								<tr>
-									<th>Tên truyện</th>
-									<th>Tác giả</th>
-									<th>Trạng thái</th>
-									<th>Lượt xem</th>
-									<th>Ngày tạo</th>
-								</tr>
-							</thead>
-							<tbody>
-								<?php foreach ($latest_stories as $story): ?>
-								<tr>
-									<td>
-										<a href="<?php echo Uri::base(); ?>admin/stories/edit/<?php echo $story->id; ?>" 
-										   class="text-decoration-none">
-											<?php echo $story->title; ?>
-										</a>
-									</td>
-									<td><?php echo $story->author_name ?? 'Unknown'; ?></td>
-									<td>
-										<span class="badge bg-<?php 
-											switch($story->status) {
-												case 'ongoing': echo 'success'; break;
-												case 'completed': echo 'info'; break;
-												case 'paused': echo 'warning'; break;
-												default: echo 'secondary';
-											}
-										?>">
-											<?php 
-											switch($story->status) {
-												case 'ongoing': echo 'Đang cập nhật'; break;
-												case 'completed': echo 'Hoàn thành'; break;
-												case 'paused': echo 'Tạm dừng'; break;
-												default: echo $story->status;
-											}
-											?>
-										</span>
-									</td>
-									<td><?php echo number_format($story->views); ?></td>
-									<td><?php echo date('d/m/Y', strtotime($story->created_at)); ?></td>
-								</tr>
-								<?php endforeach; ?>
-							</tbody>
-						</table>
-					</div>
-				<?php else: ?>
-					<div class="text-center text-muted py-4">
-						<i class="fas fa-book fa-3x mb-3"></i>
-						<p>Chưa có truyện nào</p>
-					</div>
-				<?php endif; ?>
+				<canvas id="commentStatusChart" height="200"></canvas>
+			</div>
+		</div>
+	</div>
+	
+	<!-- Comments by Story Bar Chart -->
+	<div class="col-lg-8 mb-4">
+		<div class="card">
+			<div class="card-header">
+				<h5 class="mb-0">
+					<i class="fas fa-chart-bar me-2"></i>Bình luận theo truyện
+				</h5>
+			</div>
+			<div class="card-body">
+				<canvas id="commentsByStoryChart" height="200"></canvas>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="row">
+	<!-- Comments Trend Area Chart -->
+	<div class="col-lg-6 mb-4">
+		<div class="card">
+			<div class="card-header">
+				<h5 class="mb-0">
+					<i class="fas fa-chart-area me-2"></i>Xu hướng bình luận
+				</h5>
+			</div>
+			<div class="card-body">
+				<canvas id="commentsTrendChart" height="200"></canvas>
 			</div>
 		</div>
 	</div>
 	
 	<!-- Top Viewed Stories -->
-	<div class="col-lg-4 mb-4">
+	<div class="col-lg-6 mb-4">
 		<div class="card">
 			<div class="card-header">
 				<h5 class="mb-0">
@@ -194,6 +216,104 @@ document.addEventListener('DOMContentLoaded', function() {
 	// Chart data from PHP
 	const chartData = <?php echo json_encode($chart_data); ?>;
 	
+	// Comment Status Pie Chart
+	const commentStatusCtx = document.getElementById('commentStatusChart').getContext('2d');
+	const commentStatusChart = new Chart(commentStatusCtx, {
+		type: 'doughnut',
+		data: {
+			labels: chartData.comment_status_stats.map(item => 
+				item.status === 'approved' ? 'Đã duyệt' : 'Chờ duyệt'
+			),
+			datasets: [{
+				data: chartData.comment_status_stats.map(item => item.count),
+				backgroundColor: [
+					'rgba(40, 167, 69, 0.8)',
+					'rgba(220, 53, 69, 0.8)'
+				],
+				borderColor: [
+					'rgba(40, 167, 69, 1)',
+					'rgba(220, 53, 69, 1)'
+				],
+				borderWidth: 2
+			}]
+		},
+		options: {
+			responsive: true,
+			maintainAspectRatio: false,
+			plugins: {
+				legend: {
+					position: 'bottom'
+				}
+			}
+		}
+	});
+
+	// Comments by Story Bar Chart
+	const commentsByStoryCtx = document.getElementById('commentsByStoryChart').getContext('2d');
+	const commentsByStoryChart = new Chart(commentsByStoryCtx, {
+		type: 'bar',
+		data: {
+			labels: chartData.comments_by_story.map(item => 
+				item.title.length > 20 ? item.title.substring(0, 20) + '...' : item.title
+			),
+			datasets: [{
+				label: 'Số bình luận',
+				data: chartData.comments_by_story.map(item => item.comment_count),
+				backgroundColor: 'rgba(54, 162, 235, 0.8)',
+				borderColor: 'rgba(54, 162, 235, 1)',
+				borderWidth: 1
+			}]
+		},
+		options: {
+			responsive: true,
+			maintainAspectRatio: false,
+			plugins: {
+				legend: {
+					display: false
+				}
+			},
+			scales: {
+				y: {
+					beginAtZero: true
+				}
+			}
+		}
+	});
+
+	// Comments Trend Area Chart
+	const commentsTrendCtx = document.getElementById('commentsTrendChart').getContext('2d');
+	const commentsTrendChart = new Chart(commentsTrendCtx, {
+		type: 'line',
+		data: {
+			labels: chartData.comments_by_month.map(item => {
+				const date = new Date(item.month + '-01');
+				return date.toLocaleDateString('vi-VN', { month: 'short', year: 'numeric' });
+			}),
+			datasets: [{
+				label: 'Bình luận',
+				data: chartData.comments_by_month.map(item => item.count),
+				borderColor: 'rgb(255, 99, 132)',
+				backgroundColor: 'rgba(255, 99, 132, 0.2)',
+				fill: true,
+				tension: 0.4
+			}]
+		},
+		options: {
+			responsive: true,
+			maintainAspectRatio: false,
+			plugins: {
+				legend: {
+					display: false
+				}
+			},
+			scales: {
+				y: {
+					beginAtZero: true
+				}
+			}
+		}
+	});
+
 	// Trend Chart (Stories and Chapters by Month)
 	const trendCtx = document.getElementById('trendChart').getContext('2d');
 	const trendChart = new Chart(trendCtx, {
