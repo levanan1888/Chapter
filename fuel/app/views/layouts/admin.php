@@ -224,6 +224,10 @@
 					<i class="fas fa-user-edit"></i>
 					Quản lý Tác giả
 				</a>
+				<a class="nav-link <?php echo Uri::segment(2) == 'comments' ? 'active' : ''; ?>" href="<?php echo Uri::base(); ?>admin/comments">
+					<i class="fas fa-comments"></i>
+					Quản lý Bình luận
+				</a>
 				<a class="nav-link <?php echo Uri::segment(2) == 'users' ? 'active' : ''; ?>" href="<?php echo Uri::base(); ?>admin/users">
 					<i class="fas fa-users"></i>
 					Quản lý Users

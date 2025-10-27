@@ -302,18 +302,19 @@ return array(
 		 * ---------------------------------------------------------------------
 		 */
 
-		'whitelisted_classes' => array(
-			'Fuel\\Core\\Presenter',
-			'Fuel\\Core\\Response',
-			'Fuel\\Core\\View',
-			'Fuel\\Core\\ViewModel',
-			'Closure',
-			'Model_Admin',
-			'Model_Author',
-			'Model_Story',
-			'Model_Category',
-			'Model_Chapter',
-		),
+        'whitelisted_classes' => array(
+            'Fuel\\Core\\Presenter',
+            'Fuel\\Core\\Response',
+            'Fuel\\Core\\View',
+            'Fuel\\Core\\ViewModel',
+            'Closure',
+            'Model_Admin',
+            'Model_Author',
+            'Model_Story',
+            'Model_Category',
+            'Model_Chapter',
+            'Model_Comment',
+        ),
 	),
 
 	/**

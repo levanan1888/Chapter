@@ -156,6 +156,19 @@ return array(
 	'client/api/stories' => 'client/api_stories',
 	'client/api/search' => 'client/api_search',
 	
+	// Comment routes
+	'comment/add' => 'comment/add',
+	'comment/get_comments' => 'comment/get_comments',
+	'comment/delete/(:num)' => 'comment/delete/$1',
+	
+	// Admin comment routes
+	'admin/comments' => 'admin/comment/index',
+	'admin/comments/view/(:num)' => 'admin/comment/view/$1',
+	'admin/comments/approve/(:num)' => 'admin/comment/approve/$1',
+	'admin/comments/disapprove/(:num)' => 'admin/comment/disapprove/$1',
+	'admin/comments/delete/(:num)' => 'admin/comment/delete/$1',
+	'admin/comments/save_reply' => 'admin/comment/save_reply',
+	
 	/**
 	 * -------------------------------------------------------------------------
 	 *  User Authentication routes

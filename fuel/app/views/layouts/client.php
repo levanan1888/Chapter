@@ -822,60 +822,69 @@
 	</style>
 </head>
 <body>
-	<!-- Navigation -->
+	<!-- Navigation - Compact and Aligned -->
 	<nav class="navbar navbar-expand-lg navbar-dark">
 		<div class="container">
-		<a class="navbar-brand" href="<?php echo Uri::base(); ?>">
-			<i class="fas fa-book-open me-2"></i>
-			NetTruyen
-		</a>
+			<!-- Brand -->
+			<a class="navbar-brand" href="<?php echo Uri::base(); ?>">
+				<i class="fas fa-book-open"></i>
+				NetTruyen
+			</a>
 			
+			<!-- Mobile toggle -->
 			<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
 				<span class="navbar-toggler-icon"></span>
 			</button>
 			
+			<!-- Navbar content -->
 			<div class="collapse navbar-collapse" id="navbarNav">
+				<!-- Left navigation -->
 				<ul class="navbar-nav me-auto">
 					<li class="nav-item">
 						<a class="nav-link" href="<?php echo Uri::base(); ?>">
-							<i class="fas fa-home me-1"></i>Trang chủ
+							<i class="fas fa-home"></i>
+							Trang chủ
 						</a>
 					</li>
 					<li class="nav-item">
 						<a class="nav-link" href="<?php echo Uri::base(); ?>client/stories">
-							<i class="fas fa-list me-1"></i>Danh sách
+							<i class="fas fa-list"></i>
+							Danh sách
 						</a>
 					</li>
 				</ul>
 				
 				<!-- Search Box -->
-				<form class="d-flex search-box" id="searchForm" action="<?php echo Uri::base(); ?>client/search" method="GET">
+				<form class="search-box" id="searchForm" action="<?php echo Uri::base(); ?>client/search" method="GET">
 					<div class="input-group">
 						<input class="form-control" type="search" name="q" placeholder="Tìm kiếm truyện..." id="searchInput">
-						<button class="btn btn-outline-light" type="submit">
+						<button class="btn" type="submit">
 							<i class="fas fa-search"></i>
 						</button>
 					</div>
 				</form>
 				
-				<ul class="navbar-nav ms-3">
+				<!-- Right navigation -->
+				<ul class="navbar-nav">
 					<?php if (Session::get('user_id')): ?>
 						<!-- User is logged in -->
-		<li class="nav-item dropdown" style="position: relative; z-index: 10000;">
-			<a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-				<i class="fas fa-user me-1"></i>
-				<?php echo Security::htmlentities(Session::get('user_full_name', Session::get('user_username', 'User'))); ?>
-			</a>
-			<ul class="dropdown-menu dropdown-menu-end" style="position: absolute; z-index: 10001;">
+						<li class="nav-item dropdown">
+							<a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+								<i class="fas fa-user"></i>
+								<?php echo Security::htmlentities(Session::get('user_full_name', Session::get('user_username', 'User'))); ?>
+							</a>
+							<ul class="dropdown-menu dropdown-menu-end">
 								<li>
 									<a class="dropdown-item" href="<?php echo Uri::base(); ?>user/profile">
-										<i class="fas fa-user-circle me-2"></i>Thông tin tài khoản
+										<i class="fas fa-user-circle"></i>
+										Thông tin tài khoản
 									</a>
 								</li>
 								<li><hr class="dropdown-divider"></li>
 								<li>
 									<a class="dropdown-item" href="<?php echo Uri::base(); ?>user/logout">
-										<i class="fas fa-sign-out-alt me-2"></i>Đăng xuất
+										<i class="fas fa-sign-out-alt"></i>
+										Đăng xuất
 									</a>
 								</li>
 							</ul>
@@ -884,12 +893,14 @@
 						<!-- User is not logged in -->
 						<li class="nav-item">
 							<a class="nav-link" href="<?php echo Uri::base(); ?>user/login">
-								<i class="fas fa-sign-in-alt me-1"></i>Đăng nhập
+								<i class="fas fa-sign-in-alt"></i>
+								Đăng nhập
 							</a>
 						</li>
 						<li class="nav-item">
 							<a class="nav-link" href="<?php echo Uri::base(); ?>user/register">
-								<i class="fas fa-user-plus me-1"></i>Đăng ký
+								<i class="fas fa-user-plus"></i>
+								Đăng ký
 							</a>
 						</li>
 					<?php endif; ?>

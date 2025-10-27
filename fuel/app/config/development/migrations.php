@@ -18,6 +18,7 @@ return array (
         12 => '014_update_stories_visibility_for_cascade',
         13 => '015_add_original_visibility_to_stories',
         14 => '016_create_password_reset_tokens_table',
+        15 => '017_create_comments_table',
       ),
     ),
     'module' => array(    

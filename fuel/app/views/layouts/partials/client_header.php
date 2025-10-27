@@ -52,107 +52,172 @@
 			color: var(--dark-text);
 		}
 
-		/* Navbar styles */
+		/* Navbar styles - Compact and aligned */
 		.navbar {
-			box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+			background: rgba(30, 41, 59, 0.95) !important;
+			backdrop-filter: blur(20px);
+			-webkit-backdrop-filter: blur(20px);
+			border-bottom: 1px solid rgba(51, 65, 85, 0.3);
+			padding: 0.5rem 0;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 			transition: all 0.3s ease;
-		}
-
-		body.dark-mode .navbar {
-			background-color: var(--dark-card) !important;
-			border-bottom: 1px solid var(--dark-border);
 		}
 
 		.navbar-brand {
 			font-weight: 700;
-			font-size: 1.5rem;
-			color: var(--primary-color) !important;
+			font-size: 1.4rem;
+			color: #fff !important;
 			text-decoration: none;
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
 		}
 
 		.navbar-brand:hover {
-			color: var(--accent-color) !important;
+			color: var(--primary-color) !important;
+			transform: translateY(-1px);
+			transition: all 0.2s ease;
 		}
 
 		.nav-link {
 			font-weight: 500;
-			color: var(--light-text) !important;
-			transition: color 0.3s ease;
-		}
-
-		body.dark-mode .nav-link {
-			color: var(--dark-text) !important;
+			color: #cbd5e1 !important;
+			padding: 0.5rem 1rem !important;
+			border-radius: 8px;
+			margin: 0 0.25rem;
+			transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
 		}
 
 		.nav-link:hover {
+			background: rgba(139, 126, 248, 0.1);
 			color: var(--primary-color) !important;
+			transform: translateY(-1px);
 		}
 
-		/* Search box styles */
+		/* Compact navbar items */
+		.navbar-nav {
+			align-items: center;
+		}
+
+		.navbar-nav .nav-item {
+			display: flex;
+			align-items: center;
+		}
+
+		/* Navbar container alignment */
+		.navbar .container {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+		}
+
+		.navbar .navbar-collapse {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			flex-grow: 1;
+		}
+
+		/* User dropdown alignment */
+		.navbar-nav .dropdown {
+			position: relative;
+		}
+
+		.navbar-nav .dropdown-menu {
+			position: absolute;
+			top: 100%;
+			right: 0;
+			left: auto;
+			z-index: 1000;
+		}
+
+		/* Search box styles - Compact and modern */
 		.search-box {
 			position: relative;
+			flex: 1;
+			max-width: 400px;
+			margin: 0 1rem;
+		}
+
+		.search-box .form-control {
+			background: rgba(30, 41, 59, 0.6);
+			border: 2px solid rgba(51, 65, 85, 0.5);
+			border-radius: 12px;
+			color: #fff;
+			padding: 0.5rem 1rem;
+			height: 40px;
+			transition: all 0.3s ease;
+		}
+
+		.search-box .form-control:focus {
+			background: rgba(30, 41, 59, 0.8);
+			border-color: var(--primary-color);
+			box-shadow: 0 0 0 3px rgba(139, 126, 248, 0.2);
+		}
+
+		.search-box .form-control::placeholder {
+			color: #64748b;
+		}
+
+		.search-box .btn {
+			height: 40px;
+			padding: 0 1rem;
+			border-radius: 0 12px 12px 0;
+			border-left: none;
+			background: var(--primary-color);
+			border-color: var(--primary-color);
+		}
+
+		.search-box .btn:hover {
+			background: var(--primary-dark);
+			border-color: var(--primary-dark);
 		}
 
 		.search-results {
 			position: absolute;
-			top: 100%;
+			top: calc(100% + 8px);
 			left: 0;
 			right: 0;
-			background: white;
-			border: 1px solid #ddd;
-			border-radius: 0 0 8px 8px;
-			box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-			z-index: 1000;
+			background: rgba(30, 41, 59, 0.98) !important;
+			backdrop-filter: blur(20px);
+			-webkit-backdrop-filter: blur(20px);
+			border: 1px solid rgba(51, 65, 85, 0.5);
+			border-radius: 12px;
+			box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+			z-index: 10000 !important;
 			display: none;
 			max-height: 300px;
 			overflow-y: auto;
 		}
 
-		body.dark-mode .search-results {
-			background: var(--dark-card);
-			border-color: var(--dark-border);
-		}
-
 		.search-item {
-			padding: 12px 16px;
-			border-bottom: 1px solid #eee;
+			padding: 0.75rem 1rem;
+			border-bottom: 1px solid rgba(51, 65, 85, 0.3);
 			cursor: pointer;
-			transition: background-color 0.2s;
-		}
-
-		body.dark-mode .search-item {
-			border-bottom-color: var(--dark-border);
-		}
-
-		.search-item:hover {
-			background-color: #f8f9fa;
-		}
-
-		body.dark-mode .search-item:hover {
-			background-color: var(--dark-bg);
+			transition: all 0.2s ease;
 		}
 
 		.search-item:last-child {
 			border-bottom: none;
 		}
 
-		.search-item-title {
-			font-weight: 600;
-			color: var(--light-text);
-			margin-bottom: 4px;
+		.search-item:hover {
+			background: rgba(139, 126, 248, 0.1);
 		}
 
-		body.dark-mode .search-item-title {
-			color: var(--dark-text);
+		.search-item-title {
+			font-weight: 600;
+			color: #fff;
+			margin-bottom: 0.25rem;
+			font-size: 0.9rem;
 		}
 
 		.search-item-author {
-			font-size: 0.875rem;
-			color: var(--light-text-secondary);
-		}
-
-		body.dark-mode .search-item-author {
-			color: var(--dark-text-secondary);
+			font-size: 0.8rem;
+			color: #94a3b8;
 		}
 
 		/* Theme toggle */
@@ -230,14 +295,66 @@
 			background-color: var(--dark-bg);
 		}
 
-		/* Responsive */
-		@media (max-width: 768px) {
-			.navbar-brand {
-				font-size: 1.25rem;
-			}
-			
+		/* Responsive - Mobile optimized */
+		@media (max-width: 992px) {
 			.search-box {
-				margin-top: 1rem;
+				max-width: 300px;
+				margin: 0 0.5rem;
+			}
+		}
+
+		@media (max-width: 768px) {
+			.navbar {
+				padding: 0.75rem 0;
+			}
+
+			.navbar-brand {
+				font-size: 1.2rem;
+			}
+
+			.nav-link {
+				padding: 0.4rem 0.8rem !important;
+				font-size: 0.9rem;
+			}
+
+			.search-box {
+				margin: 0.5rem 0 0 0;
+				max-width: 100%;
+				order: 3;
+				width: 100%;
+			}
+
+			.navbar-collapse {
+				text-align: center;
+			}
+
+			.navbar-nav {
+				margin: 0.5rem 0;
+			}
+
+			.navbar-nav .nav-item {
+				justify-content: center;
+			}
+		}
+
+		@media (max-width: 576px) {
+			.navbar-brand {
+				font-size: 1.1rem;
+			}
+
+			.nav-link {
+				padding: 0.3rem 0.6rem !important;
+				font-size: 0.85rem;
+			}
+
+			.search-box .form-control {
+				height: 36px;
+				font-size: 0.9rem;
+			}
+
+			.search-box .btn {
+				height: 36px;
+				padding: 0 0.8rem;
 			}
 		}
 	</style>
