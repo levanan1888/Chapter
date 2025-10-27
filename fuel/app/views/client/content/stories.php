@@ -243,83 +243,64 @@
 </div>
 
 <style>
-.story-card {
-	transition: transform 0.3s ease;
-	border: none;
-	box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+.container {
+	color: #e0e0e0;
 }
 
-.story-card:hover {
-	transform: translateY(-5px);
-	box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+h1, h2, h3, h4, h5, h6 {
+	color: #fff;
+}
+
+.btn-outline-primary {
+	border-color: #6c5ce7;
+	color: #6c5ce7;
+}
+
+.btn-outline-primary:hover {
+	background: #6c5ce7;
+	border-color: #6c5ce7;
+}
+
+.btn-primary {
+	background: #6c5ce7;
+	border-color: #6c5ce7;
+}
+
+.btn-primary:hover {
+	background: #5a4fc7;
+	border-color: #5a4fc7;
+}
+
+.btn-outline-secondary {
+	border-color: #555;
+	color: #aaa;
+	background: transparent;
+}
+
+.btn-outline-secondary:hover {
+	background: #555;
+	border-color: #555;
+	color: #fff;
+}
+
+.story-card {
+	background: #252525;
+	border: 1px solid #333;
 }
 
 .story-cover {
-	height: 200px;
-	object-fit: cover;
-	border-radius: 8px 8px 0 0;
+	height: 280px;
 }
 
-.category-badge {
-	background: linear-gradient(45deg, var(--primary-color), var(--info-color));
-	color: white;
-	padding: 4px 8px;
-	border-radius: 12px;
-	font-size: 0.8rem;
-	text-decoration: none;
-	display: inline-block;
-}
-
-.status-badge {
-	padding: 4px 8px;
-	border-radius: 12px;
-	font-size: 0.8rem;
-	font-weight: 500;
-}
-
-.status-ongoing {
-	background-color: var(--success-color);
-	color: white;
-}
-
-.status-completed {
-	background-color: var(--info-color);
-	color: white;
-}
-
-.status-paused {
-	background-color: var(--warning-color);
-	color: black;
-}
-
-.pagination .page-link {
-	border-radius: 6px;
-	margin: 0 2px;
-	border: 1px solid #dee2e6;
-}
-
-.pagination .page-item.active .page-link {
-	background-color: var(--primary-color);
-	border-color: var(--primary-color);
-}
-
-.pagination .page-link:hover {
-	background-color: #e9ecef;
-	border-color: #dee2e6;
-}
-
-/* Dark mode support */
-.dark-mode .story-card {
-	background-color: #2d2d2d;
+.story-card .card-title a {
 	color: #e0e0e0;
 }
 
-.dark-mode .card-body {
-	background-color: #2d2d2d;
-	color: #e0e0e0;
+.card-body {
+	background: transparent;
 }
 
-.dark-mode .text-dark {
-	color: #e0e0e0 !important;
+.text-center {
+	color: #aaa;
 }
 </style>

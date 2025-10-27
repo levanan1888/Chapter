@@ -70,7 +70,7 @@
 							<!-- Categories -->
 							<?php if (isset($categories) && !empty($categories)): ?>
 							<p class="mb-3">
-								<strong><i class="fas fa-tags me-2 text-warning"></i>Thể loại:</strong>
+								<strong style="color: #fff;"><i class="fas fa-tags me-2 text-warning"></i>Thể loại:</strong>
 								<?php foreach ($categories as $category): ?>
 									<a href="<?php echo Uri::base(); ?>client/category/<?php echo $category->slug; ?>" 
 									   class="category-badge me-1 text-decoration-none">
@@ -106,7 +106,7 @@
 				<div class="card-body p-0">
 					<div class="table-responsive">
 						<table class="table table-hover mb-0">
-							<thead class="table-light">
+							<thead>
 								<tr>
 									<th width="10%">Chương</th>
 									<th>Tên chương</th>
@@ -118,7 +118,7 @@
 								<?php foreach ($chapters as $chapter): ?>
 								<tr>
 									<td>
-										<span class="badge bg-secondary"><?php echo $chapter->chapter_number; ?></span>
+										<span class="badge"><?php echo $chapter->chapter_number; ?></span>
 									</td>
 									<td>
 										<a href="<?php echo Uri::base(); ?>client/read/<?php echo $story->slug; ?>/<?php echo $chapter->chapter_number; ?>" 
@@ -127,12 +127,12 @@
 										</a>
 									</td>
 									<td>
-										<small class="text-muted">
+										<small>
 											<?php echo date('d/m/Y', strtotime($chapter->created_at)); ?>
 										</small>
 									</td>
 									<td>
-										<small class="text-muted">
+										<small>
 											<i class="fas fa-eye me-1"></i>
 											<?php echo number_format($chapter->views); ?>
 										</small>
@@ -225,61 +225,154 @@
 </div>
 
 <style>
+.container {
+	color: #e0e0e0;
+}
+
+h1, h2, h3, h4, h5 {
+	color: #fff;
+}
+
 .story-detail-cover {
 	max-width: 300px;
 	width: 100%;
 	height: auto;
+	border: 1px solid #444;
+	border-radius: 8px;
 }
 
-.status-badge {
-	padding: 0.25rem 0.5rem;
-	border-radius: 0.375rem;
+.card {
+	background: rgba(30, 41, 59, 0.6) !important;
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
+	border: 1px solid rgba(51, 65, 85, 0.5) !important;
+	border-radius: 16px !important;
+	box-shadow: var(--shadow-lg) !important;
+}
+
+.card-header {
+	background: rgba(30, 41, 59, 0.8) !important;
+	border-bottom: 1px solid rgba(51, 65, 85, 0.5) !important;
+	color: #fff !important;
+	border-radius: 16px 16px 0 0 !important;
+}
+
+.card-body {
+	background: transparent;
+}
+
+.breadcrumb {
+	background: transparent;
+}
+
+.breadcrumb-item a {
+	color: #6c5ce7;
+}
+
+.breadcrumb-item.active {
+	color: #aaa;
+}
+
+p strong {
+	color: #fff;
+}
+
+
+
+.table {
+	color: #e2e8f0 !important;
+	background: transparent !important;
+}
+
+.table thead th {
+	background: rgba(15, 23, 42, 0.8) !important;
+	color: #fff !important;
+	border-bottom: 2px solid rgba(139, 126, 248, 0.3) !important;
+	border-top: none !important;
+	padding: 1rem !important;
+	font-weight: 600 !important;
+	text-transform: uppercase;
 	font-size: 0.875rem;
+	letter-spacing: 0.5px;
+}
+
+.table tbody tr {
+	background: rgba(15, 23, 42, 1) !important;
+	border-bottom: 1px solid rgba(51, 65, 85, 0.3) !important;
+	transition: all 0.2s ease;
+}
+
+.table tbody tr:nth-child(even) {
+	background: rgba(15, 23, 42, 0.95) !important;
+}
+
+.table tbody tr:last-child {
+	border-bottom: none !important;
+}
+
+.table tbody td {
+	border: none !important;
+	color: #e2e8f0 !important;
+	padding: 1rem !important;
+	vertical-align: middle;
+}
+
+.table-hover tbody tr:hover {
+	background: rgba(30, 41, 59, 1) !important;
+}
+
+.table tbody td a {
+	color: var(--primary-color) !important;
+	text-decoration: none;
+	font-weight: 500;
+	transition: all 0.2s ease;
+}
+
+.table tbody td a:hover {
+	color: var(--primary-dark) !important;
+	text-decoration: underline;
+}
+
+.table .badge {
+	background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%) !important;
+	color: #fff !important;
+	border: none !important;
+	padding: 0.5rem 0.875rem !important;
+	font-weight: 600 !important;
+	border-radius: 12px !important;
+	box-shadow: 0 2px 8px rgba(139, 126, 248, 0.3);
+}
+
+.table small {
+	color: #94a3b8 !important;
 	font-weight: 500;
 }
 
-.status-ongoing {
-	background-color: #d1ecf1;
-	color: #0c5460;
+.table tbody td i {
+	color: var(--primary-color) !important;
+	margin-right: 0.5rem;
 }
 
-.status-completed {
-	background-color: #d4edda;
-	color: #155724;
+.btn-primary {
+	background: #6c5ce7;
+	border-color: #6c5ce7;
 }
 
-.status-paused {
-	background-color: #fff3cd;
-	color: #856404;
+.btn-primary:hover {
+	background: #5a4fc7;
+	border-color: #5a4fc7;
 }
 
-.category-badge {
-	display: inline-block;
-	padding: 0.25rem 0.5rem;
-	background-color: #e9ecef;
-	color: #495057;
-	border-radius: 0.375rem;
-	font-size: 0.875rem;
-	text-decoration: none;
-	transition: background-color 0.15s ease-in-out;
-}
-
-.category-badge:hover {
-	background-color: #dee2e6;
-	color: #495057;
-}
-
-.story-card {
-	transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-}
-
-.story-card:hover {
-	transform: translateY(-2px);
-	box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+.bg-light {
+	background: #2d2d2d !important;
+	color: #e0e0e0;
+	border: 1px solid #444;
 }
 
 .story-cover {
-	height: 300px;
+	height: 120px;
+	width: 80px;
 	object-fit: cover;
+	border-radius: 4px;
 }
 </style>

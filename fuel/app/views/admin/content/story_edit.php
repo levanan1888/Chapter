@@ -94,8 +94,8 @@
 								<div class="form-text">Ảnh bìa hiện tại</div>
 							</div>
 						<?php endif; ?>
-						<input type="file" class="form-control" id="cover_image" name="cover_image" accept="image/*">
-						<div class="form-text">Hỗ trợ: JPG, PNG, GIF (tối đa 2MB)</div>
+						<input type="file" class="form-control" id="cover_image" name="cover_image" accept="image/jpeg,image/png,image/gif,image/webp">
+						<div class="form-text">Hỗ trợ: JPG, PNG, GIF, WEBP (tối đa 2MB)</div>
 					</div>
 
 					<div class="mb-3">

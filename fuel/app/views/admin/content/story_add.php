@@ -94,8 +94,8 @@
 				<div class="col-md-4">
 					<div class="mb-3">
 						<label for="cover_image" class="form-label">Ảnh bìa</label>
-						<input type="file" class="form-control" id="cover_image" name="cover_image" accept="image/*">
-						<div class="form-text">Hỗ trợ: JPG, PNG, GIF (tối đa 2MB)</div>
+						<input type="file" class="form-control" id="cover_image" name="cover_image" accept="image/jpeg,image/png,image/gif,image/webp">
+						<div class="form-text">Hỗ trợ: JPG, PNG, GIF, WEBP (tối đa 2MB)</div>
 					</div>
 
 					<!-- Bỏ phần ảnh chương đầu tiên theo yêu cầu -->

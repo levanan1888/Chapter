@@ -17,9 +17,7 @@ return array (
         11 => '013_add_user_type_to_admins',
         12 => '014_update_stories_visibility_for_cascade',
         13 => '015_add_original_visibility_to_stories',
-        14 => '016_add_password_reset_fields_to_admins',
-        15 => '016_create_password_reset_tokens_table',
-        16 => '016_create_password_resets_table',
+        14 => '016_create_password_reset_tokens_table',
       ),
     ),
     'module' => array(    

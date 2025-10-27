@@ -297,6 +297,20 @@ class Controller_Admin_Story extends Controller_Admin_Base
 				);
 
 				if ($data['story']->update_story($update_data)) {
+					// Upload ảnh bìa nếu có
+					if (isset($_FILES['cover_image']) && $_FILES['cover_image']['error'] == 0) {
+						$cover_image = $this->upload_cover_image($_FILES['cover_image'], $data['story']->id);
+						if ($cover_image) {
+							// Xóa ảnh cũ nếu có
+							if (!empty($data['story']->cover_image) && file_exists(DOCROOT . $data['story']->cover_image)) {
+								@unlink(DOCROOT . $data['story']->cover_image);
+							}
+							$data['story']->cover_image = $cover_image;
+							$data['story']->save();
+							\Log::info('Cover image updated: ' . $cover_image);
+						}
+					}
+
 					// Cập nhật categories
 					$data['story']->remove_all_categories();
 					if (!empty($category_ids) && is_array($category_ids)) {
@@ -788,7 +802,7 @@ class Controller_Admin_Story extends Controller_Admin_Base
 			}
 
 			// Validate file
-			$allowed_types = array('image/jpeg', 'image/png', 'image/gif');
+			$allowed_types = array('image/jpeg', 'image/png', 'image/gif', 'image/webp');
 			if (!in_array($file['type'], $allowed_types)) {
 				return null;
 			}
