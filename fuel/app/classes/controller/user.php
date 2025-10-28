@@ -167,31 +167,33 @@ class Controller_User extends Controller
 				} elseif (strlen($password) < 6) {
 					$data['error_message'] = 'Mật khẩu phải có ít nhất 6 ký tự.';
 				} else {
-					// Kiểm tra tồn tại trùng username hoặc email
-					$existing = $this->find_user_by_username_or_email($username);
-					if (!$existing) {
-						$existing = $this->find_user_by_username_or_email($email);
-					}
-
-					if ($existing) {
-						$data['error_message'] = 'Username hoặc email đã tồn tại.';
+					// Kiểm tra email đã tồn tại chưa
+					$existing_email = $this->find_user_by_email($email);
+					if ($existing_email) {
+						$data['error_message'] = 'Email này đã được đăng ký. Vui lòng sử dụng email khác.';
 					} else {
-						$user_data = array(
-							'username' => $username,
-							'email' => $email,
-							'password' => $password,
-							'full_name' => $full_name,
-							'is_active' => 1,
-							'user_type' => 'user'
-						);
-
-						$new_user = Model_Admin::create_admin($user_data);
-						if ($new_user) {
-							// Sau khi tạo, chuyển sang đăng nhập
-							Session::set_flash('success', 'Đăng ký thành công! Vui lòng đăng nhập.');
-							Response::redirect('user/login');
+						// Kiểm tra username đã tồn tại chưa
+						$existing_username = $this->find_user_by_username($username);
+						if ($existing_username) {
+							$data['error_message'] = 'Tên đăng nhập này đã được sử dụng. Vui lòng chọn tên đăng nhập khác.';
 						} else {
-							$data['error_message'] = 'Không thể tạo tài khoản. Vui lòng thử lại.';
+							$user_data = array(
+								'username' => $username,
+								'email' => $email,
+								'password' => $password,
+								'full_name' => $full_name,
+								'is_active' => 1,
+								'user_type' => 'user'
+							);
+
+							$new_user = Model_Admin::create_admin($user_data);
+							if ($new_user) {
+								// Sau khi tạo, chuyển sang đăng nhập
+								Session::set_flash('success', 'Đăng ký thành công! Vui lòng đăng nhập.');
+								Response::redirect('user/login');
+							} else {
+								$data['error_message'] = 'Không thể tạo tài khoản. Vui lòng thử lại.';
+							}
 						}
 					}
 				}
@@ -396,6 +398,36 @@ class Controller_User extends Controller
 		try {
 			$query = \DB::query("SELECT * FROM admins WHERE email = :email AND user_type = :user_type AND is_active = :is_active AND deleted_at IS NULL");
 			$result = $query->param('email', $email)
+							->param('user_type', 'user')
+							->param('is_active', 1)
+							->execute();
+
+			if ($result->count() > 0) {
+				$data = $result->current();
+				$user = new Model_Admin();
+				foreach ($data as $key => $value) {
+					$user->$key = $value;
+				}
+				return $user;
+			}
+
+			return null;
+		} catch (\Exception $e) {
+			return null;
+		}
+	}
+
+	/**
+	 * Tìm user theo username với user_type = 'user'
+	 * 
+	 * @param string $username Username
+	 * @return Model_Admin|null
+	 */
+	protected function find_user_by_username($username)
+	{
+		try {
+			$query = \DB::query("SELECT * FROM admins WHERE username = :username AND user_type = :user_type AND is_active = :is_active AND deleted_at IS NULL");
+			$result = $query->param('username', $username)
 							->param('user_type', 'user')
 							->param('is_active', 1)
 							->execute();

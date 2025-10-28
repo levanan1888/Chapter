@@ -71,19 +71,45 @@
 			transition: all 0.3s ease;
 		}
 
-		.navbar-brand {
-			font-weight: 700;
-			font-size: 1.5rem;
-			letter-spacing: -0.5px;
-			color: #fff !important;
-			text-decoration: none;
-		}
+	.navbar-brand {
+		font-weight: 700;
+		font-size: 1.5rem;
+		letter-spacing: -0.5px;
+		color: #fff !important;
+		text-decoration: none;
+		display: flex;
+		align-items: center;
+		padding: 0;
+	}
 
-		.navbar-brand:hover {
-			color: var(--primary-color) !important;
-			transform: translateY(-1px);
-			transition: all 0.2s ease;
-		}
+	.navbar-brand img {
+		height: 50px;
+		width: auto;
+		max-height: 50px;
+		transition: all 0.3s ease;
+	}
+
+	.navbar-brand span {
+		font-size: 1.2rem;
+		font-weight: 600;
+		color: #fff;
+		transition: all 0.3s ease;
+	}
+
+	.navbar-brand:hover {
+		color: var(--primary-color) !important;
+		transform: translateY(-1px);
+		transition: all 0.2s ease;
+	}
+
+	.navbar-brand:hover img {
+		filter: brightness(1.1);
+		transform: scale(1.05);
+	}
+
+	.navbar-brand:hover span {
+		color: var(--primary-color);
+	}
 
 		.nav-link {
 			font-weight: 500;
@@ -763,6 +789,15 @@
 				font-size: 1.25rem;
 			}
 
+			.navbar-brand img {
+				height: 40px;
+				max-height: 40px;
+			}
+
+			.navbar-brand span {
+				font-size: 1rem;
+			}
+
 			.btn-lg {
 				padding: 0.75rem 1.5rem;
 				font-size: 1rem;
@@ -784,6 +819,15 @@
 
 			.hero-section {
 				padding: 2.5rem 0;
+			}
+
+			.navbar-brand img {
+				height: 35px;
+				max-height: 35px;
+			}
+
+			.navbar-brand span {
+				font-size: 0.9rem;
 			}
 		}
 
@@ -825,11 +869,11 @@
 	<!-- Navigation - Compact and Aligned -->
 	<nav class="navbar navbar-expand-lg navbar-dark">
 		<div class="container">
-			<!-- Brand -->
-			<a class="navbar-brand" href="<?php echo Uri::base(); ?>">
-				<i class="fas fa-book-open"></i>
-				NetTruyen
-			</a>
+		<!-- Brand -->
+		<a class="navbar-brand" href="<?php echo Uri::base(); ?>">
+			<img src="<?php echo Uri::base(); ?>assets/img/Gemini_Generated_Image_qp3mt7qp3mt7qp3m.png" alt="NetTruyen" style="height: 50px; width: auto;">
+			<span class="ms-2">An - NetTruyen</span>
+		</a>
 			
 			<!-- Mobile toggle -->
 			<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
