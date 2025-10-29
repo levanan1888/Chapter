@@ -442,16 +442,10 @@ class Model_Category extends \Model
 				}
 				$this->updated_at = $updated_at;
 
-				// Nếu thay đổi trạng thái is_active, áp dụng cascade effect
+				// Log thay đổi trạng thái is_active (không ẩn truyện nữa)
 				if ($is_active_changed) {
-					\Log::info("Category {$this->id} is_active changed from {$old_is_active} to {$new_is_active}, applying cascade effect");
-					
-					// Cập nhật trạng thái hiển thị của các truyện liên quan
-					if ($new_is_active == 0) {
-						$this->hide_related_stories();
-					} else {
-						$this->show_related_stories();
-					}
+					\Log::info("Category {$this->id} is_active changed from {$old_is_active} to {$new_is_active}");
+					// Không còn ẩn truyện khi danh mục bị ẩn
 				}
 
 				return true;
@@ -894,12 +888,8 @@ class Model_Category extends \Model
 				return false;
 			}
 
-			// 2. Cập nhật trạng thái hiển thị của các truyện liên quan
-			if ($is_active == 0) {
-				$this->hide_related_stories();
-			} else {
-				$this->show_related_stories();
-			}
+			// Không còn cập nhật trạng thái hiển thị của các truyện liên quan
+			// Truyện sẽ vẫn hiển thị, chỉ danh mục không hoạt động
 
 			\DB::commit_transaction();
 			

@@ -801,23 +801,48 @@ document.addEventListener('DOMContentLoaded', function() {
 	
 	// Keyboard navigation
 	document.addEventListener('keydown', function(e) {
-		// Left arrow key - previous chapter
-		if (e.key === 'ArrowLeft') {
-			<?php if (isset($previous_chapter) && $previous_chapter): ?>
-				window.location.href = '<?php echo Uri::base(); ?>client/read/<?php echo $story->slug; ?>/<?php echo $previous_chapter->chapter_number; ?>';
-			<?php endif; ?>
-		}
-		
-		// Right arrow key - next chapter
-		if (e.key === 'ArrowRight') {
-			<?php if (isset($next_chapter) && $next_chapter): ?>
-				window.location.href = '<?php echo Uri::base(); ?>client/read/<?php echo $story->slug; ?>/<?php echo $next_chapter->chapter_number; ?>';
-			<?php endif; ?>
-		}
-		
-		// Escape key - back to story
-		if (e.key === 'Escape') {
-			window.location.href = '<?php echo Uri::base(); ?>client/story/<?php echo $story->slug; ?>';
+		// If in fullscreen mode, handle image navigation
+		if (isFullscreen) {
+			// Left arrow key - previous image
+			if (e.key === 'ArrowLeft') {
+				e.preventDefault();
+				previousImage();
+				return;
+			}
+			
+			// Right arrow key - next image
+			if (e.key === 'ArrowRight') {
+				e.preventDefault();
+				nextImage();
+				return;
+			}
+			
+			// Escape key - exit fullscreen
+			if (e.key === 'Escape') {
+				e.preventDefault();
+				exitFullscreen();
+				return;
+			}
+		} else {
+			// Normal navigation when not in fullscreen
+			// Left arrow key - previous chapter
+			if (e.key === 'ArrowLeft') {
+				<?php if (isset($previous_chapter) && $previous_chapter): ?>
+					window.location.href = '<?php echo Uri::base(); ?>client/read/<?php echo $story->slug; ?>/<?php echo $previous_chapter->chapter_number; ?>';
+				<?php endif; ?>
+			}
+			
+			// Right arrow key - next chapter
+			if (e.key === 'ArrowRight') {
+				<?php if (isset($next_chapter) && $next_chapter): ?>
+					window.location.href = '<?php echo Uri::base(); ?>client/read/<?php echo $story->slug; ?>/<?php echo $next_chapter->chapter_number; ?>';
+				<?php endif; ?>
+			}
+			
+			// Escape key - back to story
+			if (e.key === 'Escape') {
+				window.location.href = '<?php echo Uri::base(); ?>client/story/<?php echo $story->slug; ?>';
+			}
 		}
 	});
 
@@ -877,18 +902,143 @@ document.addEventListener('DOMContentLoaded', function() {
 		});
 	}
 
+	// Fullscreen image navigation
+	let currentImageIndex = 0;
+	let allImages = [];
+	let isFullscreen = false;
+	let currentFullscreenImage = null;
+	let originalImageSrcs = []; // Store original image sources
+
+	// Initialize image array and indices
+	function initializeImages() {
+		allImages = Array.from(document.querySelectorAll('.chapter-image'));
+		allImages.forEach((img, index) => {
+			img.dataset.imageIndex = index;
+			// Store original src if not already stored
+			if (!originalImageSrcs[index]) {
+				originalImageSrcs[index] = img.src;
+			}
+		});
+	}
+
 	// Double-click to fullscreen
 	document.querySelectorAll('.chapter-image').forEach(img => {
 		img.addEventListener('dblclick', function() {
-			if (this.requestFullscreen) {
-				this.requestFullscreen();
-			} else if (this.webkitRequestFullscreen) {
-				this.webkitRequestFullscreen();
-			} else if (this.msRequestFullscreen) {
-				this.msRequestFullscreen();
-			}
+			currentImageIndex = parseInt(this.dataset.imageIndex);
+			currentFullscreenImage = this;
+			enterFullscreen(this);
 		});
 	});
+
+	// Enter fullscreen mode
+	function enterFullscreen(img) {
+		if (img.requestFullscreen) {
+			img.requestFullscreen();
+		} else if (img.webkitRequestFullscreen) {
+			img.webkitRequestFullscreen();
+		} else if (img.msRequestFullscreen) {
+			img.msRequestFullscreen();
+		}
+	}
+
+	// Exit fullscreen mode
+	function exitFullscreen() {
+		if (document.exitFullscreen) {
+			document.exitFullscreen();
+		} else if (document.webkitExitFullscreen) {
+			document.webkitExitFullscreen();
+		} else if (document.msExitFullscreen) {
+			document.msExitFullscreen();
+		}
+	}
+
+	// Navigate to next image in fullscreen
+	function nextImage() {
+		if (!isFullscreen || allImages.length <= 1) return;
+		
+		// Only go to next if not at the last image
+		if (currentImageIndex < allImages.length - 1) {
+			currentImageIndex++;
+			updateFullscreenImage();
+		}
+	}
+
+	// Navigate to previous image in fullscreen
+	function previousImage() {
+		if (!isFullscreen || allImages.length <= 1) return;
+		
+		// Only go to previous if not at the first image
+		if (currentImageIndex > 0) {
+			currentImageIndex--;
+			updateFullscreenImage();
+		}
+	}
+
+	// Update the fullscreen image
+	function updateFullscreenImage() {
+		if (!isFullscreen || !currentFullscreenImage) return;
+		
+		const newImage = allImages[currentImageIndex];
+		if (newImage && newImage !== currentFullscreenImage) {
+			// Update the src of the current fullscreen image
+			currentFullscreenImage.src = newImage.src;
+			currentFullscreenImage.alt = newImage.alt;
+		}
+	}
+
+	// Restore all images to their original sources
+	function restoreOriginalImages() {
+		allImages.forEach((img, index) => {
+			if (originalImageSrcs[index]) {
+				img.src = originalImageSrcs[index];
+			}
+		});
+	}
+
+	// Listen for fullscreen changes
+	document.addEventListener('fullscreenchange', handleFullscreenChange);
+	document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+	document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+	document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+	function handleFullscreenChange() {
+		const isCurrentlyFullscreen = !!(document.fullscreenElement || 
+										document.webkitFullscreenElement || 
+										document.mozFullScreenElement || 
+										document.msFullscreenElement);
+		
+		if (isCurrentlyFullscreen && !isFullscreen) {
+			// Entering fullscreen
+			isFullscreen = true;
+			initializeImages();
+		} else if (!isCurrentlyFullscreen && isFullscreen) {
+			// Exiting fullscreen - restore all images to original sources
+			isFullscreen = false;
+			restoreOriginalImages();
+			
+			// Scroll to the current image position
+			scrollToCurrentImage();
+			
+			currentFullscreenImage = null;
+		}
+	}
+
+	// Scroll to the current image position
+	function scrollToCurrentImage() {
+		if (allImages.length > 0 && currentImageIndex >= 0 && currentImageIndex < allImages.length) {
+			const targetImage = allImages[currentImageIndex];
+			if (targetImage) {
+				// Smooth scroll to the image
+				targetImage.scrollIntoView({
+					behavior: 'smooth',
+					block: 'center'
+				});
+			}
+		}
+	}
+
+	// Initialize images on page load
+	initializeImages();
 });
 </script>
 

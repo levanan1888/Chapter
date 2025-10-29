@@ -48,7 +48,6 @@
 					<div class="mb-3">
 						<label for="description" class="form-label">Mô tả</label>
 						<textarea class="form-control" id="description" name="description" rows="5"><?php echo isset($author) ? htmlspecialchars($author->description) : ''; ?></textarea>
-						<div class="form-text">Mô tả chỉ được chứa chữ cái và khoảng trắng</div>
 					</div>
 				</div>
 

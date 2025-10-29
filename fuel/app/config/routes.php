@@ -101,6 +101,7 @@ return array(
 	'admin/chapters/bulk-restore' => 'admin/chapter/bulk_restore',
 	'admin/chapters/bulk-force-delete' => 'admin/chapter/bulk_force_delete',
 	'admin/chapters/api/list/(:num)' => 'admin/chapter/api_list/$1',
+	'admin/chapters/crawl_images' => 'admin/chapter/crawl_images',
 	
 	// Category management routes
 	'admin/categories' => 'admin/category/index',

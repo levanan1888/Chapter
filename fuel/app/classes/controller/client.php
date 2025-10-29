@@ -84,7 +84,7 @@ class Controller_Client extends Controller
 					break;
 			}
 			
-			$data['stories'] = Model_Story::get_all_stories($limit, $offset, $order_by, $order_direction);
+			$data['stories'] = Model_Story::get_all_stories($limit, $offset, $order_by, $order_direction, $status);
 			$data['total_stories'] = Model_Story::count_all();
 		}
 

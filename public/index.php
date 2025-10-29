@@ -30,6 +30,12 @@ error_reporting(-1);
 
 ini_set('display_errors', 1);
 
+// Increase PHP settings for handling large image uploads
+ini_set('max_input_vars', 10000); // Allow more input variables for multiple images
+ini_set('post_max_size', '100M'); // Increase POST max size
+ini_set('upload_max_filesize', '50M'); // Allow larger file uploads
+ini_set('memory_limit', '256M'); // Increase memory limit for image processing
+
 /**
  * -----------------------------------------------------------------------------
  *  Define constants

@@ -706,28 +706,56 @@ class Controller_Admin_Chapter extends Controller_Admin_Base
 		$this->require_login();
 
 		if (Input::method() !== 'POST') {
-			Response::redirect('admin/stories');
+			// Non-POST access: keep UX smooth by redirecting back with notice
+			Session::set_flash('error', 'Phương thức không hợp lệ. Vui lòng thao tác từ giao diện quản trị.');
+			$referer = Input::server('HTTP_REFERER', 'admin/stories');
+			Response::redirect($referer);
 		}
 
 		// Kiểm tra CSRF token
 		if (!Security::check_token()) {
-			return $this->error_response('Token bảo mật không hợp lệ. Vui lòng thử lại.');
+			if (Input::is_ajax()) {
+				return $this->error_response('Token bảo mật không hợp lệ. Vui lòng thử lại.');
+			}
+			Session::set_flash('error', 'Token bảo mật không hợp lệ. Vui lòng thử lại.');
+			$referer = Input::server('HTTP_REFERER', 'admin/stories');
+			Response::redirect($referer);
 		}
 
 		if (empty($id)) {
-			return $this->error_response('ID không hợp lệ.');
+			if (Input::is_ajax()) {
+				return $this->error_response('ID không hợp lệ.');
+			}
+			Session::set_flash('error', 'ID không hợp lệ.');
+			$referer = Input::server('HTTP_REFERER', 'admin/stories');
+			Response::redirect($referer);
 		}
 
 		$chapter = Model_Chapter::find_admin($id);
 		
 		if (!$chapter) {
-			return $this->error_response('Không tìm thấy chương.');
+			if (Input::is_ajax()) {
+				return $this->error_response('Không tìm thấy chương.');
+			}
+			Session::set_flash('error', 'Không tìm thấy chương.');
+			$referer = Input::server('HTTP_REFERER', 'admin/stories');
+			Response::redirect($referer);
 		}
 
 		if ($chapter->restore()) {
-			return $this->success_response('Khôi phục chương thành công!');
+			if (Input::is_ajax()) {
+				return $this->success_response('Khôi phục chương thành công!');
+			}
+			Session::set_flash('success', 'Khôi phục chương thành công!');
+			$redirect_to = Input::server('HTTP_REFERER', 'admin/stories');
+			Response::redirect($redirect_to);
 		} else {
-			return $this->error_response('Có lỗi xảy ra khi khôi phục chương.');
+			if (Input::is_ajax()) {
+				return $this->error_response('Có lỗi xảy ra khi khôi phục chương.');
+			}
+			Session::set_flash('error', 'Có lỗi xảy ra khi khôi phục chương.');
+			$redirect_to = Input::server('HTTP_REFERER', 'admin/stories');
+			Response::redirect($redirect_to);
 		}
 	}
 
@@ -742,22 +770,39 @@ class Controller_Admin_Chapter extends Controller_Admin_Base
 		$this->require_login();
 
 		if (Input::method() !== 'POST') {
-			Response::redirect('admin/stories');
+			Session::set_flash('error', 'Phương thức không hợp lệ. Vui lòng thao tác từ giao diện quản trị.');
+			$referer = Input::server('HTTP_REFERER', 'admin/stories');
+			Response::redirect($referer);
 		}
 
 		// Kiểm tra CSRF token
 		if (!Security::check_token()) {
-			return $this->error_response('Token bảo mật không hợp lệ. Vui lòng thử lại.');
+			if (Input::is_ajax()) {
+				return $this->error_response('Token bảo mật không hợp lệ. Vui lòng thử lại.');
+			}
+			Session::set_flash('error', 'Token bảo mật không hợp lệ. Vui lòng thử lại.');
+			$referer = Input::server('HTTP_REFERER', 'admin/stories');
+			Response::redirect($referer);
 		}
 
 		if (empty($id)) {
-			return $this->error_response('ID không hợp lệ.');
+			if (Input::is_ajax()) {
+				return $this->error_response('ID không hợp lệ.');
+			}
+			Session::set_flash('error', 'ID không hợp lệ.');
+			$referer = Input::server('HTTP_REFERER', 'admin/stories');
+			Response::redirect($referer);
 		}
 
 		$chapter = Model_Chapter::find_admin($id);
 		
 		if (!$chapter) {
-			return $this->error_response('Không tìm thấy chương.');
+			if (Input::is_ajax()) {
+				return $this->error_response('Không tìm thấy chương.');
+			}
+			Session::set_flash('error', 'Không tìm thấy chương.');
+			$referer = Input::server('HTTP_REFERER', 'admin/stories');
+			Response::redirect($referer);
 		}
 
 		// Xóa các file ảnh trước khi xóa chương
@@ -770,9 +815,19 @@ class Controller_Admin_Chapter extends Controller_Admin_Base
 		}
 
 		if ($chapter->force_delete()) {
-			return $this->success_response('Xóa vĩnh viễn chương thành công!');
+			if (Input::is_ajax()) {
+				return $this->success_response('Xóa vĩnh viễn chương thành công!');
+			}
+			Session::set_flash('success', 'Xóa vĩnh viễn chương thành công!');
+			$redirect_to = Input::server('HTTP_REFERER', 'admin/stories');
+			Response::redirect($redirect_to);
 		} else {
-			return $this->error_response('Có lỗi xảy ra khi xóa vĩnh viễn chương.');
+			if (Input::is_ajax()) {
+				return $this->error_response('Có lỗi xảy ra khi xóa vĩnh viễn chương.');
+			}
+			Session::set_flash('error', 'Có lỗi xảy ra khi xóa vĩnh viễn chương.');
+			$redirect_to = Input::server('HTTP_REFERER', 'admin/stories');
+			Response::redirect($redirect_to);
 		}
 	}
 

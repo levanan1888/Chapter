@@ -79,7 +79,7 @@ function displayReplyRecursive($reply, $depth = 0) {
                         <div class="mb-3">
                             <label for="edit-content-reply-<?php echo $reply->id; ?>" class="form-label">Nội dung trả lời *</label>
                             <textarea class="form-control" id="edit-content-reply-<?php echo $reply->id; ?>" 
-                                      name="content" rows="3" required><?php echo htmlspecialchars($reply->content); ?></textarea>
+                                      name="content" rows="3" required><?php echo htmlspecialchars(html_entity_decode($reply->content, ENT_QUOTES, 'UTF-8')); ?></textarea>
                         </div>
                         
                         <div class="d-flex justify-content-end gap-2">
@@ -304,8 +304,8 @@ function displayReplyRecursive($reply, $depth = 0) {
 											
 											<div class="mb-3">
 												<label for="edit-content-<?php echo $comment->id; ?>" class="form-label">Nội dung bình luận *</label>
-												<textarea class="form-control" id="edit-content-<?php echo $comment->id; ?>" 
-														  name="content" rows="3" required><?php echo htmlspecialchars($comment->content); ?></textarea>
+                                            <textarea class="form-control" id="edit-content-<?php echo $comment->id; ?>" 
+                                                      name="content" rows="3" required><?php echo htmlspecialchars(html_entity_decode($comment->content, ENT_QUOTES, 'UTF-8')); ?></textarea>
 											</div>
 											
 											<div class="d-flex justify-content-end gap-2">

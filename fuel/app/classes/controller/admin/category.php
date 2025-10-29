@@ -79,7 +79,7 @@ class Controller_Admin_Category extends Controller_Admin_Base
 			// - custom_name: kiểm tra tên cơ bản (không rỗng, tối thiểu 2 ký tự)
 			// - custom_category: không được chứa chữ "n"
 			$validation->add_field('name', 'Tên danh mục', 'required|custom_name|custom_category');
-			$validation->add_field('description', 'Mô tả', 'required|custom_category|custom_name');
+			// Description không cần validation - có thể để trống
 
 			if ($validation->run()) {
 				// Tạo slug từ tên nếu không có slug
@@ -187,7 +187,7 @@ class Controller_Admin_Category extends Controller_Admin_Base
 			$validation = Validation::forge();
 			$validation->add_callable('Validation_Custom');
 			$validation->add_field('name', 'Tên danh mục', 'required|custom_name|custom_category');
-			$validation->add_field('description', 'Mô tả', 'custom_category');
+			// Description không cần validation - có thể để trống
 
 			if ($validation->run()) {
 				// Tạo slug từ tên nếu không có slug

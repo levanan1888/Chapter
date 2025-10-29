@@ -78,7 +78,7 @@
 		}
 
 		body {
-			background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+			background: linear-gradient(135deg, rgba(2, 8, 23, 0.85) 0%, rgba(2, 6, 23, 0.85) 100%);
 			background-attachment: fixed;
 			font-family: var(--font-family);
 			font-size: var(--font-size-base);
@@ -88,6 +88,35 @@
 			color: var(--text-secondary);
 			-webkit-font-smoothing: antialiased;
 			-moz-osx-font-smoothing: grayscale;
+		}
+
+		/* Fullscreen background slideshow */
+		#bg-slideshow {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			z-index: 0;
+			overflow: hidden;
+			pointer-events: none;
+		}
+
+		.bg-slide {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background-size: cover;
+			background-position: center center;
+			background-repeat: no-repeat;
+			opacity: 0;
+			transition: opacity 1.2s ease-in-out;
+		}
+
+		.bg-slide.active {
+			opacity: 1;
 		}
 
 		/* Typography System */
@@ -955,6 +984,10 @@
 	</style>
 </head>
 <body>
+	<div id="bg-slideshow">
+		<div class="bg-slide active" id="bg-slide-a"></div>
+		<div class="bg-slide" id="bg-slide-b"></div>
+	</div>
 	<!-- Navigation - Compact and Aligned -->
 	<nav class="navbar navbar-expand-lg navbar-dark">
 		<div class="container">
@@ -1083,6 +1116,50 @@
 				window.location.href = `<?php echo Uri::base(); ?>client/search?q=${encodeURIComponent(query)}`;
 			}
 		});
+
+		// Background slideshow
+		(function() {
+			const base = '<?php echo Uri::base(); ?>assets/img/';
+			const images = [
+				'hinh-nen-anime-17.jpg',
+				'hinh-nen-anime-20.jpg',
+				'hinh2.jpg',
+				'image.png'
+			];
+			// Preload images
+			images.forEach(function(name) { const img = new Image(); img.src = base + name; });
+
+			var index = 0;
+			var a = document.getElementById('bg-slide-a');
+			var b = document.getElementById('bg-slide-b');
+
+			function fullBg(url) {
+				return `linear-gradient(135deg, rgba(2, 8, 23, 0.85) 0%, rgba(2, 6, 23, 0.85) 100%), url('${url}')`;
+			}
+
+			function setInitial() {
+				a.style.backgroundImage = fullBg(base + images[0]);
+				b.style.backgroundImage = fullBg(base + images[1 % images.length]);
+			}
+
+			function swapSlides() {
+				index = (index + 1) % images.length;
+				var nextIndex = (index + 1) % images.length;
+				// Fade b in while a fades out, then swap roles
+				b.style.backgroundImage = fullBg(base + images[index]);
+				b.classList.add('active');
+				a.classList.remove('active');
+				// After transition, swap element refs
+				setTimeout(function() {
+					var tmp = a; a = b; b = tmp; // a is now visible
+					b.style.backgroundImage = fullBg(base + images[nextIndex]);
+					b.classList.remove('active');
+				}, 1300);
+			}
+
+			setInitial();
+			setInterval(swapSlides, 8000); // 8s per slide
+		})();
 	</script>
 </body>
 </html>

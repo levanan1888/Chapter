@@ -28,7 +28,7 @@ class Controller_Admin_Author extends Controller_Admin_Base
 		
 		// Phân trang
 		$page = Input::get('page', 1);
-		$limit = 10;
+		$limit = 20;
 		$offset = ($page - 1) * $limit;
 
 		// Lấy danh sách tác giả với filter
@@ -283,7 +283,7 @@ class Controller_Admin_Author extends Controller_Admin_Base
 		
 		// Phân trang
 		$page = Input::get('page', 1);
-		$limit = 10;
+		$limit = 20;
 		$offset = ($page - 1) * $limit;
 
 		// Lấy danh sách tác giả đã xóa

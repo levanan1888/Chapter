@@ -119,11 +119,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to refresh CSRF token
     function refreshCsrfToken() {
-        fetch('<?php echo Uri::base(); ?>admin/chapters/add/<?php echo isset($story) ? $story->id : ''; ?>', {
+        // Use current page URL instead of hardcoded path
+        const currentUrl = window.location.href;
+        
+        fetch(currentUrl, {
             method: 'GET',
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
-            }
+            },
+            cache: 'no-cache'
         })
         .then(response => response.text())
         .then(html => {
@@ -153,19 +157,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Refresh CSRF token when page becomes visible (user returns from another page)
-    document.addEventListener('visibilitychange', function() {
-        if (!document.hidden) {
-            console.log('Page became visible, refreshing CSRF token...');
-            refreshCsrfToken();
-        }
-    });
-    
-    // Also refresh token when page gains focus
-    window.addEventListener('focus', function() {
-        console.log('Window gained focus, refreshing CSRF token...');
-        refreshCsrfToken();
-    });
+    // Không refresh CSRF token khi visibility change để tránh xung đột
+    // Token sẽ được refresh ngay trước khi submit form
 
     // Add image button click
     addImageBtn.addEventListener('click', function() {
@@ -520,11 +513,46 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Handle form submission: just ensure image order is updated, then allow normal submit (CSRF-safe)
-    document.querySelector('form').addEventListener('submit', function() {
-        // Refresh CSRF token before submission
-        refreshCsrfToken();
+    document.querySelector('form').addEventListener('submit', function(e) {
+        // Prevent default submission temporarily
+        e.preventDefault();
         
+        // Update image order first
         updateImageOrder();
+        
+        // Refresh CSRF token before submission
+        fetch(window.location.href, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            cache: 'no-cache'
+        })
+        .then(response => response.text())
+        .then(html => {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const newToken = doc.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+                            doc.querySelector('input[name="<?php echo \Config::get('security.csrf_token_key'); ?>"]')?.value;
+            if (newToken) {
+                // Update token in form
+                const csrfInput = document.querySelector('input[name="<?php echo \Config::get('security.csrf_token_key'); ?>"]');
+                if (csrfInput) {
+                    csrfInput.value = newToken;
+                }
+                
+                // Now submit the form
+                document.querySelector('form').submit();
+            } else {
+                // If token refresh fails, submit anyway
+                document.querySelector('form').submit();
+            }
+        })
+        .catch(err => {
+            console.error('Failed to refresh CSRF token before submit:', err);
+            // Submit anyway
+            document.querySelector('form').submit();
+        });
     });
 
     function showImageModal(imageSrc) {

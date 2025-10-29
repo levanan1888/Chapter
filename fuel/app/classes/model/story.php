@@ -165,7 +165,7 @@ class Model_Story extends \Model
 	 * @param string $order_direction Hướng sắp xếp
 	 * @return array
 	 */
-    public static function get_all_stories($limit = null, $offset = 0, $order_by = 'created_at', $order_direction = 'DESC')
+    public static function get_all_stories($limit = null, $offset = 0, $order_by = 'created_at', $order_direction = 'DESC', $status = null)
 	{
 		try {
             // Build SQL safely with whitelisted order fields
@@ -182,8 +182,14 @@ class Model_Story extends \Model
                     END AS author_name
                     FROM stories s
                     LEFT JOIN authors a ON s.author_id = a.id
-                    WHERE s.deleted_at IS NULL AND s.is_visible = 1
-                    ORDER BY s." . $order_by . " " . $order_direction;
+                    WHERE s.deleted_at IS NULL AND s.is_visible = 1";
+            
+            // Add status filter if provided
+            if (!empty($status)) {
+                $sql .= " AND s.status = :status";
+            }
+            
+            $sql .= " ORDER BY s." . $order_by . " " . $order_direction;
 
             if ($limit !== null) {
                 $limit = (int) $limit;
@@ -192,6 +198,11 @@ class Model_Story extends \Model
             }
 
             $query = \DB::query($sql);
+            
+            // Bind status parameter if provided
+            if (!empty($status)) {
+                $query->param('status', $status);
+            }
 
 			$results = $query->execute();
 			$stories = array();
@@ -721,7 +732,7 @@ class Model_Story extends \Model
 		try {
 			$query = \DB::query("SELECT c.* FROM categories c 
 								INNER JOIN story_categories sc ON c.id = sc.category_id 
-								WHERE sc.story_id = :story_id AND c.deleted_at IS NULL 
+								WHERE sc.story_id = :story_id AND c.deleted_at IS NULL AND c.is_active = 1 
 								ORDER BY c.name ASC");
 			$results = $query->param('story_id', $this->id)->execute();
 			$categories = array();
