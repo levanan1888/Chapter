@@ -6,7 +6,7 @@
 				<i class="fas fa-book-open"></i>
 			</div>
 			<h1 class="display-4 mb-4 fw-bold" style="background: linear-gradient(135deg, #8b7ef8 0%, #ff9f66 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-				Chào mừng đến với NetTruyen
+				Chào mừng đến với An - NetTruyen
 			</h1>
 			<p class="lead mb-5" style="font-size: 1.25rem; color: #cbd5e1; max-width: 700px; margin: 0 auto;">
 				Khám phá thế giới truyện tranh đa dạng và phong phú
@@ -51,9 +51,11 @@
 										<?php echo $story->title; ?>
 									</a>
 								</h5>
+								<?php if (!empty($story->author_name)): ?>
 								<p class="card-text text-muted small">
-									<?php echo $story->author_name ?? 'Unknown'; ?>
+									<?php echo Security::htmlentities($story->author_name); ?>
 								</p>
+								<?php endif; ?>
 								<div class="mt-auto">
 									<div class="d-flex justify-content-between align-items-center mb-2">
 										<span class="status-badge status-<?php echo $story->status; ?>">
@@ -127,7 +129,9 @@
 									</a>
 								</h5>
 								<p class="card-text text-muted small mb-2">
-									<i class="fas fa-user me-1"></i><?php echo Security::htmlentities($story->author_name ?? 'Unknown'); ?>
+									<?php if (!empty($story->author_name)): ?>
+									<i class="fas fa-user me-1"></i><?php echo Security::htmlentities($story->author_name); ?>
+									<?php endif; ?>
 								</p>
 								<div class="mt-auto">
 									<div class="d-flex justify-content-between align-items-center mb-2">
@@ -205,7 +209,9 @@
 									</a>
 								</h5>
 								<p class="card-text text-muted small mb-2">
-									<i class="fas fa-user me-1"></i><?php echo Security::htmlentities($story->author_name ?? 'Unknown'); ?>
+									<?php if (!empty($story->author_name)): ?>
+									<i class="fas fa-user me-1"></i><?php echo Security::htmlentities($story->author_name); ?>
+									<?php endif; ?>
 								</p>
 								<div class="mt-auto">
 									<div class="d-flex justify-content-between align-items-center mb-2">

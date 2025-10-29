@@ -32,6 +32,14 @@ function displayReplyRecursive($reply, $depth = 0) {
                     <span class="badge bg-warning me-2">Chưa duyệt</span>
                 <?php endif; ?>
                 <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-outline-primary" 
+                            onclick="toggleEditReplyForm(<?php echo $reply->id; ?>)" title="Sửa">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-info" 
+                            onclick="toggleReplyForm(<?php echo $reply->id; ?>, <?php echo $reply->parent_id; ?>)" title="Trả lời">
+                        <i class="fas fa-reply"></i>
+                    </button>
                     <?php if ($reply->is_approved): ?>
                         <a href="<?php echo Uri::base(); ?>admin/comments/disapprove/<?php echo $reply->id; ?>" 
                            class="btn btn-outline-warning" title="Ẩn trả lời">
@@ -54,7 +62,69 @@ function displayReplyRecursive($reply, $depth = 0) {
             </div>
         </div>
         <div class="reply-content mt-2" style="font-size: <?php echo $font_size; ?>rem;">
-            <p class="mb-0"><?php echo nl2br(html_entity_decode(htmlspecialchars($reply->content), ENT_QUOTES, 'UTF-8')); ?></p>
+            <p class="mb-0" id="reply-content-text-<?php echo $reply->id; ?>"><?php echo nl2br(html_entity_decode(htmlspecialchars($reply->content), ENT_QUOTES, 'UTF-8')); ?></p>
+        </div>
+        
+        <!-- Edit Form for replies -->
+        <div id="edit-form-reply-<?php echo $reply->id; ?>" style="display: none;" class="mt-3">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-edit me-2"></i>Chỉnh sửa trả lời #<?php echo $reply->id; ?>
+                    </h6>
+                    <form method="POST" action="<?php echo Uri::base(); ?>admin/comments/edit" class="edit-form">
+                        <input type="hidden" name="<?php echo \Config::get('security.csrf_token_key'); ?>" value="<?php echo \Security::fetch_token(); ?>">
+                        <input type="hidden" name="comment_id" value="<?php echo $reply->id; ?>">
+                        
+                        <div class="mb-3">
+                            <label for="edit-content-reply-<?php echo $reply->id; ?>" class="form-label">Nội dung trả lời *</label>
+                            <textarea class="form-control" id="edit-content-reply-<?php echo $reply->id; ?>" 
+                                      name="content" rows="3" required><?php echo htmlspecialchars($reply->content); ?></textarea>
+                        </div>
+                        
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" 
+                                    onclick="toggleEditReplyForm(<?php echo $reply->id; ?>)">
+                                <i class="fas fa-times me-2"></i>Hủy
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Lưu thay đổi
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Reply Form for child comments -->
+        <div id="reply-form-<?php echo $reply->id; ?>" style="display: none;" class="mt-3">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-reply me-2"></i>Trả lời bình luận #<?php echo $reply->id; ?>
+                    </h6>
+                    <form method="POST" action="<?php echo Uri::base(); ?>admin/comments/save_reply" class="reply-form">
+                        <input type="hidden" name="<?php echo \Config::get('security.csrf_token_key'); ?>" value="<?php echo \Security::fetch_token(); ?>">
+                        <input type="hidden" name="parent_id" value="<?php echo $reply->id; ?>">
+                        
+                        <div class="mb-3">
+                            <label for="reply-content-<?php echo $reply->id; ?>" class="form-label">Nội dung trả lời *</label>
+                            <textarea class="form-control" id="reply-content-<?php echo $reply->id; ?>" 
+                                      name="content" rows="3" placeholder="Nhập nội dung trả lời..." required></textarea>
+                        </div>
+                        
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" 
+                                    onclick="toggleReplyForm(<?php echo $reply->id; ?>, <?php echo $reply->parent_id; ?>)">
+                                <i class="fas fa-times me-2"></i>Hủy
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane me-2"></i>Gửi trả lời
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
     
@@ -181,40 +251,75 @@ function displayReplyRecursive($reply, $depth = 0) {
 										<?php endif; ?>
 									</small>
 								</div>
-								<div class="comment-actions">
-									<?php if ($comment->is_approved): ?>
-										<span class="badge bg-success me-2">Đã duyệt</span>
-									<?php else: ?>
-										<span class="badge bg-warning me-2">Chưa duyệt</span>
-									<?php endif; ?>
-									<div class="btn-group btn-group-sm" role="group">
-										<button type="button" class="btn btn-outline-info" 
-												onclick="toggleReplyForm(<?php echo $comment->id; ?>)" title="Trả lời">
-											<i class="fas fa-reply"></i>
-										</button>
-										<?php if ($comment->is_approved): ?>
-											<a href="<?php echo Uri::base(); ?>admin/comments/disapprove/<?php echo $comment->id; ?>" 
-											   class="btn btn-outline-warning" title="Ẩn bình luận">
-												<i class="fas fa-eye-slash"></i>
-											</a>
-										<?php else: ?>
-											<a href="<?php echo Uri::base(); ?>admin/comments/approve/<?php echo $comment->id; ?>" 
-											   class="btn btn-outline-success" title="Duyệt bình luận">
-												<i class="fas fa-check"></i>
-											</a>
-										<?php endif; ?>
-										<form method="POST" action="<?php echo Uri::base(); ?>admin/comments/delete/<?php echo $comment->id; ?>" 
-											  style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn xóa bình luận này?')">
+                                <div class="comment-actions">
+                                    <?php if ($comment->is_approved): ?>
+                                        <span class="badge bg-success me-2">Đã duyệt</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-warning me-2">Chưa duyệt</span>
+                                    <?php endif; ?>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button type="button" class="btn btn-outline-primary" 
+                                                onclick="toggleEditForm(<?php echo $comment->id; ?>)" title="Sửa">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-info" 
+                                                onclick="toggleReplyForm(<?php echo $comment->id; ?>)" title="Trả lời">
+                                            <i class="fas fa-reply"></i>
+                                        </button>
+                                        <?php if ($comment->is_approved): ?>
+                                            <a href="<?php echo Uri::base(); ?>admin/comments/disapprove/<?php echo $comment->id; ?>" 
+                                               class="btn btn-outline-warning" title="Ẩn bình luận">
+                                                <i class="fas fa-eye-slash"></i>
+                                            </a>
+                                        <?php else: ?>
+                                            <a href="<?php echo Uri::base(); ?>admin/comments/approve/<?php echo $comment->id; ?>" 
+                                               class="btn btn-outline-success" title="Duyệt bình luận">
+                                                <i class="fas fa-check"></i>
+                                            </a>
+                                        <?php endif; ?>
+                                        <form method="POST" action="<?php echo Uri::base(); ?>admin/comments/delete/<?php echo $comment->id; ?>" 
+                                              style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn xóa bình luận này?')">
+                                            <input type="hidden" name="<?php echo \Config::get('security.csrf_token_key'); ?>" value="<?php echo \Security::fetch_token(); ?>">
+                                            <button type="submit" class="btn btn-outline-danger" title="Xóa">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+							</div>
+							<div class="comment-content">
+								<p class="mb-0" id="comment-content-text-<?php echo $comment->id; ?>"><?php echo nl2br(html_entity_decode(htmlspecialchars($comment->content), ENT_QUOTES, 'UTF-8')); ?></p>
+							</div>
+							
+							<!-- Edit Form for main comment -->
+							<div id="edit-form-<?php echo $comment->id; ?>" style="display: none;" class="mt-3">
+								<div class="card bg-light">
+									<div class="card-body">
+										<h6 class="card-title">
+											<i class="fas fa-edit me-2"></i>Chỉnh sửa bình luận #<?php echo $comment->id; ?>
+										</h6>
+										<form method="POST" action="<?php echo Uri::base(); ?>admin/comments/edit" class="edit-form">
 											<input type="hidden" name="<?php echo \Config::get('security.csrf_token_key'); ?>" value="<?php echo \Security::fetch_token(); ?>">
-											<button type="submit" class="btn btn-outline-danger" title="Xóa">
-												<i class="fas fa-trash"></i>
-											</button>
+											<input type="hidden" name="comment_id" value="<?php echo $comment->id; ?>">
+											
+											<div class="mb-3">
+												<label for="edit-content-<?php echo $comment->id; ?>" class="form-label">Nội dung bình luận *</label>
+												<textarea class="form-control" id="edit-content-<?php echo $comment->id; ?>" 
+														  name="content" rows="3" required><?php echo htmlspecialchars($comment->content); ?></textarea>
+											</div>
+											
+											<div class="d-flex justify-content-end gap-2">
+												<button type="button" class="btn btn-secondary" 
+														onclick="toggleEditForm(<?php echo $comment->id; ?>)">
+													<i class="fas fa-times me-2"></i>Hủy
+												</button>
+												<button type="submit" class="btn btn-primary">
+													<i class="fas fa-save me-2"></i>Lưu thay đổi
+												</button>
+											</div>
 										</form>
 									</div>
 								</div>
-							</div>
-							<div class="comment-content">
-								<p class="mb-0"><?php echo nl2br(html_entity_decode(htmlspecialchars($comment->content), ENT_QUOTES, 'UTF-8')); ?></p>
 							</div>
 							
 							<!-- Replies Section -->
@@ -345,10 +450,13 @@ function displayReplyRecursive($reply, $depth = 0) {
 </div>
 
 <script>
-function toggleReplyForm(commentId) {
-    const formDiv = document.getElementById('reply-form-' + commentId);
+function toggleEditForm(commentId) {
+    const formDiv = document.getElementById('edit-form-' + commentId);
     if (formDiv.style.display === 'none') {
-        // Hide all other reply forms first
+        // Hide all other edit and reply forms first
+        document.querySelectorAll('[id^="edit-form-"]').forEach(div => {
+            div.style.display = 'none';
+        });
         document.querySelectorAll('[id^="reply-form-"]').forEach(div => {
             div.style.display = 'none';
         });
@@ -356,7 +464,58 @@ function toggleReplyForm(commentId) {
         formDiv.style.display = 'block';
         // Focus on textarea
         setTimeout(() => {
-            document.getElementById('reply-content-' + commentId).focus();
+            const textarea = document.getElementById('edit-content-' + commentId);
+            if (textarea) {
+                textarea.focus();
+            }
+        }, 100);
+    } else {
+        formDiv.style.display = 'none';
+    }
+}
+
+function toggleEditReplyForm(replyId) {
+    const formDiv = document.getElementById('edit-form-reply-' + replyId);
+    if (formDiv.style.display === 'none') {
+        // Hide all other edit and reply forms first
+        document.querySelectorAll('[id^="edit-form-"]').forEach(div => {
+            div.style.display = 'none';
+        });
+        document.querySelectorAll('[id^="reply-form-"]').forEach(div => {
+            div.style.display = 'none';
+        });
+        // Show this form
+        formDiv.style.display = 'block';
+        // Focus on textarea
+        setTimeout(() => {
+            const textarea = document.getElementById('edit-content-reply-' + replyId);
+            if (textarea) {
+                textarea.focus();
+            }
+        }, 100);
+    } else {
+        formDiv.style.display = 'none';
+    }
+}
+
+function toggleReplyForm(commentId, parentId) {
+    const formDiv = document.getElementById('reply-form-' + commentId);
+    if (formDiv.style.display === 'none') {
+        // Hide all other edit and reply forms first
+        document.querySelectorAll('[id^="edit-form-"]').forEach(div => {
+            div.style.display = 'none';
+        });
+        document.querySelectorAll('[id^="reply-form-"]').forEach(div => {
+            div.style.display = 'none';
+        });
+        // Show this form
+        formDiv.style.display = 'block';
+        // Focus on textarea
+        setTimeout(() => {
+            const textarea = document.getElementById('reply-content-' + commentId);
+            if (textarea) {
+                textarea.focus();
+            }
         }, 100);
     } else {
         formDiv.style.display = 'none';
@@ -379,7 +538,7 @@ function toggleReplies(commentId) {
     }
 }
 
-// Handle form submission
+// Handle form submission for replies
 document.addEventListener('DOMContentLoaded', function() {
     const replyForms = document.querySelectorAll('.reply-form');
     replyForms.forEach(form => {
@@ -409,6 +568,42 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => {
                 console.error('Error:', error);
                 alert('Có lỗi xảy ra khi gửi trả lời');
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            });
+        });
+    });
+    
+    // Handle form submission for edits
+    const editForms = document.querySelectorAll('.edit-form');
+    editForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            
+            // Disable button and show loading
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang lưu...';
+            
+            fetch(this.action, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Reload page to show updated comment
+                    window.location.reload();
+                } else {
+                    throw new Error('Network response was not ok');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra khi chỉnh sửa bình luận');
                 // Re-enable button
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalText;

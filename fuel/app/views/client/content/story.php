@@ -35,9 +35,9 @@
 							<h1 class="h2 mb-3"><?php echo Security::htmlentities($story->title); ?></h1>
 							
 							<!-- Author -->
-							<?php if (isset($author) && $author): ?>
+							<?php if (isset($author) && $author && $author->is_active == 1 && empty($author->deleted_at)): ?>
 							<p class="mb-2">
-								<strong><i class="fas fa-user me-2 text-primary"></i>Tác giả:</strong>
+								<strong><i class="fas fa-pen-fancy me-2 text-primary"></i>Tác giả:</strong>
 								<a href="<?php echo Uri::base(); ?>client/author/<?php echo $author->slug; ?>" 
 								   class="text-decoration-none ms-2">
 									<?php echo Security::htmlentities($author->name); ?>
@@ -47,7 +47,7 @@
 							
 							<!-- Status -->
 							<p class="mb-2">
-								<strong><i class="fas fa-info-circle me-2 text-info"></i>Trạng thái:</strong>
+								<strong><i class="fas fa-flag me-2 text-info"></i>Trạng thái:</strong>
 								<span class="status-badge status-<?php echo $story->status; ?> ms-2">
 									<?php 
 									switch($story->status) {
@@ -62,7 +62,7 @@
 							
 							<!-- View Count -->
 							<p class="mb-2">
-								<strong><i class="fas fa-eye me-2 text-success"></i>Lượt xem:</strong>
+								<strong><i class="fas fa-chart-line me-2 text-success"></i>Lượt xem:</strong>
 								<span class="ms-2"><?php echo number_format($story->views); ?></span>
 							</p>
 							
@@ -70,7 +70,7 @@
 							<!-- Categories -->
 							<?php if (isset($categories) && !empty($categories)): ?>
 							<p class="mb-3">
-								<strong style="color: #fff;"><i class="fas fa-tags me-2 text-warning"></i>Thể loại:</strong>
+								<strong style="color: #fff;"><i class="fas fa-layer-group me-2 text-warning"></i>Thể loại:</strong>
 								<?php foreach ($categories as $category): ?>
 									<a href="<?php echo Uri::base(); ?>client/category/<?php echo $category->slug; ?>" 
 									   class="category-badge me-1 text-decoration-none">
@@ -83,7 +83,7 @@
 							<!-- Description -->
 							<?php if (!empty($story->description)): ?>
 							<div class="mb-3">
-								<strong><i class="fas fa-align-left me-2 text-secondary"></i>Mô tả:</strong>
+								<strong><i class="fas fa-file-alt me-2 text-secondary"></i>Mô tả:</strong>
 								<div class="mt-2 p-3 bg-light rounded">
 									<?php echo nl2br(Security::htmlentities($story->description)); ?>
 								</div>
@@ -104,43 +104,36 @@
 					</h3>
 				</div>
 				<div class="card-body p-0">
-					<div class="table-responsive">
-						<table class="table table-hover mb-0">
-							<thead>
-								<tr>
-									<th width="10%">Chương</th>
-									<th>Tên chương</th>
-									<th width="15%">Ngày cập nhật</th>
-									<th width="10%">Lượt xem</th>
-								</tr>
-							</thead>
-							<tbody>
-								<?php foreach ($chapters as $chapter): ?>
-								<tr>
-									<td>
-										<span class="badge"><?php echo $chapter->chapter_number; ?></span>
-									</td>
-									<td>
-										<a href="<?php echo Uri::base(); ?>client/read/<?php echo $story->slug; ?>/<?php echo $chapter->chapter_number; ?>" 
-										   class="text-decoration-none">
-											<?php echo Security::htmlentities($chapter->title); ?>
-										</a>
-									</td>
-									<td>
-										<small>
-											<?php echo date('d/m/Y', strtotime($chapter->created_at)); ?>
-										</small>
-									</td>
-									<td>
-										<small>
-											<i class="fas fa-eye me-1"></i>
-											<?php echo number_format($chapter->views); ?>
-										</small>
-									</td>
-								</tr>
-								<?php endforeach; ?>
-							</tbody>
-						</table>
+					<div class="chapter-list-container">
+						<?php foreach ($chapters as $index => $chapter): ?>
+						<div class="chapter-item">
+							<div class="chapter-number">
+								<span class="chapter-badge"><?php echo $chapter->chapter_number; ?></span>
+							</div>
+							<div class="chapter-content">
+								<a href="<?php echo Uri::base(); ?>client/read/<?php echo $story->slug; ?>/<?php echo $chapter->chapter_number; ?>" 
+								   class="chapter-title">
+									<?php echo Security::htmlentities($chapter->title); ?>
+								</a>
+								<div class="chapter-meta">
+									<span class="chapter-date">
+										<i class="fas fa-calendar-alt me-1"></i>
+										<?php echo date('d/m/Y', strtotime($chapter->created_at)); ?>
+									</span>
+									<span class="chapter-views">
+										<i class="fas fa-eye me-1"></i>
+										<?php echo number_format($chapter->views); ?>
+									</span>
+								</div>
+							</div>
+							<div class="chapter-action">
+								<a href="<?php echo Uri::base(); ?>client/read/<?php echo $story->slug; ?>/<?php echo $chapter->chapter_number; ?>" 
+								   class="btn-read">
+									<i class="fas fa-play"></i>
+								</a>
+							</div>
+						</div>
+						<?php endforeach; ?>
 					</div>
 				</div>
 			</div>
@@ -207,7 +200,7 @@
 								</a>
 							</h6>
 							<small class="text-muted d-block">
-								<?php echo Security::htmlentities($related_story->author_name ?? 'Unknown'); ?>
+								<?php echo Security::htmlentities($related_story->author_name ?? ''); ?>
 							</small>
 							<small class="text-muted">
 								<i class="fas fa-eye me-1"></i>
@@ -225,12 +218,16 @@
 </div>
 
 <style>
+/* Import unified design system */
 .container {
-	color: #e0e0e0;
+	color: var(--text-secondary, #e2e8f0);
+	font-family: var(--font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif);
 }
 
 h1, h2, h3, h4, h5 {
-	color: #fff;
+	color: var(--text-primary, #ffffff);
+	font-family: var(--font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif);
+	font-weight: var(--font-weight-bold, 700);
 }
 
 .story-detail-cover {
@@ -242,23 +239,26 @@ h1, h2, h3, h4, h5 {
 }
 
 .card {
-	background: rgba(30, 41, 59, 0.6) !important;
+	background: var(--bg-surface, rgba(30, 41, 59, 0.6)) !important;
 	backdrop-filter: blur(10px);
 	-webkit-backdrop-filter: blur(10px);
-	border: 1px solid rgba(51, 65, 85, 0.5) !important;
+	border: 1px solid var(--border-primary, rgba(51, 65, 85, 0.5)) !important;
 	border-radius: 16px !important;
-	box-shadow: var(--shadow-lg) !important;
+	box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1)) !important;
 }
 
 .card-header {
-	background: rgba(30, 41, 59, 0.8) !important;
-	border-bottom: 1px solid rgba(51, 65, 85, 0.5) !important;
-	color: #fff !important;
+	background: var(--bg-card, rgba(30, 41, 59, 0.8)) !important;
+	border-bottom: 1px solid var(--border-primary, rgba(51, 65, 85, 0.5)) !important;
+	color: var(--text-primary, #ffffff) !important;
 	border-radius: 16px 16px 0 0 !important;
+	font-family: var(--font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif);
 }
 
 .card-body {
 	background: transparent;
+	color: var(--text-secondary, #e2e8f0);
+	font-family: var(--font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif);
 }
 
 .breadcrumb {
@@ -266,91 +266,278 @@ h1, h2, h3, h4, h5 {
 }
 
 .breadcrumb-item a {
-	color: #6c5ce7;
+	color: var(--text-primary, #ffffff) !important;
+	text-decoration: none;
+	transition: all 0.2s ease;
+	font-family: var(--font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif);
+	font-size: var(--font-size-sm, 0.875rem);
+}
+
+.breadcrumb-item a:hover {
+	color: var(--primary-color, #8b7ef8) !important;
 }
 
 .breadcrumb-item.active {
-	color: #aaa;
+	color: var(--text-primary, #ffffff) !important;
+	font-family: var(--font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif);
+	font-size: var(--font-size-sm, 0.875rem);
+}
+
+/* Breadcrumb separators */
+.breadcrumb-item + .breadcrumb-item::before {
+	color: var(--text-primary, #ffffff) !important;
+	content: "/";
 }
 
 p strong {
+	color: var(--text-primary, #ffffff);
+	font-family: var(--font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif);
+	font-weight: var(--font-weight-semibold, 600);
+}
+
+/* Input descriptions and form elements */
+.form-text,
+.form-label,
+small,
+.text-muted {
+	color: var(--text-primary, #ffffff) !important;
+	font-family: var(--font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif);
+	font-size: var(--font-size-sm, 0.875rem);
+}
+
+.form-control::placeholder {
+	color: var(--text-muted, #94a3b8) !important;
+	font-family: var(--font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif);
+}
+
+.form-control {
+	background-color: var(--bg-card, rgba(15, 23, 42, 0.8)) !important;
+	border: 1px solid var(--border-primary, rgba(51, 65, 85, 0.5)) !important;
+	color: var(--text-secondary, #e2e8f0) !important;
+	font-family: var(--font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif);
+	font-size: var(--font-size-base, 1rem);
+}
+
+.form-control:focus {
+	background-color: var(--bg-hover, rgba(15, 23, 42, 0.9)) !important;
+	border-color: var(--primary-color, #8b7ef8) !important;
+	color: var(--text-secondary, #e2e8f0) !important;
+	box-shadow: 0 0 0 0.2rem rgba(139, 126, 248, 0.25) !important;
+}
+
+/* Breadcrumb improvements */
+.breadcrumb-item a i {
+	color: #fff !important;
+}
+
+.breadcrumb-item.active i {
+	color: #fff !important;
+}
+
+
+
+/* Modern Chapter List Styles */
+.chapter-list-container {
+	background: transparent;
+	padding: 0;
+}
+
+.chapter-item {
+	display: flex;
+	align-items: center;
+	padding: 1rem 1.5rem;
+	border-bottom: 1px solid var(--border-light, rgba(51, 65, 85, 0.3));
+	background: var(--bg-card, rgba(15, 23, 42, 0.6));
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	position: relative;
+	overflow: hidden;
+	font-family: var(--font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif);
+}
+
+.chapter-item:last-child {
+	border-bottom: none;
+}
+
+.chapter-item::before {
+	content: '';
+	position: absolute;
+	left: 0;
+	top: 0;
+	height: 100%;
+	width: 3px;
+	background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+	opacity: 0;
+	transition: opacity 0.3s ease;
+}
+
+.chapter-item:hover {
+	background: var(--bg-hover, rgba(30, 41, 59, 0.8));
+	transform: translateX(4px);
+}
+
+.chapter-item:hover::before {
+	opacity: 1;
+}
+
+.chapter-number {
+	flex-shrink: 0;
+	margin-right: 1rem;
+}
+
+.chapter-badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
 	color: #fff;
-}
-
-
-
-.table {
-	color: #e2e8f0 !important;
-	background: transparent !important;
-}
-
-.table thead th {
-	background: rgba(15, 23, 42, 0.8) !important;
-	color: #fff !important;
-	border-bottom: 2px solid rgba(139, 126, 248, 0.3) !important;
-	border-top: none !important;
-	padding: 1rem !important;
-	font-weight: 600 !important;
-	text-transform: uppercase;
+	border-radius: 50%;
+	font-weight: 700;
 	font-size: 0.875rem;
-	letter-spacing: 0.5px;
+	box-shadow: 0 4px 12px rgba(139, 126, 248, 0.3);
+	transition: all 0.3s ease;
 }
 
-.table tbody tr {
-	background: rgba(15, 23, 42, 1) !important;
-	border-bottom: 1px solid rgba(51, 65, 85, 0.3) !important;
-	transition: all 0.2s ease;
+.chapter-item:hover .chapter-badge {
+	transform: scale(1.1);
+	box-shadow: 0 6px 16px rgba(139, 126, 248, 0.4);
 }
 
-.table tbody tr:nth-child(even) {
-	background: rgba(15, 23, 42, 0.95) !important;
+.chapter-content {
+	flex: 1;
+	min-width: 0;
 }
 
-.table tbody tr:last-child {
-	border-bottom: none !important;
-}
-
-.table tbody td {
-	border: none !important;
-	color: #e2e8f0 !important;
-	padding: 1rem !important;
-	vertical-align: middle;
-}
-
-.table-hover tbody tr:hover {
-	background: rgba(30, 41, 59, 1) !important;
-}
-
-.table tbody td a {
-	color: var(--primary-color) !important;
+.chapter-title {
+	color: var(--text-secondary, #e2e8f0);
 	text-decoration: none;
-	font-weight: 500;
+	font-weight: var(--font-weight-semibold, 600);
+	font-size: var(--font-size-base, 1rem);
+	line-height: var(--line-height-tight, 1.25);
+	display: block;
+	margin-bottom: 0.5rem;
 	transition: all 0.2s ease;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-family: var(--font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif);
 }
 
-.table tbody td a:hover {
-	color: var(--primary-dark) !important;
-	text-decoration: underline;
+.chapter-title:hover {
+	color: var(--primary-color);
+	text-decoration: none;
 }
 
-.table .badge {
-	background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%) !important;
-	color: #fff !important;
-	border: none !important;
-	padding: 0.5rem 0.875rem !important;
-	font-weight: 600 !important;
-	border-radius: 12px !important;
-	box-shadow: 0 2px 8px rgba(139, 126, 248, 0.3);
+.chapter-meta {
+	display: flex;
+	gap: 1rem;
+	align-items: center;
 }
 
-.table small {
-	color: #94a3b8 !important;
-	font-weight: 500;
+.chapter-date,
+.chapter-views {
+	color: var(--text-muted, #94a3b8);
+	font-size: var(--font-size-sm, 0.875rem);
+	font-weight: var(--font-weight-medium, 500);
+	display: flex;
+	align-items: center;
+	font-family: var(--font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif);
 }
 
-.table tbody td i {
-	color: var(--primary-color) !important;
-	margin-right: 0.5rem;
+.chapter-date i,
+.chapter-views i {
+	color: var(--primary-color);
+	font-size: 0.75rem;
+}
+
+.chapter-action {
+	flex-shrink: 0;
+	margin-left: 1rem;
+}
+
+.btn-read {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	background: rgba(139, 126, 248, 0.1);
+	border: 2px solid rgba(139, 126, 248, 0.3);
+	color: var(--primary-color);
+	border-radius: 50%;
+	text-decoration: none;
+	transition: all 0.3s ease;
+	opacity: 0;
+	transform: scale(0.8);
+}
+
+.chapter-item:hover .btn-read {
+	opacity: 1;
+	transform: scale(1);
+}
+
+.btn-read:hover {
+	background: var(--primary-color);
+	color: #fff;
+	border-color: var(--primary-color);
+	transform: scale(1.1);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+	.chapter-item {
+		padding: 0.875rem 1rem;
+	}
+	
+	.chapter-badge {
+		width: 35px;
+		height: 35px;
+		font-size: 0.8rem;
+	}
+	
+	.chapter-title {
+		font-size: 0.9rem;
+	}
+	
+	.chapter-meta {
+		flex-direction: column;
+		gap: 0.25rem;
+		align-items: flex-start;
+	}
+	
+	.chapter-date,
+	.chapter-views {
+		font-size: 0.8rem;
+	}
+	
+	.btn-read {
+		width: 35px;
+		height: 35px;
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+@media (max-width: 576px) {
+	.chapter-item {
+		padding: 0.75rem;
+	}
+	
+	.chapter-number {
+		margin-right: 0.75rem;
+	}
+	
+	.chapter-badge {
+		width: 32px;
+		height: 32px;
+		font-size: 0.75rem;
+	}
+	
+	.chapter-title {
+		font-size: 0.85rem;
+		margin-bottom: 0.25rem;
+	}
 }
 
 .btn-primary {

@@ -103,7 +103,9 @@ $(document).ready(function() {
 		stories.forEach(function(story) {
 			html += '<div class="search-item" data-id="' + story.id + '">';
 			html += '<div class="search-item-title">' + story.title + '</div>';
-			html += '<div class="search-item-author">' + story.author_name + '</div>';
+			if (story.author_name) {
+				html += '<div class="search-item-author">' + story.author_name + '</div>';
+			}
 			html += '</div>';
 		});
 		

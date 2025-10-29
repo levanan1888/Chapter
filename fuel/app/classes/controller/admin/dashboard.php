@@ -36,11 +36,11 @@ class Controller_Admin_Dashboard extends Controller_Admin_Base
 		$data['total_categories'] = Model_Category::count_all();
 		$data['total_authors'] = Model_Author::count_all();
 		
-		// Thống kê comment
-		$data['total_comments'] = Model_Comment::count_all();
-		$data['approved_comments'] = Model_Comment::count_approved();
-		$data['pending_comments'] = Model_Comment::count_pending();
-		$data['recent_comments'] = Model_Comment::get_recent_comments(5);
+		// Thống kê lượt xem và trạng thái truyện
+		$data['total_views'] = Model_Story::get_total_views();
+		$data['active_stories'] = Model_Story::count_active();
+		$data['featured_stories'] = Model_Story::count_featured();
+		$data['hot_stories_count'] = Model_Story::count_hot();
 
 		// Truyện mới nhất
 		$data['latest_stories'] = Model_Story::get_latest_stories(5);
@@ -157,14 +157,14 @@ class Controller_Admin_Dashboard extends Controller_Admin_Base
 		// Dữ liệu lượt xem truyện top 5
 		$chart_data['top_viewed_stories'] = $this->get_top_viewed_stories();
 		
-		// Dữ liệu comment theo tháng
-		$chart_data['comments_by_month'] = $this->get_comments_by_month();
+		// Dữ liệu lượt xem theo tháng
+		$chart_data['views_by_month'] = $this->get_views_by_month();
 		
-		// Dữ liệu comment theo trạng thái
-		$chart_data['comment_status_stats'] = $this->get_comment_status_stats();
+		// Dữ liệu truyện theo trạng thái
+		$chart_data['story_status_stats'] = $this->get_story_status_stats();
 		
-		// Dữ liệu comment theo truyện
-		$chart_data['comments_by_story'] = $this->get_comments_by_story();
+		// Dữ liệu truyện theo danh mục
+		$chart_data['stories_by_category'] = $this->get_stories_by_category();
 
 		return $chart_data;
 	}
@@ -271,18 +271,18 @@ class Controller_Admin_Dashboard extends Controller_Admin_Base
 	}
 
 	/**
-	 * Lấy số lượng comment theo tháng
+	 * Lấy số lượng lượt xem theo tháng
 	 * 
 	 * @return array
 	 */
-	private function get_comments_by_month()
+	private function get_views_by_month()
 	{
 		try {
 			$query = \DB::query("
 				SELECT 
 					DATE_FORMAT(created_at, '%Y-%m') as month,
-					COUNT(*) as count
-				FROM comments 
+					SUM(views) as total_views
+				FROM stories 
 				WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 MONTH)
 				GROUP BY DATE_FORMAT(created_at, '%Y-%m')
 				ORDER BY month ASC
@@ -293,7 +293,7 @@ class Controller_Admin_Dashboard extends Controller_Admin_Base
 			foreach ($results as $result) {
 				$data[] = array(
 					'month' => $result['month'],
-					'count' => (int) $result['count']
+					'total_views' => (int) $result['total_views']
 				);
 			}
 			
@@ -304,22 +304,22 @@ class Controller_Admin_Dashboard extends Controller_Admin_Base
 	}
 
 	/**
-	 * Lấy thống kê comment theo trạng thái
+	 * Lấy thống kê truyện theo trạng thái
 	 * 
 	 * @return array
 	 */
-	private function get_comment_status_stats()
+	private function get_story_status_stats()
 	{
 		try {
 			$query = \DB::query("
 				SELECT 
 					CASE 
-						WHEN is_approved = 1 THEN 'approved'
-						ELSE 'pending'
+						WHEN is_visible = 1 THEN 'active'
+						ELSE 'inactive'
 					END as status,
 					COUNT(*) as count
-				FROM comments 
-				GROUP BY is_approved
+				FROM stories 
+				GROUP BY is_visible
 			");
 			$results = $query->execute();
 			
@@ -338,22 +338,23 @@ class Controller_Admin_Dashboard extends Controller_Admin_Base
 	}
 
 	/**
-	 * Lấy comment theo truyện (top 5)
+	 * Lấy truyện theo danh mục (top 5)
 	 * 
 	 * @return array
 	 */
-	private function get_comments_by_story()
+	private function get_stories_by_category()
 	{
 		try {
 			$query = \DB::query("
 				SELECT 
-					s.title,
-					COUNT(c.id) as comment_count
-				FROM stories s
-				LEFT JOIN comments c ON s.id = c.story_id
-				WHERE s.is_visible = 1
-				GROUP BY s.id, s.title
-				ORDER BY comment_count DESC
+					c.name,
+					COUNT(sc.story_id) as story_count
+				FROM categories c
+				LEFT JOIN story_categories sc ON c.id = sc.category_id
+				LEFT JOIN stories s ON sc.story_id = s.id AND s.is_visible = 1
+				WHERE c.is_active = 1
+				GROUP BY c.id, c.name
+				ORDER BY story_count DESC
 				LIMIT 5
 			");
 			$results = $query->execute();
@@ -361,8 +362,8 @@ class Controller_Admin_Dashboard extends Controller_Admin_Base
 			$data = array();
 			foreach ($results as $result) {
 				$data[] = array(
-					'title' => $result['title'],
-					'comment_count' => (int) $result['comment_count']
+					'name' => $result['name'],
+					'story_count' => (int) $result['story_count']
 				);
 			}
 			

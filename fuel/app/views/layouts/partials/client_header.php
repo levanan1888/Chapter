@@ -5,7 +5,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta name="description" content="Đọc truyện tranh online miễn phí">
 	<meta name="keywords" content="truyện tranh, manga, comic, đọc truyện online">
-	<meta name="author" content="Comic Reader">
+	<meta name="author" content="An - NetTruyen">
 	
 	
 	
@@ -18,32 +18,69 @@
 	<!-- Custom CSS -->
 	<style>
 		:root {
-			--primary-color: #ff6b35;
-			--secondary-color: #2c3e50;
-			--accent-color: #f39c12;
-			--success-color: #27ae60;
-			--warning-color: #f39c12;
-			--danger-color: #e74c3c;
-			--info-color: #3498db;
+			/* Color System - Unified with main layout */
+			--primary-color: #8b7ef8;
+			--primary-dark: #6b5ddc;
+			--secondary-color: #a8a3ff;
+			--accent-warm: #ff9f66;
+			--accent-cool: #66d9ef;
+			--success-color: #4ade80;
+			--danger-color: #ef4444;
+			--warning-color: #fbbf24;
+			--info-color: #3b82f6;
 			
-			--light-bg: #ffffff;
-			--light-card: #ffffff;
-			--light-text: #2c3e50;
-			--light-text-secondary: #7f8c8d;
-			--light-border: #ecf0f1;
+			/* Text Colors */
+			--text-primary: #ffffff;
+			--text-secondary: #e2e8f0;
+			--text-muted: #94a3b8;
+			--text-light: #cbd5e1;
+			--text-dark: #1f2937;
 			
-			--dark-bg: #1a1a1a;
-			--dark-card: #2d2d2d;
-			--dark-text: #ffffff;
-			--dark-text-secondary: #b0b0b0;
-			--dark-border: #404040;
+			/* Background Colors */
+			--bg-primary: #0f172a;
+			--bg-secondary: #1e293b;
+			--bg-surface: rgba(30, 41, 59, 0.6);
+			--bg-card: rgba(15, 23, 42, 0.8);
+			--bg-hover: rgba(30, 41, 59, 0.8);
+			
+			/* Border Colors */
+			--border-primary: rgba(51, 65, 85, 0.5);
+			--border-light: rgba(51, 65, 85, 0.3);
+			
+			/* Font System */
+			--font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'Roboto', sans-serif;
+			--font-size-xs: 0.75rem;
+			--font-size-sm: 0.875rem;
+			--font-size-base: 1rem;
+			--font-size-lg: 1.125rem;
+			--font-size-xl: 1.25rem;
+			--font-size-2xl: 1.5rem;
+			--font-size-3xl: 1.875rem;
+			--font-size-4xl: 2.25rem;
+			
+			/* Font Weights */
+			--font-weight-normal: 400;
+			--font-weight-medium: 500;
+			--font-weight-semibold: 600;
+			--font-weight-bold: 700;
+			
+			/* Line Heights */
+			--line-height-tight: 1.25;
+			--line-height-normal: 1.5;
+			--line-height-relaxed: 1.75;
 		}
 
 		body {
-			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-			background-color: var(--light-bg);
-			color: var(--light-text);
+			font-family: var(--font-family);
+			font-size: var(--font-size-base);
+			font-weight: var(--font-weight-normal);
+			line-height: var(--line-height-normal);
+			background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+			background-attachment: fixed;
+			color: var(--text-secondary);
 			transition: all 0.3s ease;
+			-webkit-font-smoothing: antialiased;
+			-moz-osx-font-smoothing: grayscale;
 		}
 
 		/* Dark mode styles */

@@ -154,7 +154,10 @@ abstract class Controller_Admin_Base extends Controller
 	 */
 	protected function validate_csrf()
 	{
-		// FuelPHP tự động validate CSRF token
+		// Kiểm tra CSRF token
+		if (!Security::check_token()) {
+			return false;
+		}
 		return true;
 	}
 

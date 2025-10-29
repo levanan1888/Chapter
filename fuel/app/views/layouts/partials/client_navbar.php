@@ -1,7 +1,8 @@
 <nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top">
 	<div class="container">
 		<a class="navbar-brand" href="<?php echo Uri::create('/'); ?>">
-			<i class="fas fa-book-open me-2"></i>Comic Reader
+			<img src="<?php echo Uri::base(); ?>assets/img/Gemini_Generated_Image_qp3mt7qp3mt7qp3m.png" alt="An - NetTruyen" style="height: 40px; width: auto; margin-right: 10px;">
+			An - NetTruyen
 		</a>
 		
 		<button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">

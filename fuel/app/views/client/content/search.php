@@ -69,7 +69,7 @@
 								</a>
 							</h5>
 							<p class="card-text text-muted small">
-								<?php echo Security::htmlentities($story->author_name ?? 'Unknown'); ?>
+								<?php echo Security::htmlentities($story->author_name ?? ''); ?>
 							</p>
 							<div class="mt-auto">
 								<div class="d-flex justify-content-between align-items-center mb-2">

@@ -37,39 +37,44 @@ class Controller_Admin_Auth extends Controller_Admin_Base
 
 		// Xử lý form đăng nhập
 		if (Input::method() === 'POST') {
-			// CSRF token đã được kiểm tra tự động bởi Fuel
-			$username = Input::post('username', '');
-			$password = Input::post('password', '');
-
-			// Kiểm tra dữ liệu đầu vào
-			if (empty($username) || empty($password)) {
-				$data['error_message'] = 'Vui lòng nhập đầy đủ thông tin đăng nhập.';
+			// Kiểm tra CSRF token
+			if (!$this->validate_csrf()) {
+				$data['error_message'] = 'Token bảo mật không hợp lệ. Vui lòng thử lại.';
+				$data['username'] = Input::post('username', ''); // Giữ lại username để user không phải nhập lại
 			} else {
-				// Tìm user theo username hoặc email (bao gồm cả tài khoản bị soft delete)
-				$user = Model_Admin::find_by_username_or_email_any_status($username);
+				$username = Input::post('username', '');
+				$password = Input::post('password', '');
 
-				if ($user && $user->check_password($password)) {
-					// Kiểm tra tài khoản có bị soft delete không
-					if ($user->deleted_at !== null) {
-						$data['error_message'] = 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.';
-					} elseif ($user->is_active == 0) {
-						$data['error_message'] = 'Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.';
-					} elseif ($user->user_type !== 'admin') {
-						$data['error_message'] = 'Bạn không đủ quyền đăng nhập vào hệ thống quản trị.';
-					} else {
-						// Đăng nhập thành công - chỉ admin mới được phép
-						Session::set('admin_id', $user->id);
-						Session::set('admin_username', $user->username);
-						Session::set('admin_full_name', $user->full_name);
-
-						// Cập nhật thời gian đăng nhập cuối
-						$user->update_last_login();
-
-						// Redirect đến dashboard
-						Response::redirect('admin/dashboard');
-					}
+				// Kiểm tra dữ liệu đầu vào
+				if (empty($username) || empty($password)) {
+					$data['error_message'] = 'Vui lòng nhập đầy đủ thông tin đăng nhập.';
 				} else {
-					$data['error_message'] = 'Tên đăng nhập hoặc mật khẩu không đúng.';
+					// Tìm user theo username hoặc email (bao gồm cả tài khoản bị soft delete)
+					$user = Model_Admin::find_by_username_or_email_any_status($username);
+
+					if ($user && $user->check_password($password)) {
+						// Kiểm tra tài khoản có bị soft delete không
+						if ($user->deleted_at !== null) {
+							$data['error_message'] = 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.';
+						} elseif ($user->is_active == 0) {
+							$data['error_message'] = 'Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.';
+						} elseif ($user->user_type !== 'admin') {
+							$data['error_message'] = 'Bạn không đủ quyền đăng nhập vào hệ thống quản trị.';
+						} else {
+							// Đăng nhập thành công - chỉ admin mới được phép
+							Session::set('admin_id', $user->id);
+							Session::set('admin_username', $user->username);
+							Session::set('admin_full_name', $user->full_name);
+
+							// Cập nhật thời gian đăng nhập cuối
+							$user->update_last_login();
+
+							// Redirect đến dashboard
+							Response::redirect('admin/dashboard');
+						}
+					} else {
+						$data['error_message'] = 'Tên đăng nhập hoặc mật khẩu không đúng.';
+					}
 				}
 			}
 		}
@@ -98,50 +103,60 @@ class Controller_Admin_Auth extends Controller_Admin_Base
 		$data['form_data'] = array();
 
 		if (Input::method() === 'POST') {
-			// CSRF token đã được kiểm tra tự động bởi Fuel
-			$username = Input::post('username', '');
-			$email = Input::post('email', '');
-			$password = Input::post('password', '');
-			$full_name = Input::post('full_name', '');
-
-			if (empty($username) || empty($email) || empty($password)) {
-				$data['error_message'] = 'Vui lòng nhập đầy đủ thông tin bắt buộc.';
+			// Kiểm tra CSRF token
+			if (!$this->validate_csrf()) {
+				$data['error_message'] = 'Token bảo mật không hợp lệ. Vui lòng thử lại.';
+				// Giữ lại dữ liệu form khi có lỗi CSRF
+				$data['form_data'] = array(
+					'username' => Input::post('username', ''),
+					'email' => Input::post('email', ''),
+					'full_name' => Input::post('full_name', ''),
+				);
 			} else {
-				// Kiểm tra tồn tại trùng username hoặc email
-				$existing = Model_Admin::find_by_username_or_email($username);
-				if (!$existing) {
-					$existing = Model_Admin::find_by_username_or_email($email);
-				}
+				$username = Input::post('username', '');
+				$email = Input::post('email', '');
+				$password = Input::post('password', '');
+				$full_name = Input::post('full_name', '');
 
-				if ($existing) {
-					$data['error_message'] = 'Username hoặc email đã tồn tại.';
+				if (empty($username) || empty($email) || empty($password)) {
+					$data['error_message'] = 'Vui lòng nhập đầy đủ thông tin bắt buộc.';
 				} else {
-					$admin_data = array(
-						'username' => $username,
-						'email' => $email,
-						'password' => $password,
-						'full_name' => $full_name,
-						'is_active' => 1,
-					);
+					// Kiểm tra tồn tại trùng username hoặc email
+					$existing = Model_Admin::find_by_username_or_email($username);
+					if (!$existing) {
+						$existing = Model_Admin::find_by_username_or_email($email);
+					}
 
-					$new_admin = Model_Admin::create_admin($admin_data);
-					if ($new_admin) {
-						// Sau khi tạo, chuyển sang đăng nhập
-						$data['success_message'] = 'Tạo tài khoản admin thành công. Vui lòng đăng nhập!';
-						Response::redirect('admin/login');
+					if ($existing) {
+						$data['error_message'] = 'Username hoặc email đã tồn tại.';
 					} else {
-						$data['error_message'] = 'Không thể tạo tài khoản. Vui lòng thử lại.';
+						$admin_data = array(
+							'username' => $username,
+							'email' => $email,
+							'password' => $password,
+							'full_name' => $full_name,
+							'is_active' => 1,
+						);
+
+						$new_admin = Model_Admin::create_admin($admin_data);
+						if ($new_admin) {
+							// Sau khi tạo, chuyển sang đăng nhập
+							$data['success_message'] = 'Tạo tài khoản admin thành công. Vui lòng đăng nhập!';
+							Response::redirect('admin/login');
+						} else {
+							$data['error_message'] = 'Không thể tạo tài khoản. Vui lòng thử lại.';
+						}
 					}
 				}
-			}
 
-			// Lưu lại dữ liệu form nếu lỗi
-			if (!empty($data['error_message'])) {
-				$data['form_data'] = array(
-					'username' => $username,
-					'email' => $email,
-					'full_name' => $full_name,
-				);
+				// Lưu lại dữ liệu form nếu lỗi
+				if (!empty($data['error_message'])) {
+					$data['form_data'] = array(
+						'username' => $username,
+						'email' => $email,
+						'full_name' => $full_name,
+					);
+				}
 			}
 		}
 

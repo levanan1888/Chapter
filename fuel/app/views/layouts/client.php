@@ -12,6 +12,7 @@
 	<!-- Custom CSS -->
 	<style>
 		:root {
+			/* Color System */
 			--primary-color: #8b7ef8;
 			--primary-dark: #6b5ddc;
 			--secondary-color: #a8a3ff;
@@ -21,22 +22,48 @@
 			--danger-color: #ef4444;
 			--warning-color: #fbbf24;
 			--info-color: #3b82f6;
-			--light-color: #fafafa;
-			--gray-50: #f9fafb;
-			--gray-100: #f3f4f6;
-			--gray-200: #e5e7eb;
-			--gray-300: #d1d5db;
-			--gray-400: #9ca3af;
-			--gray-500: #6b7280;
-			--gray-600: #4b5563;
-			--gray-700: #374151;
-			--gray-800: #1f2937;
-			--gray-900: #111827;
-			--dark-bg: #0f172a;
-			--dark-surface: #1e293b;
-			--dark-border: #334155;
-			--font-primary: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
-			--font-display: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+			
+			/* Text Colors */
+			--text-primary: #ffffff;
+			--text-secondary: #e2e8f0;
+			--text-muted: #94a3b8;
+			--text-light: #cbd5e1;
+			--text-dark: #1f2937;
+			
+			/* Background Colors */
+			--bg-primary: #0f172a;
+			--bg-secondary: #1e293b;
+			--bg-surface: rgba(30, 41, 59, 0.6);
+			--bg-card: rgba(15, 23, 42, 0.8);
+			--bg-hover: rgba(30, 41, 59, 0.8);
+			
+			/* Border Colors */
+			--border-primary: rgba(51, 65, 85, 0.5);
+			--border-light: rgba(51, 65, 85, 0.3);
+			
+			/* Font System */
+			--font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'Roboto', sans-serif;
+			--font-size-xs: 0.75rem;
+			--font-size-sm: 0.875rem;
+			--font-size-base: 1rem;
+			--font-size-lg: 1.125rem;
+			--font-size-xl: 1.25rem;
+			--font-size-2xl: 1.5rem;
+			--font-size-3xl: 1.875rem;
+			--font-size-4xl: 2.25rem;
+			
+			/* Font Weights */
+			--font-weight-normal: 400;
+			--font-weight-medium: 500;
+			--font-weight-semibold: 600;
+			--font-weight-bold: 700;
+			
+			/* Line Heights */
+			--line-height-tight: 1.25;
+			--line-height-normal: 1.5;
+			--line-height-relaxed: 1.75;
+			
+			/* Shadows */
 			--shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 			--shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 			--shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
@@ -51,69 +78,112 @@
 		}
 
 		body {
-			background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+			background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
 			background-attachment: fixed;
-			font-family: var(--font-primary);
+			font-family: var(--font-family);
+			font-size: var(--font-size-base);
+			font-weight: var(--font-weight-normal);
+			line-height: var(--line-height-normal);
 			min-height: 100vh;
-			color: #e2e8f0;
-			line-height: 1.6;
+			color: var(--text-secondary);
 			-webkit-font-smoothing: antialiased;
 			-moz-osx-font-smoothing: grayscale;
 		}
 
+		/* Typography System */
+		h1, h2, h3, h4, h5, h6 {
+			color: var(--text-primary);
+			font-family: var(--font-family);
+			font-weight: var(--font-weight-bold);
+			line-height: var(--line-height-tight);
+		}
+
+		h1 { font-size: var(--font-size-4xl); }
+		h2 { font-size: var(--font-size-3xl); }
+		h3 { font-size: var(--font-size-2xl); }
+		h4 { font-size: var(--font-size-xl); }
+		h5 { font-size: var(--font-size-lg); }
+		h6 { font-size: var(--font-size-base); }
+
+		p {
+			color: var(--text-secondary);
+			font-size: var(--font-size-base);
+			line-height: var(--line-height-normal);
+		}
+
+		small, .small {
+			color: var(--text-muted);
+			font-size: var(--font-size-sm);
+		}
+
+		.text-muted {
+			color: var(--text-muted) !important;
+		}
+
+		.text-light {
+			color: var(--text-light) !important;
+		}
+
+		.text-primary {
+			color: var(--primary-color) !important;
+		}
+
 		/* Modern Navbar */
 		.navbar {
-			background: rgba(30, 41, 59, 0.8) !important;
+			background: var(--bg-surface) !important;
 			backdrop-filter: blur(20px);
 			-webkit-backdrop-filter: blur(20px);
-			border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+			border-bottom: 1px solid var(--border-primary);
 			padding: 0.875rem 0;
 			transition: all 0.3s ease;
 		}
 
-	.navbar-brand {
-		font-weight: 700;
-		font-size: 1.5rem;
-		letter-spacing: -0.5px;
-		color: #fff !important;
-		text-decoration: none;
-		display: flex;
-		align-items: center;
-		padding: 0;
-	}
+		.navbar-brand {
+			font-family: var(--font-family);
+			font-weight: var(--font-weight-bold);
+			font-size: var(--font-size-2xl);
+			letter-spacing: -0.5px;
+			color: var(--text-primary) !important;
+			text-decoration: none;
+			display: flex;
+			align-items: center;
+			padding: 0;
+		}
 
-	.navbar-brand img {
-		height: 50px;
-		width: auto;
-		max-height: 50px;
-		transition: all 0.3s ease;
-	}
+		.navbar-brand img {
+			height: 50px;
+			width: auto;
+			max-height: 50px;
+			transition: all 0.3s ease;
+		}
 
-	.navbar-brand span {
-		font-size: 1.2rem;
-		font-weight: 600;
-		color: #fff;
-		transition: all 0.3s ease;
-	}
+		.navbar-brand span {
+			font-size: var(--font-size-xl);
+			font-weight: var(--font-weight-semibold);
+			color: var(--text-primary);
+			transition: all 0.3s ease;
+		}
 
-	.navbar-brand:hover {
-		color: var(--primary-color) !important;
-		transform: translateY(-1px);
-		transition: all 0.2s ease;
-	}
+		.navbar-brand:hover {
+			color: var(--primary-color) !important;
+			transform: translateY(-1px);
+			transition: all 0.2s ease;
+		}
 
-	.navbar-brand:hover img {
-		filter: brightness(1.1);
-		transform: scale(1.05);
-	}
+		.navbar-brand:hover img {
+			filter: brightness(1.1);
+			transform: scale(1.05);
+		}
 
-	.navbar-brand:hover span {
-		color: var(--primary-color);
-	}
+		.navbar-brand:hover span {
+			color: var(--primary-color);
+		}
 
 		.nav-link {
-			font-weight: 500;
-			color: #cbd5e1 !important;
+			font-family: var(--font-family);
+			font-weight: var(--font-weight-medium);
+			font-size: var(--font-size-base);
+			color: var(--text-light) !important;
 			padding: 0.5rem 1rem !important;
 			border-radius: 8px;
 			margin: 0 0.25rem;
@@ -135,7 +205,7 @@
 		.story-card {
 			transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 			border: none;
-			background: rgba(30, 41, 59, 0.6);
+			background: var(--bg-surface);
 			backdrop-filter: blur(10px);
 			-webkit-backdrop-filter: blur(10px);
 			border-radius: 16px;
@@ -370,6 +440,25 @@
 
 		.search-box .form-control::placeholder {
 			color: #64748b;
+		}
+
+		/* Search button styling */
+		.search-box .btn {
+			background: var(--primary-color);
+			border-color: var(--primary-color);
+			color: #ffffff;
+		}
+
+		.search-box .btn:hover {
+			background: var(--primary-dark);
+			border-color: var(--primary-dark);
+			color: #ffffff;
+		}
+
+		.search-box .btn i {
+			color: #ffffff !important;
+			font-size: 1rem;
+			font-weight: 600;
 		}
 
 		.search-results {
@@ -871,7 +960,7 @@
 		<div class="container">
 		<!-- Brand -->
 		<a class="navbar-brand" href="<?php echo Uri::base(); ?>">
-			<img src="<?php echo Uri::base(); ?>assets/img/Gemini_Generated_Image_qp3mt7qp3mt7qp3m.png" alt="NetTruyen" style="height: 50px; width: auto;">
+			<img src="<?php echo Uri::base(); ?>assets/img/Gemini_Generated_Image_qp3mt7qp3mt7qp3m.png" alt="An - NetTruyen" style="height: 50px; width: auto;">
 			<span class="ms-2">An - NetTruyen</span>
 		</a>
 			
@@ -963,13 +1052,18 @@
 	<!-- Footer -->
 	<footer class="footer" style="background: #1a1a1a; border-top: 1px solid #444;">
 		<div class="container">
-			<div class="row">
+			<div class="row align-items-center">
 				<div class="col-md-6">
-				<h5 style="color: #fff;">NetTruyen</h5>
-				<p style="color: #aaa;">Nền tảng đọc truyện tranh online miễn phí</p>
+					<div class="d-flex align-items-center">
+						<img src="<?php echo Uri::base(); ?>assets/img/Gemini_Generated_Image_qp3mt7qp3mt7qp3m.png" alt="An - NetTruyen" style="height: 40px; width: auto; margin-right: 15px;">
+						<div>
+							<h5 style="color: #fff; margin-bottom: 5px;">An - NetTruyen</h5>
+							<p style="color: #aaa; margin-bottom: 0;">Nền tảng đọc truyện tranh online miễn phí</p>
+						</div>
+					</div>
 				</div>
 				<div class="col-md-6 text-md-end">
-					<p style="color: #aaa;">&copy; 2024 NetTruyen. All rights reserved.</p>
+					<p style="color: #aaa;">&copy; 2024 An - NetTruyen. All rights reserved.</p>
 				</div>
 			</div>
 		</div>

@@ -69,11 +69,11 @@
 			<div class="card-body">
 				<div class="d-flex justify-content-between">
 					<div>
-						<h4 class="card-title"><?php echo isset($total_comments) ? $total_comments : 0; ?></h4>
-						<p class="card-text">Bình luận</p>
+						<h4 class="card-title"><?php echo isset($total_views) ? number_format($total_views) : 0; ?></h4>
+						<p class="card-text">Tổng lượt xem</p>
 					</div>
 					<div class="align-self-center">
-						<i class="fas fa-comments fa-2x"></i>
+						<i class="fas fa-eye fa-2x"></i>
 					</div>
 				</div>
 			</div>
@@ -85,11 +85,11 @@
 			<div class="card-body">
 				<div class="d-flex justify-content-between">
 					<div>
-						<h4 class="card-title"><?php echo isset($approved_comments) ? $approved_comments : 0; ?></h4>
-						<p class="card-text">Đã duyệt</p>
+						<h4 class="card-title"><?php echo isset($active_stories) ? $active_stories : 0; ?></h4>
+						<p class="card-text">Truyện đang hoạt động</p>
 					</div>
 					<div class="align-self-center">
-						<i class="fas fa-check-circle fa-2x"></i>
+						<i class="fas fa-play-circle fa-2x"></i>
 					</div>
 				</div>
 			</div>
@@ -101,11 +101,11 @@
 			<div class="card-body">
 				<div class="d-flex justify-content-between">
 					<div>
-						<h4 class="card-title"><?php echo isset($pending_comments) ? $pending_comments : 0; ?></h4>
-						<p class="card-text">Chờ duyệt</p>
+						<h4 class="card-title"><?php echo isset($featured_stories) ? $featured_stories : 0; ?></h4>
+						<p class="card-text">Truyện nổi bật</p>
 					</div>
 					<div class="align-self-center">
-						<i class="fas fa-clock fa-2x"></i>
+						<i class="fas fa-star fa-2x"></i>
 					</div>
 				</div>
 			</div>
@@ -114,46 +114,46 @@
 </div>
 
 <div class="row">
-	<!-- Comment Status Pie Chart -->
+	<!-- Story Status Pie Chart -->
 	<div class="col-lg-4 mb-4">
 		<div class="card">
 			<div class="card-header">
 				<h5 class="mb-0">
-					<i class="fas fa-chart-pie me-2"></i>Trạng thái bình luận
+					<i class="fas fa-chart-pie me-2"></i>Trạng thái truyện
 				</h5>
 			</div>
 			<div class="card-body">
-				<canvas id="commentStatusChart" height="200"></canvas>
+				<canvas id="storyStatusChart" height="200"></canvas>
 			</div>
 		</div>
 	</div>
 	
-	<!-- Comments by Story Bar Chart -->
+	<!-- Stories by Category Bar Chart -->
 	<div class="col-lg-8 mb-4">
 		<div class="card">
 			<div class="card-header">
 				<h5 class="mb-0">
-					<i class="fas fa-chart-bar me-2"></i>Bình luận theo truyện
+					<i class="fas fa-chart-bar me-2"></i>Truyện theo danh mục
 				</h5>
 			</div>
 			<div class="card-body">
-				<canvas id="commentsByStoryChart" height="200"></canvas>
+				<canvas id="storiesByCategoryChart" height="200"></canvas>
 			</div>
 		</div>
 	</div>
 </div>
 
 <div class="row">
-	<!-- Comments Trend Area Chart -->
+	<!-- Views Trend Area Chart -->
 	<div class="col-lg-6 mb-4">
 		<div class="card">
 			<div class="card-header">
 				<h5 class="mb-0">
-					<i class="fas fa-chart-area me-2"></i>Xu hướng bình luận
+					<i class="fas fa-chart-area me-2"></i>Xu hướng lượt xem
 				</h5>
 			</div>
 			<div class="card-body">
-				<canvas id="commentsTrendChart" height="200"></canvas>
+				<canvas id="viewsTrendChart" height="200"></canvas>
 			</div>
 		</div>
 	</div>
@@ -216,23 +216,23 @@ document.addEventListener('DOMContentLoaded', function() {
 	// Chart data from PHP
 	const chartData = <?php echo json_encode($chart_data); ?>;
 	
-	// Comment Status Pie Chart
-	const commentStatusCtx = document.getElementById('commentStatusChart').getContext('2d');
-	const commentStatusChart = new Chart(commentStatusCtx, {
+	// Story Status Pie Chart
+	const storyStatusCtx = document.getElementById('storyStatusChart').getContext('2d');
+	const storyStatusChart = new Chart(storyStatusCtx, {
 		type: 'doughnut',
 		data: {
-			labels: chartData.comment_status_stats.map(item => 
-				item.status === 'approved' ? 'Đã duyệt' : 'Chờ duyệt'
+			labels: chartData.story_status_stats.map(item => 
+				item.status === 'active' ? 'Đang hoạt động' : 'Không hoạt động'
 			),
 			datasets: [{
-				data: chartData.comment_status_stats.map(item => item.count),
+				data: chartData.story_status_stats.map(item => item.count),
 				backgroundColor: [
 					'rgba(40, 167, 69, 0.8)',
-					'rgba(220, 53, 69, 0.8)'
+					'rgba(108, 117, 125, 0.8)'
 				],
 				borderColor: [
 					'rgba(40, 167, 69, 1)',
-					'rgba(220, 53, 69, 1)'
+					'rgba(108, 117, 125, 1)'
 				],
 				borderWidth: 2
 			}]
@@ -248,17 +248,17 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 	});
 
-	// Comments by Story Bar Chart
-	const commentsByStoryCtx = document.getElementById('commentsByStoryChart').getContext('2d');
-	const commentsByStoryChart = new Chart(commentsByStoryCtx, {
+	// Stories by Category Bar Chart
+	const storiesByCategoryCtx = document.getElementById('storiesByCategoryChart').getContext('2d');
+	const storiesByCategoryChart = new Chart(storiesByCategoryCtx, {
 		type: 'bar',
 		data: {
-			labels: chartData.comments_by_story.map(item => 
-				item.title.length > 20 ? item.title.substring(0, 20) + '...' : item.title
+			labels: chartData.stories_by_category.map(item => 
+				item.name.length > 15 ? item.name.substring(0, 15) + '...' : item.name
 			),
 			datasets: [{
-				label: 'Số bình luận',
-				data: chartData.comments_by_story.map(item => item.comment_count),
+				label: 'Số truyện',
+				data: chartData.stories_by_category.map(item => item.story_count),
 				backgroundColor: 'rgba(54, 162, 235, 0.8)',
 				borderColor: 'rgba(54, 162, 235, 1)',
 				borderWidth: 1
@@ -280,18 +280,18 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 	});
 
-	// Comments Trend Area Chart
-	const commentsTrendCtx = document.getElementById('commentsTrendChart').getContext('2d');
-	const commentsTrendChart = new Chart(commentsTrendCtx, {
+	// Views Trend Area Chart
+	const viewsTrendCtx = document.getElementById('viewsTrendChart').getContext('2d');
+	const viewsTrendChart = new Chart(viewsTrendCtx, {
 		type: 'line',
 		data: {
-			labels: chartData.comments_by_month.map(item => {
+			labels: chartData.views_by_month.map(item => {
 				const date = new Date(item.month + '-01');
 				return date.toLocaleDateString('vi-VN', { month: 'short', year: 'numeric' });
 			}),
 			datasets: [{
-				label: 'Bình luận',
-				data: chartData.comments_by_month.map(item => item.count),
+				label: 'Lượt xem',
+				data: chartData.views_by_month.map(item => item.total_views),
 				borderColor: 'rgb(255, 99, 132)',
 				backgroundColor: 'rgba(255, 99, 132, 0.2)',
 				fill: true,

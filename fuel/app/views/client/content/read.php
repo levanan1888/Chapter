@@ -430,9 +430,10 @@ document.addEventListener('DOMContentLoaded', function() {
 		const marginLeft = depth * 40;
 		const fontSize = Math.max(0.75, 0.9 - (depth * 0.05)) + 'rem';
 		const avatarSize = Math.max(24, 32 - (depth * 4)) + 'px';
+		const isOwner = reply.user_id == <?php echo (int)Session::get('user_id', 0); ?>;
 		
 		let html = `
-			<div class="reply-item mb-3 p-3" data-comment-id="${reply.id}" style="background: rgba(30, 41, 59, 0.${Math.max(2, 4 - depth)}); border-radius: 8px; position: relative; margin-left: ${marginLeft}px; border-left: 2px solid rgba(99, 102, 241, ${Math.max(0.1, 0.3 - depth * 0.05)}); padding-left: 20px;">
+			<div class="reply-item mb-3 p-3" data-comment-id="${reply.id}" data-user-id="${reply.user_id}" style="background: rgba(30, 41, 59, 0.${Math.max(2, 4 - depth)}); border-radius: 8px; position: relative; margin-left: ${marginLeft}px; border-left: 2px solid rgba(99, 102, 241, ${Math.max(0.1, 0.3 - depth * 0.05)}); padding-left: 20px;">
 				<div class="d-flex justify-content-between align-items-start mb-2">
 					<div class="d-flex align-items-center">
 						<div class="user-avatar me-2" style="width: ${avatarSize}; height: ${avatarSize}; background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: ${fontSize}; font-weight: bold;">
@@ -443,12 +444,19 @@ document.addEventListener('DOMContentLoaded', function() {
 							<small class="text-muted">${reply.created_at}</small>
 						</div>
 					</div>
-					<button class="btn btn-sm btn-outline-primary" onclick="replyToComment(${reply.id})" style="font-size: ${fontSize}; padding: 0.25rem 0.5rem;">
-						<i class="fas fa-reply me-1"></i>Trả lời
-					</button>
+					<div class="dropdown">
+						<button class="btn btn-sm btn-outline-light" type="button" id="replyMenu${reply.id}" data-bs-toggle="dropdown" aria-expanded="false" style="border: none; color: #94a3b8; font-size: ${fontSize}; padding: 0.25rem 0.5rem;">
+							<i class="fas fa-ellipsis-v"></i>
+						</button>
+						<ul class="dropdown-menu dropdown-menu-end" aria-labelledby="replyMenu${reply.id}" style="background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(51, 65, 85, 0.5); min-width: 150px;">
+							${isOwner ? `<li><a class="dropdown-item text-white" href="#" onclick="event.preventDefault(); editComment(${reply.id});"><i class="fas fa-edit me-2"></i>Sửa</a></li>` : ''}
+							${isOwner ? `<li><a class="dropdown-item text-danger" href="#" onclick="event.preventDefault(); deleteComment(${reply.id});"><i class="fas fa-trash me-2"></i>Xóa</a></li>` : ''}
+							<li><a class="dropdown-item text-white" href="#" onclick="event.preventDefault(); replyToComment(${reply.id});"><i class="fas fa-reply me-2"></i>Trả lời</a></li>
+						</ul>
+					</div>
 				</div>
 				<div class="mt-2">
-					<p class="mb-0 text-light" style="font-size: ${fontSize};">${reply.content}</p>
+					<p class="mb-0 text-light reply-content-${reply.id}" style="font-size: ${fontSize};">${reply.content}</p>
 				</div>
 				${reply.replies && reply.replies.length > 0 ? reply.replies.map(nested => displayReply(nested, depth + 1)).join('') : ''}
 			</div>
@@ -469,8 +477,9 @@ document.addEventListener('DOMContentLoaded', function() {
 		comments.forEach(comment => {
 			const userName = comment.user_name || 'Anonymous';
 			const firstLetter = userName.charAt(0).toUpperCase();
+			const isOwner = comment.user_id == <?php echo (int)Session::get('user_id', 0); ?>;
 			html += `
-				<div class="comment-item mb-4 p-3" data-comment-id="${comment.id}" style="background: rgba(15, 23, 42, 0.6); border-radius: 12px; border: 1px solid rgba(51, 65, 85, 0.3);">
+				<div class="comment-item mb-4 p-3" data-comment-id="${comment.id}" data-user-id="${comment.user_id}" style="background: rgba(15, 23, 42, 0.6); border-radius: 12px; border: 1px solid rgba(51, 65, 85, 0.3);">
 					<div class="d-flex justify-content-between align-items-start mb-2">
 						<div class="d-flex align-items-center">
 							<div class="user-avatar me-3" style="width: 40px; height: 40px; background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
@@ -481,12 +490,19 @@ document.addEventListener('DOMContentLoaded', function() {
 								<small class="text-muted">${comment.created_at}</small>
 							</div>
 						</div>
-						<button class="btn btn-sm btn-outline-primary" onclick="replyToComment(${comment.id})">
-							<i class="fas fa-reply me-1"></i>Trả lời
-						</button>
+						<div class="dropdown">
+							<button class="btn btn-sm btn-outline-light" type="button" id="commentMenu${comment.id}" data-bs-toggle="dropdown" aria-expanded="false" style="border: none; color: #94a3b8;">
+								<i class="fas fa-ellipsis-v"></i>
+							</button>
+							<ul class="dropdown-menu dropdown-menu-end" aria-labelledby="commentMenu${comment.id}" style="background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(51, 65, 85, 0.5); min-width: 150px;">
+								${isOwner ? `<li><a class="dropdown-item text-white" href="#" onclick="event.preventDefault(); editComment(${comment.id});"><i class="fas fa-edit me-2"></i>Sửa</a></li>` : ''}
+								${isOwner ? `<li><a class="dropdown-item text-danger" href="#" onclick="event.preventDefault(); deleteComment(${comment.id});"><i class="fas fa-trash me-2"></i>Xóa</a></li>` : ''}
+								<li><a class="dropdown-item text-white" href="#" onclick="event.preventDefault(); replyToComment(${comment.id});"><i class="fas fa-reply me-2"></i>Trả lời</a></li>
+							</ul>
+						</div>
 					</div>
 					<div class="comment-content mb-3">
-						<p class="mb-0 text-light">${comment.content}</p>
+						<p class="mb-0 text-light comment-content-${comment.id}">${comment.content}</p>
 					</div>
 					${comment.replies.length > 0 ? `
 						<div class="replies" style="margin-left: 60px; border-left: 2px solid rgba(99, 102, 241, 0.3); padding-left: 20px;">
@@ -559,6 +575,177 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 	}
 	
+	
+	window.editComment = function(commentId) {
+		<?php if (!Session::get('user_id')): ?>
+		showLoginRequired();
+		return;
+		<?php endif; ?>
+		
+		const commentElement = document.querySelector(`[data-comment-id="${commentId}"]`);
+		if (!commentElement) {
+			console.error('Comment element not found for ID:', commentId);
+			return;
+		}
+		
+		const contentElement = commentElement.querySelector(`.comment-content-${commentId}`) || 
+							   commentElement.querySelector('.reply-content-' + commentId);
+		if (!contentElement) {
+			alert('Không thể tìm thấy nội dung bình luận');
+			return;
+		}
+		
+		const currentContent = contentElement.textContent.trim();
+		const textareaHtml = `
+			<div class="edit-form mb-3 p-3" style="background: rgba(30, 41, 59, 0.8); border-radius: 8px; border: 1px solid rgba(51, 65, 85, 0.5);">
+				<h6 class="text-white mb-2">
+					<i class="fas fa-edit me-2"></i>Chỉnh sửa bình luận
+				</h6>
+				<textarea class="form-control mb-2" rows="3" id="edit-content-${commentId}" 
+						  style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(51, 65, 85, 0.5); color: white; border-radius: 8px;">${currentContent}</textarea>
+				<div class="d-flex gap-2">
+					<button class="btn btn-secondary btn-sm" onclick="cancelEdit(${commentId})">
+						<i class="fas fa-times me-1"></i>Hủy
+					</button>
+					<button class="btn btn-primary btn-sm" onclick="saveEdit(${commentId})">
+						<i class="fas fa-save me-1"></i>Lưu
+					</button>
+				</div>
+			</div>
+		`;
+		
+		contentElement.style.display = 'none';
+		contentElement.insertAdjacentHTML('afterend', textareaHtml);
+	};
+	
+	window.cancelEdit = function(commentId) {
+		const editForm = document.querySelector(`#edit-content-${commentId}`).closest('.edit-form');
+		const contentElement = document.querySelector(`.comment-content-${commentId}`) || 
+							   document.querySelector(`.reply-content-${commentId}`);
+		if (editForm && contentElement) {
+			editForm.remove();
+			contentElement.style.display = '';
+		}
+	};
+	
+	window.saveEdit = async function(commentId) {
+		<?php if (!Session::get('user_id')): ?>
+		showLoginRequired();
+		return;
+		<?php endif; ?>
+		
+		const textarea = document.getElementById(`edit-content-${commentId}`);
+		if (!textarea) {
+			alert('Không thể tìm thấy form chỉnh sửa');
+			return;
+		}
+		
+		const newContent = textarea.value.trim();
+		if (!newContent) {
+			alert('Vui lòng nhập nội dung bình luận');
+			return;
+		}
+		
+		const saveBtn = textarea.nextElementSibling.querySelector('button:last-child');
+		const originalText = saveBtn.innerHTML;
+		
+		// Disable button and show loading
+		saveBtn.disabled = true;
+		saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Đang lưu...';
+		
+		try {
+			// Get token
+			const tokenResponse = await fetch('<?php echo Uri::base(); ?>comment/get_token');
+			const tokenData = await tokenResponse.json();
+			
+			if (!tokenData.success) {
+				throw new Error('Không thể lấy CSRF token');
+			}
+			
+			const formData = new FormData();
+			formData.append('comment_id', commentId);
+			formData.append('content', newContent);
+			formData.append('fuel_csrf_token', tokenData.token);
+			
+			const response = await fetch('<?php echo Uri::base(); ?>comment/edit', {
+				method: 'POST',
+				body: formData
+			});
+			
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+			
+			const data = await response.json();
+			
+			if (data.success) {
+				// Update content
+				const contentElement = document.querySelector(`.comment-content-${commentId}`) || 
+									   document.querySelector(`.reply-content-${commentId}`);
+				if (contentElement) {
+					contentElement.textContent = newContent;
+					contentElement.style.display = '';
+				}
+				
+				// Remove edit form
+				const editForm = textarea.closest('.edit-form');
+				if (editForm) {
+					editForm.remove();
+				}
+				
+				alert('Chỉnh sửa bình luận thành công!');
+			} else {
+				alert('Có lỗi xảy ra: ' + (data.message || 'Không thể lưu thay đổi'));
+			}
+		} catch (error) {
+			console.error('Error saving edit:', error);
+			alert('Có lỗi xảy ra khi lưu thay đổi: ' + error.message);
+		} finally {
+			saveBtn.disabled = false;
+			saveBtn.innerHTML = originalText;
+		}
+	};
+	
+	window.deleteComment = async function(commentId) {
+		<?php if (!Session::get('user_id')): ?>
+		showLoginRequired();
+		return;
+		<?php endif; ?>
+		
+		if (!confirm('Bạn có chắc chắn muốn xóa bình luận này?')) {
+			return;
+		}
+		
+		try {
+			// Get fresh CSRF token
+			const tokenResponse = await fetch('<?php echo Uri::base(); ?>comment/get_token');
+			const tokenData = await tokenResponse.json();
+			
+			if (!tokenData.success) {
+				throw new Error('Không thể lấy CSRF token');
+			}
+			
+			const formData = new FormData();
+			formData.append('fuel_csrf_token', tokenData.token);
+			
+			const response = await fetch('<?php echo Uri::base(); ?>comment/delete/' + commentId, {
+				method: 'POST',
+				body: formData
+			});
+			
+			const data = await response.json();
+			
+			if (data.success) {
+				loadComments();
+				alert('Bình luận đã được xóa thành công!');
+			} else {
+				alert('Có lỗi xảy ra: ' + (data.message || 'Không thể xóa bình luận'));
+			}
+		} catch (error) {
+			console.error('Error deleting comment:', error);
+			alert('Có lỗi xảy ra khi xóa bình luận: ' + error.message);
+		}
+	};
 	
 	function showLoginRequired() {
 		// Create modal for login required

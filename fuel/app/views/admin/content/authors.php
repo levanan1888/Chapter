@@ -151,10 +151,6 @@
 							<td><?php echo date('d/m/Y', strtotime($author->created_at)); ?></td>
 							<td>
 								<div class="btn-group" role="group">
-									<a href="<?php echo Uri::base(); ?>admin/authors/view/<?php echo $author->id; ?>" 
-									   class="btn btn-sm btn-outline-info" title="Xem chi tiết">
-										<i class="fas fa-eye"></i>
-									</a>
 									<a href="<?php echo Uri::base(); ?>admin/authors/edit/<?php echo $author->id; ?>" 
 									   class="btn btn-sm btn-outline-primary" title="Sửa">
 										<i class="fas fa-edit"></i>

@@ -49,9 +49,11 @@
 								<?php echo Security::htmlentities($story->title); ?>
 							</a>
 						</h5>
+						<?php if (!empty($story->author_name)): ?>
 						<p class="card-text text-muted small">
-							<?php echo Security::htmlentities($story->author_name ?? 'Unknown'); ?>
+							<?php echo Security::htmlentities($story->author_name); ?>
 						</p>
+						<?php endif; ?>
 						<div class="mt-auto">
 							<div class="d-flex justify-content-between align-items-center mb-2">
 								<span class="status-badge status-<?php echo $story->status; ?>">

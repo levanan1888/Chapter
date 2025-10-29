@@ -58,7 +58,7 @@
 					<div class="col-md-6">
 						<div class="mb-3">
 							<label class="form-label fw-bold">Tác giả:</label>
-							<p><?php echo isset($story->author_name) ? $story->author_name : 'Chưa xác định'; ?></p>
+							<p><?php echo !empty($story->author_name) ? $story->author_name : '<span class="text-muted">Chưa xác định</span>'; ?></p>
 						</div>
 					</div>
 					<div class="col-md-6">

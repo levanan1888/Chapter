@@ -182,9 +182,11 @@
 				</p>
 				<?php endif; ?>
 				
+				<?php if (!empty($comment->story->author_name)): ?>
 				<p><strong>Tác giả:</strong><br>
-					<?php echo Security::htmlentities($comment->story->author_name ?? 'Unknown'); ?>
+					<?php echo Security::htmlentities($comment->story->author_name); ?>
 				</p>
+				<?php endif; ?>
 			</div>
 		</div>
 	</div>

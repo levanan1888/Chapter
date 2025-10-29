@@ -415,15 +415,60 @@ class Controller_Admin_Comment extends Controller_Admin_Base
             ]);
             
             if ($reply->save()) {
-                Session::set_flash('success', 'Trả lời đã được thêm thành công!');
+                Session::set_flash('success', 'Trả lời bình luận thành công!');
                 Log::info('Admin reply added: ' . $reply->id);
             } else {
-                Session::set_flash('error', 'Có lỗi xảy ra khi thêm trả lời');
+                Session::set_flash('error', 'Có lỗi xảy ra khi trả lời bình luận');
             }
             
         } catch (Exception $e) {
             Log::error('Save reply error: ' . $e->getMessage());
-            Session::set_flash('error', 'Có lỗi xảy ra khi thêm trả lời');
+            Session::set_flash('error', 'Có lỗi xảy ra khi trả lời bình luận');
+        }
+        
+        return Response::redirect('admin/comments');
+    }
+    
+    /**
+     * Edit comment
+     * 
+     * @return Response
+     */
+    public function action_edit()
+    {
+        if (!Session::get('admin_id')) {
+            Response::redirect('admin/login');
+        }
+        
+        try {
+            $comment_id = Input::post('comment_id');
+            $content = Input::post('content');
+            
+            if (empty($comment_id) || empty($content)) {
+                Session::set_flash('error', 'Thiếu thông tin bắt buộc');
+                return Response::redirect('admin/comments');
+            }
+            
+            $comment = Model_Comment::find($comment_id);
+            if (!$comment) {
+                Session::set_flash('error', 'Bình luận không tồn tại');
+                return Response::redirect('admin/comments');
+            }
+            
+            // Update comment
+            $comment->content = $content;
+            $comment->updated_at = date('Y-m-d H:i:s');
+            
+            if ($comment->save()) {
+                Session::set_flash('success', 'Chỉnh sửa bình luận thành công!');
+                Log::info('Admin edited comment: ' . $comment_id);
+            } else {
+                Session::set_flash('error', 'Có lỗi xảy ra khi chỉnh sửa bình luận');
+            }
+            
+        } catch (Exception $e) {
+            Log::error('Edit comment error: ' . $e->getMessage());
+            Session::set_flash('error', 'Có lỗi xảy ra khi chỉnh sửa bình luận');
         }
         
         return Response::redirect('admin/comments');

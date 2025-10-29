@@ -175,7 +175,11 @@ class Model_Story extends \Model
             }
             $order_direction = strtoupper($order_direction) === 'ASC' ? 'ASC' : 'DESC';
 
-            $sql = "SELECT s.*, a.name AS author_name
+            $sql = "SELECT s.*, 
+                    CASE 
+                        WHEN a.deleted_at IS NULL AND a.is_active = 1 THEN a.name 
+                        ELSE NULL 
+                    END AS author_name
                     FROM stories s
                     LEFT JOIN authors a ON s.author_id = a.id
                     WHERE s.deleted_at IS NULL AND s.is_visible = 1
@@ -230,8 +234,13 @@ class Model_Story extends \Model
 	public static function get_hot_stories($limit = 10)
 	{
 		try {
-			$sql = "SELECT s.*, a.name as author_name FROM stories s 
-					INNER JOIN authors a ON s.author_id = a.id 
+			$sql = "SELECT s.*, 
+					CASE 
+						WHEN a.deleted_at IS NULL AND a.is_active = 1 THEN a.name 
+						ELSE NULL 
+					END AS author_name 
+					FROM stories s 
+					LEFT JOIN authors a ON s.author_id = a.id 
 					WHERE s.deleted_at IS NULL AND s.is_hot = :is_hot AND s.is_visible = 1 
 					ORDER BY s.views DESC, s.created_at DESC LIMIT :limit";
 			
@@ -280,9 +289,14 @@ class Model_Story extends \Model
 	public static function search_stories($keyword, $limit = null, $offset = 0)
 	{
 		try {
-			$sql = "SELECT s.*, a.name as author_name FROM stories s 
-					INNER JOIN authors a ON s.author_id = a.id 
-					WHERE s.deleted_at IS NULL AND s.is_visible = 1 AND (s.title LIKE :keyword OR a.name LIKE :keyword) 
+			$sql = "SELECT s.*, 
+					CASE 
+						WHEN a.deleted_at IS NULL AND a.is_active = 1 THEN a.name 
+						ELSE NULL 
+					END AS author_name 
+					FROM stories s 
+					LEFT JOIN authors a ON s.author_id = a.id 
+					WHERE s.deleted_at IS NULL AND s.is_visible = 1 AND (s.title LIKE :keyword OR (a.deleted_at IS NULL AND a.is_active = 1 AND a.name LIKE :keyword)) 
 					ORDER BY s.created_at DESC";
 			if ($limit) {
 				$sql .= " LIMIT :limit OFFSET :offset";
@@ -325,8 +339,13 @@ class Model_Story extends \Model
 	public static function get_stories_by_category($category_id, $limit = null, $offset = 0)
 	{
 		try {
-			$sql = "SELECT s.*, a.name as author_name FROM stories s 
-					INNER JOIN authors a ON s.author_id = a.id 
+			$sql = "SELECT s.*, 
+					CASE 
+						WHEN a.deleted_at IS NULL AND a.is_active = 1 THEN a.name 
+						ELSE NULL 
+					END AS author_name 
+					FROM stories s 
+					LEFT JOIN authors a ON s.author_id = a.id 
 					INNER JOIN story_categories sc ON s.id = sc.story_id 
 					WHERE s.deleted_at IS NULL AND s.is_visible = 1 AND sc.category_id = :category_id 
 					ORDER BY s.created_at DESC";
@@ -371,8 +390,13 @@ class Model_Story extends \Model
 	public static function get_stories_by_author($author_id, $limit = null, $offset = 0)
 	{
 		try {
-			$sql = "SELECT s.*, a.name as author_name FROM stories s 
-					INNER JOIN authors a ON s.author_id = a.id 
+			$sql = "SELECT s.*, 
+					CASE 
+						WHEN a.deleted_at IS NULL AND a.is_active = 1 THEN a.name 
+						ELSE NULL 
+					END AS author_name 
+					FROM stories s 
+					LEFT JOIN authors a ON s.author_id = a.id 
 					WHERE s.deleted_at IS NULL AND s.is_visible = 1 AND s.author_id = :author_id 
 					ORDER BY s.created_at DESC";
 			if ($limit) {
@@ -848,8 +872,12 @@ class Model_Story extends \Model
 	{
 		try {
 			// Base query
-			$sql = "SELECT s.*, a.name AS author_name
-					FROM stories s
+			$sql = "SELECT s.*, 
+					CASE 
+						WHEN a.deleted_at IS NULL AND a.is_active = 1 THEN a.name 
+						ELSE NULL 
+					END AS author_name 
+					FROM stories s 
 					LEFT JOIN authors a ON s.author_id = a.id";
 			
 			// Add category join only if filtering by category
@@ -862,7 +890,7 @@ class Model_Story extends \Model
 			
 			// Tìm kiếm theo tên truyện hoặc tác giả
 			if (!empty($search)) {
-				$sql .= " AND (s.title LIKE :search OR a.name LIKE :search)";
+				$sql .= " AND (s.title LIKE :search OR (a.deleted_at IS NULL AND a.is_active = 1 AND a.name LIKE :search))";
 				$params['search'] = '%' . $search . '%';
 			}
 			
@@ -1010,7 +1038,12 @@ class Model_Story extends \Model
 	public static function get_deleted_stories($limit = null, $offset = 0, $search = '', $sort = 'deleted_at_desc')
 	{
 		try {
-			$sql = "SELECT s.*, a.name as author_name FROM stories s 
+			$sql = "SELECT s.*, 
+					CASE 
+						WHEN a.deleted_at IS NULL AND a.is_active = 1 THEN a.name 
+						ELSE NULL 
+					END AS author_name 
+					FROM stories s 
 					LEFT JOIN authors a ON s.author_id = a.id 
 					WHERE s.deleted_at IS NOT NULL";
 			$params = array();
@@ -1107,7 +1140,12 @@ class Model_Story extends \Model
 	public static function find_deleted($id)
 	{
 		try {
-			$query = \DB::query("SELECT s.*, a.name as author_name FROM stories s 
+			$query = \DB::query("SELECT s.*, 
+								CASE 
+									WHEN a.deleted_at IS NULL AND a.is_active = 1 THEN a.name 
+									ELSE NULL 
+								END AS author_name 
+								FROM stories s 
 								LEFT JOIN authors a ON s.author_id = a.id 
 								WHERE s.id = :id AND s.deleted_at IS NOT NULL");
 			$result = $query->param('id', $id)->execute();
@@ -1292,10 +1330,14 @@ class Model_Story extends \Model
             }
             $order_direction = strtoupper($order_direction) === 'ASC' ? 'ASC' : 'DESC';
 
-            $sql = "SELECT s.*, a.name AS author_name
-                    FROM stories s
-                    LEFT JOIN authors a ON s.author_id = a.id
-                    WHERE s.deleted_at IS NULL
+            $sql = "SELECT s.*, 
+                    CASE 
+                        WHEN a.deleted_at IS NULL AND a.is_active = 1 THEN a.name 
+                        ELSE NULL 
+                    END AS author_name 
+                    FROM stories s 
+                    LEFT JOIN authors a ON s.author_id = a.id 
+                    WHERE s.deleted_at IS NULL 
                     ORDER BY s." . $order_by . " " . $order_direction;
 
             if ($limit !== null) {
@@ -1324,6 +1366,94 @@ class Model_Story extends \Model
         } catch (\Exception $e) {
             \Log::error('Model_Story::get_all_stories_admin failed: ' . $e->getMessage());
             return array();
+		}
+	}
+
+	/**
+	 * Lấy tổng lượt xem của tất cả truyện
+	 * 
+	 * @return int
+	 */
+	public static function get_total_views()
+	{
+		try {
+			$query = \DB::query("
+				SELECT SUM(views) as total_views
+				FROM stories 
+				WHERE deleted_at IS NULL
+			");
+			$result = $query->execute();
+			
+			return isset($result[0]['total_views']) ? (int) $result[0]['total_views'] : 0;
+		} catch (\Exception $e) {
+			\Log::error('Model_Story::get_total_views failed: ' . $e->getMessage());
+			return 0;
+		}
+	}
+
+	/**
+	 * Đếm số truyện đang hoạt động (is_visible = 1)
+	 * 
+	 * @return int
+	 */
+	public static function count_active()
+	{
+		try {
+			$query = \DB::query("
+				SELECT COUNT(*) as count
+				FROM stories 
+				WHERE is_visible = 1 AND deleted_at IS NULL
+			");
+			$result = $query->execute();
+			
+			return isset($result[0]['count']) ? (int) $result[0]['count'] : 0;
+		} catch (\Exception $e) {
+			\Log::error('Model_Story::count_active failed: ' . $e->getMessage());
+			return 0;
+		}
+	}
+
+	/**
+	 * Đếm số truyện nổi bật (is_featured = 1)
+	 * 
+	 * @return int
+	 */
+	public static function count_featured()
+	{
+		try {
+			$query = \DB::query("
+				SELECT COUNT(*) as count
+				FROM stories 
+				WHERE is_featured = 1 AND deleted_at IS NULL
+			");
+			$result = $query->execute();
+			
+			return isset($result[0]['count']) ? (int) $result[0]['count'] : 0;
+		} catch (\Exception $e) {
+			\Log::error('Model_Story::count_featured failed: ' . $e->getMessage());
+			return 0;
+		}
+	}
+
+	/**
+	 * Đếm số truyện hot (is_hot = 1)
+	 * 
+	 * @return int
+	 */
+	public static function count_hot()
+	{
+		try {
+			$query = \DB::query("
+				SELECT COUNT(*) as count
+				FROM stories 
+				WHERE is_hot = 1 AND deleted_at IS NULL
+			");
+			$result = $query->execute();
+			
+			return isset($result[0]['count']) ? (int) $result[0]['count'] : 0;
+		} catch (\Exception $e) {
+			\Log::error('Model_Story::count_hot failed: ' . $e->getMessage());
+			return 0;
 		}
 	}
 }

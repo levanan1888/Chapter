@@ -36,6 +36,7 @@ class Controller_Comment extends Controller
                 'id' => $reply->id,
                 'content' => $reply->content,
                 'user_name' => $reply_user_name,
+                'user_id' => $reply->user_id,
                 'created_at' => $reply->created_at,
                 'replies' => $nested_replies
             );
@@ -200,6 +201,7 @@ class Controller_Comment extends Controller
                     'id' => $comment->id,
                     'content' => $comment->content,
                     'user_name' => $user_name,
+                    'user_id' => $comment->user_id,
                     'created_at' => $comment->created_at,
                     'replies' => $replies
                 );
@@ -275,6 +277,82 @@ class Controller_Comment extends Controller
             return \Response::forge(json_encode([
                 'success' => false,
                 'message' => 'Có lỗi xảy ra khi xóa bình luận'
+            ]), 500)->set_header('Content-Type', 'application/json');
+        }
+    }
+
+    /**
+     * Edit a comment
+     * 
+     * @return Response
+     */
+    public function action_edit()
+    {
+        try {
+            // Check if user is logged in
+            if (!\Session::get('user_id')) {
+                return \Response::forge(json_encode([
+                    'success' => false,
+                    'message' => 'Bạn cần đăng nhập để chỉnh sửa bình luận'
+                ]), 401)->set_header('Content-Type', 'application/json');
+            }
+
+            // Validate CSRF token
+            if (!\Security::check_token()) {
+                return \Response::forge(json_encode([
+                    'success' => false,
+                    'message' => 'CSRF token không hợp lệ'
+                ]), 403)->set_header('Content-Type', 'application/json');
+            }
+
+            $comment_id = \Input::post('comment_id');
+            $content = \Input::post('content');
+
+            if (empty($comment_id) || empty($content)) {
+                return \Response::forge(json_encode([
+                    'success' => false,
+                    'message' => 'Thiếu thông tin bắt buộc'
+                ]), 400)->set_header('Content-Type', 'application/json');
+            }
+
+            $comment = \Model_Comment::find($comment_id);
+            if (!$comment) {
+                return \Response::forge(json_encode([
+                    'success' => false,
+                    'message' => 'Bình luận không tồn tại'
+                ]), 404)->set_header('Content-Type', 'application/json');
+            }
+
+            // Check if user owns the comment
+            if ($comment->user_id != \Session::get('user_id') && !\Session::get('is_admin')) {
+                return \Response::forge(json_encode([
+                    'success' => false,
+                    'message' => 'Bạn không có quyền chỉnh sửa bình luận này'
+                ]), 403)->set_header('Content-Type', 'application/json');
+            }
+
+            // Update comment content
+            $comment->content = $content;
+            $comment->updated_at = date('Y-m-d H:i:s');
+
+            if ($comment->save()) {
+                \Log::info('Comment edited: ' . $comment_id);
+                return \Response::forge(json_encode([
+                    'success' => true,
+                    'message' => 'Chỉnh sửa bình luận thành công!'
+                ]), 200)->set_header('Content-Type', 'application/json');
+            } else {
+                return \Response::forge(json_encode([
+                    'success' => false,
+                    'message' => 'Không thể lưu thay đổi'
+                ]), 500)->set_header('Content-Type', 'application/json');
+            }
+
+        } catch (\Exception $e) {
+            \Log::error('Error editing comment: ' . $e->getMessage());
+            return \Response::forge(json_encode([
+                'success' => false,
+                'message' => 'Có lỗi xảy ra khi chỉnh sửa bình luận'
             ]), 500)->set_header('Content-Type', 'application/json');
         }
     }
