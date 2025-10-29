@@ -68,7 +68,6 @@
 							<label for="sort" class="form-label">Sắp xếp</label>
 							<select class="form-select" id="sort" name="sort">
 								<option value="latest" <?php echo (isset($filter_params['sort']) && $filter_params['sort'] == 'latest') ? 'selected' : ''; ?>>Mới nhất</option>
-								<option value="popular" <?php echo (isset($filter_params['sort']) && $filter_params['sort'] == 'popular') ? 'selected' : ''; ?>>Phổ biến</option>
 								<option value="view" <?php echo (isset($filter_params['sort']) && $filter_params['sort'] == 'view') ? 'selected' : ''; ?>>Xem nhiều</option>
 							</select>
 						</div>

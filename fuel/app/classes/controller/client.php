@@ -26,8 +26,8 @@ class Controller_Client extends Controller
 		// Lấy truyện hot
 		$data['hot_stories'] = Model_Story::get_hot_stories(8);
 		
-		// Lấy truyện được xem nhiều nhất
-		$data['most_viewed_stories'] = Model_Story::get_most_viewed_stories(8);
+        // Lấy truyện nổi bật
+        $data['featured_stories'] = Model_Story::get_featured_stories(8);
 		
 		// Lấy danh sách categories
 		$data['categories'] = Model_Category::get_all_categories();
@@ -57,33 +57,30 @@ class Controller_Client extends Controller
 		$limit = 20;
 		$offset = ($page - 1) * $limit;
 
+		// Xác định sắp xếp theo yêu cầu
+		$order_by = 'created_at';
+		$order_direction = 'DESC';
+		
+		switch ($sort) {
+			case 'view':
+				// Most viewed: sort by views desc
+				$order_by = 'views';
+				$order_direction = 'DESC';
+				break;
+			default:
+				$order_by = 'created_at';
+				$order_direction = 'DESC';
+				break;
+		}
+
 		// Lấy danh sách truyện theo điều kiện lọc
 		if ($category_id) {
-			$data['stories'] = Model_Story::get_stories_by_category($category_id, $limit, $offset);
+			$data['stories'] = Model_Story::get_stories_by_category($category_id, $limit, $offset, $order_by, $order_direction, $status);
 			$data['total_stories'] = Model_Category::find($category_id)->get_story_count();
 		} elseif ($author_id) {
-			$data['stories'] = Model_Story::get_stories_by_author($author_id, $limit, $offset);
+			$data['stories'] = Model_Story::get_stories_by_author($author_id, $limit, $offset, $order_by, $order_direction, $status);
 			$data['total_stories'] = Model_Author::find($author_id)->get_story_count();
 		} else {
-			// Sắp xếp theo yêu cầu
-			$order_by = 'created_at';
-			$order_direction = 'DESC';
-			
-			switch ($sort) {
-				case 'popular':
-					$order_by = 'like_count';
-					$order_direction = 'DESC';
-					break;
-				case 'view':
-					$order_by = 'view_count';
-					$order_direction = 'DESC';
-					break;
-				default:
-					$order_by = 'created_at';
-					$order_direction = 'DESC';
-					break;
-			}
-			
 			$data['stories'] = Model_Story::get_all_stories($limit, $offset, $order_by, $order_direction, $status);
 			$data['total_stories'] = Model_Story::count_all();
 		}
@@ -363,27 +360,23 @@ class Controller_Client extends Controller
 		$offset = ($page - 1) * $limit;
 
 		// Lấy danh sách truyện theo điều kiện
+		// Determine ordering
+		$order_by = 'created_at';
+		$order_direction = 'DESC';
+		switch ($sort) {
+			case 'view':
+				$order_by = 'views';
+				$order_direction = 'DESC';
+				break;
+		}
+
 		if ($category_id) {
-			$stories = Model_Story::get_stories_by_category($category_id, $limit, $offset);
+			$stories = Model_Story::get_stories_by_category($category_id, $limit, $offset, $order_by, $order_direction, null);
 			$total = Model_Category::find($category_id)->get_story_count();
 		} elseif ($author_id) {
-			$stories = Model_Story::get_stories_by_author($author_id, $limit, $offset);
+			$stories = Model_Story::get_stories_by_author($author_id, $limit, $offset, $order_by, $order_direction, null);
 			$total = Model_Author::find($author_id)->get_story_count();
 		} else {
-			$order_by = 'created_at';
-			$order_direction = 'DESC';
-			
-			switch ($sort) {
-				case 'popular':
-					$order_by = 'like_count';
-					$order_direction = 'DESC';
-					break;
-				case 'view':
-					$order_by = 'view_count';
-					$order_direction = 'DESC';
-					break;
-			}
-			
 			$stories = Model_Story::get_all_stories($limit, $offset, $order_by, $order_direction);
 			$total = Model_Story::count_all();
 		}

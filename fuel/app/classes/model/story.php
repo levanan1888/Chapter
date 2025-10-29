@@ -245,38 +245,80 @@ class Model_Story extends \Model
 	public static function get_hot_stories($limit = 10)
 	{
 		try {
-			$sql = "SELECT s.*, 
-					CASE 
-						WHEN a.deleted_at IS NULL AND a.is_active = 1 THEN a.name 
-						ELSE NULL 
-					END AS author_name 
-					FROM stories s 
-					LEFT JOIN authors a ON s.author_id = a.id 
-					WHERE s.deleted_at IS NULL AND s.is_hot = :is_hot AND s.is_visible = 1 
-					ORDER BY s.views DESC, s.created_at DESC LIMIT :limit";
-			
-			$query = \DB::query($sql);
-			$results = $query->param('is_hot', 1)
-							->param('limit', $limit)
-							->execute();
-			$stories = array();
+            $sql = "SELECT s.*, 
+                    CASE 
+                        WHEN a.deleted_at IS NULL AND a.is_active = 1 THEN a.name 
+                        ELSE NULL 
+                    END AS author_name 
+                    FROM stories s 
+                    LEFT JOIN authors a ON s.author_id = a.id 
+                    WHERE s.deleted_at IS NULL AND s.is_hot = :is_hot AND s.is_visible = 1 
+                    ORDER BY s.views DESC, s.created_at DESC LIMIT :limit";
+            
+            $query = \DB::query($sql);
+            $results = $query->param('is_hot', 1)
+                            ->param('limit', $limit)
+                            ->execute();
+            $stories = array();
 
-			foreach ($results as $result) {
-				$story = new self();
-				foreach ($result as $key => $value) {
-					if ($key !== 'author_name') {
-						$story->$key = $value;
-					}
-				}
-				$story->author_name = $result['author_name'];
-				$stories[] = $story;
-			}
+            foreach ($results as $result) {
+                $story = new self();
+                foreach ($result as $key => $value) {
+                    if ($key !== 'author_name') {
+                        $story->$key = $value;
+                    }
+                }
+                $story->author_name = $result['author_name'];
+                $stories[] = $story;
+            }
 
-			return $stories;
-		} catch (\Exception $e) {
-			return array();
-		}
-	}
+            return $stories;
+        } catch (\Exception $e) {
+            return array();
+        }
+    }
+
+    /**
+     * Lấy truyện nổi bật
+     *
+     * @param int $limit Giới hạn số lượng
+     * @return array
+     */
+    public static function get_featured_stories($limit = 10)
+    {
+        try {
+            $sql = "SELECT s.*, 
+                    CASE 
+                        WHEN a.deleted_at IS NULL AND a.is_active = 1 THEN a.name 
+                        ELSE NULL 
+                    END AS author_name 
+                    FROM stories s 
+                    LEFT JOIN authors a ON s.author_id = a.id 
+                    WHERE s.deleted_at IS NULL AND s.is_featured = :is_featured AND s.is_visible = 1 
+                    ORDER BY s.views DESC, s.created_at DESC LIMIT :limit";
+
+            $query = \DB::query($sql);
+            $results = $query->param('is_featured', 1)
+                            ->param('limit', $limit)
+                            ->execute();
+
+            $stories = array();
+            foreach ($results as $result) {
+                $story = new self();
+                foreach ($result as $key => $value) {
+                    if ($key !== 'author_name') {
+                        $story->$key = $value;
+                    }
+                }
+                $story->author_name = $result['author_name'];
+                $stories[] = $story;
+            }
+
+            return $stories;
+        } catch (\Exception $e) {
+            return array();
+        }
+    }
 
 	/**
 	 * Lấy truyện được xem nhiều nhất
@@ -347,9 +389,16 @@ class Model_Story extends \Model
 	 * @param int $offset Vị trí bắt đầu
 	 * @return array
 	 */
-	public static function get_stories_by_category($category_id, $limit = null, $offset = 0)
+    public static function get_stories_by_category($category_id, $limit = null, $offset = 0, $order_by = 'created_at', $order_direction = 'DESC', $status = null)
 	{
 		try {
+			// Whitelist order columns
+			$allowedOrderFields = array('created_at', 'updated_at', 'views', 'title', 'id');
+			if (!in_array($order_by, $allowedOrderFields, true)) {
+				$order_by = 'created_at';
+			}
+			$order_direction = strtoupper($order_direction) === 'ASC' ? 'ASC' : 'DESC';
+
 			$sql = "SELECT s.*, 
 					CASE 
 						WHEN a.deleted_at IS NULL AND a.is_active = 1 THEN a.name 
@@ -358,14 +407,24 @@ class Model_Story extends \Model
 					FROM stories s 
 					LEFT JOIN authors a ON s.author_id = a.id 
 					INNER JOIN story_categories sc ON s.id = sc.story_id 
-					WHERE s.deleted_at IS NULL AND s.is_visible = 1 AND sc.category_id = :category_id 
-					ORDER BY s.created_at DESC";
+					WHERE s.deleted_at IS NULL AND s.is_visible = 1 AND sc.category_id = :category_id";
+
+			// Optional status filter
+			if (!empty($status)) {
+				$sql .= " AND s.status = :status";
+			}
+
+			$sql .= " 
+					ORDER BY s." . $order_by . " " . $order_direction;
 			if ($limit) {
 				$sql .= " LIMIT :limit OFFSET :offset";
 			}
 			
 			$query = \DB::query($sql);
 			$query->param('category_id', $category_id);
+			if (!empty($status)) {
+				$query->param('status', $status);
+			}
 			if ($limit) {
 				$query->param('limit', $limit)->param('offset', $offset);
 			}
@@ -398,9 +457,16 @@ class Model_Story extends \Model
 	 * @param int $offset Vị trí bắt đầu
 	 * @return array
 	 */
-	public static function get_stories_by_author($author_id, $limit = null, $offset = 0)
+    public static function get_stories_by_author($author_id, $limit = null, $offset = 0, $order_by = 'created_at', $order_direction = 'DESC', $status = null)
 	{
 		try {
+			// Whitelist order columns
+			$allowedOrderFields = array('created_at', 'updated_at', 'views', 'title', 'id');
+			if (!in_array($order_by, $allowedOrderFields, true)) {
+				$order_by = 'created_at';
+			}
+			$order_direction = strtoupper($order_direction) === 'ASC' ? 'ASC' : 'DESC';
+
 			$sql = "SELECT s.*, 
 					CASE 
 						WHEN a.deleted_at IS NULL AND a.is_active = 1 THEN a.name 
@@ -408,14 +474,24 @@ class Model_Story extends \Model
 					END AS author_name 
 					FROM stories s 
 					LEFT JOIN authors a ON s.author_id = a.id 
-					WHERE s.deleted_at IS NULL AND s.is_visible = 1 AND s.author_id = :author_id 
-					ORDER BY s.created_at DESC";
+					WHERE s.deleted_at IS NULL AND s.is_visible = 1 AND s.author_id = :author_id";
+
+			// Optional status filter
+			if (!empty($status)) {
+				$sql .= " AND s.status = :status";
+			}
+
+			$sql .= " 
+					ORDER BY s." . $order_by . " " . $order_direction;
 			if ($limit) {
 				$sql .= " LIMIT :limit OFFSET :offset";
 			}
 			
 			$query = \DB::query($sql);
 			$query->param('author_id', $author_id);
+			if (!empty($status)) {
+				$query->param('status', $status);
+			}
 			if ($limit) {
 				$query->param('limit', $limit)->param('offset', $offset);
 			}

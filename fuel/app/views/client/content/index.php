@@ -99,7 +99,7 @@
 				<div>
 					<h2 class="mb-2">
 						<i class="fas fa-fire me-2" style="color: #ff6b6b;"></i>
-						Top thịnh hành
+						Truyện hot
 					</h2>
 					<p class="mb-0" style="color: #94a3b8;">Truyện được mọi người yêu thích</p>
 				</div>
@@ -171,15 +171,15 @@
 	</div>
 	<?php endif; ?>
 
-	<!-- Most Viewed Stories -->
-	<?php if (isset($most_viewed_stories) && !empty($most_viewed_stories)): ?>
+	<!-- Featured Stories -->
+	<?php if (isset($featured_stories) && !empty($featured_stories)): ?>
 	<div class="row mb-5">
 		<div class="col-12">
 			<div class="section-header d-flex justify-content-between align-items-end flex-wrap">
 				<div>
 					<h2 class="mb-2">
 						<i class="fas fa-trophy me-2" style="color: #fbbf24;"></i>
-						Được xem nhiều nhất
+						Truyện nổi bật
 					</h2>
 					<p class="mb-0" style="color: #94a3b8;">Những bộ truyện có lượt xem cao nhất</p>
 				</div>
@@ -189,7 +189,7 @@
 			</div>
 			
 			<div class="row">
-				<?php foreach ($most_viewed_stories as $story): ?>
+				<?php foreach ($featured_stories as $story): ?>
 					<?php if (isset($story->is_visible) && $story->is_visible == 1): ?>
 					<div class="col-lg-3 col-md-4 col-sm-6 mb-4">
 						<div class="card story-card h-100 position-relative">

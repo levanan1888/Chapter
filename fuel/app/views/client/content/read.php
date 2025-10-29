@@ -1,5 +1,6 @@
+<!-- Trang đọc chương: chứa header điều hướng, nội dung ảnh chương, điều hướng chương, và bình luận (AJAX) -->
 <div class="container-fluid">
-	<!-- Navigation Header -->
+	<!-- Navigation Header: thanh điều hướng trên cùng, có nút về trang truyện, tiêu đề chương, và dropdown chọn chương -->
 	<div class="row py-4 mb-4" id="navigation-header" style="background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(51, 65, 85, 0.5); border-radius: 0 0 20px 20px; z-index: 1000; margin: 0; padding: 1rem 0; transition: all 0.3s ease;">
 		<div class="col-12">
 			<div class="d-flex justify-content-between align-items-center text-white flex-wrap gap-3">
@@ -43,7 +44,7 @@
 		</div>
 	</div>
 
-	<!-- Chapter Navigation Buttons -->
+	<!-- Chapter Navigation Buttons: cặp nút chuyển nhanh sang chương trước/sau nằm phía trên nội dung -->
 	<div class="row mb-4">
 		<div class="col-12">
 			<div class="d-flex justify-content-between">
@@ -72,7 +73,7 @@
 		</div>
 	</div>
 
-	<!-- Chapter Content -->
+	<!-- Chapter Content: hiển thị toàn bộ hình ảnh của chương theo thứ tự; hỗ trợ lazy-load & fullscreen trong script -->
 	<div class="row justify-content-center" id="chapter-content" style="margin-top: 0;">
 		<div class="col-lg-6 col-md-8 col-sm-10">
 			<div class="reader-container">
@@ -99,7 +100,7 @@
 		</div>
 	</div>
 
-	<!-- Bottom Navigation -->
+	<!-- Bottom Navigation: cặp nút điều hướng đặt cuối trang để tiếp tục sang chương kế -->
 	<div class="row mt-4 mb-4">
 		<div class="col-12">
 			<div class="d-flex justify-content-between">
@@ -139,7 +140,7 @@
 		</div>
 	</div>
 
-	<!-- Floating Navigation (for mobile) -->
+	<!-- Floating Navigation (for mobile): nút nổi dành cho thiết bị di động hỗ trợ chuyển chương nhanh -->
 	<div class="navigation-buttons d-md-none">
 		<?php if (isset($previous_chapter) && $previous_chapter): ?>
 			<a href="<?php echo Uri::base(); ?>client/read/<?php echo $story->slug; ?>/<?php echo $previous_chapter->chapter_number; ?>" 
@@ -157,7 +158,7 @@
 	</div>
 </div>
 
-<!-- Comments Section -->
+<!-- Comments Section: form bình luận (khi đăng nhập) và danh sách bình luận + trả lời dạng cây -->
 <div class="row justify-content-center mt-5">
 	<div class="col-lg-8 col-md-10">
 		<div class="card">
@@ -202,15 +203,16 @@
 	</div>
 </div>
 
-<!-- Reading Controls -->
+<!-- Reading Controls: cụm nút nổi hỗ trợ (ví dụ: cuộn lên đầu trang) hiển thị trễ để không che nội dung -->
 <div class="reading-controls" id="readingControls" style="display: none;">
 	<button onclick="scrollToTop()" title="Về đầu trang">
 		<i class="fas fa-chevron-up"></i>
 	</button>
 </div>
 
-<!-- Keyboard Navigation Script -->
+<!-- Keyboard Navigation Script: khối JS khởi tạo sự kiện, xử lý bình luận, phím tắt, sticky header, lazy-load, fullscreen -->
 <script>
+// Cuộn lên đầu trang với hiệu ứng mượt
 function scrollToTop() {
 	window.scrollTo({
 		top: 0,
@@ -219,7 +221,8 @@ function scrollToTop() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-	// Show reading controls
+    // Khởi tạo UI sau khi DOM sẵn sàng
+    // Show reading controls: bật cụm nút sau 1s để không gây giật màn hình
 	const controls = document.getElementById('readingControls');
 	if (controls) {
 		setTimeout(() => {
@@ -228,7 +231,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		}, 1000);
 	}
 
-	// Keyboard shortcuts toggle
+    // Keyboard shortcuts toggle: nhấn H để ẩn/hiện cụm nút trợ giúp
 	let controlsVisible = true;
 	document.addEventListener('keydown', function(e) {
 		if (e.key === 'h' || e.key === 'H') {
@@ -239,13 +242,13 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 	});
 	
-	// Comments functionality
+    // Comments functionality: biến ngữ cảnh cho các API bình luận
 	const storyId = <?php echo $story->id; ?>;
 	const chapterId = <?php echo $chapter->id; ?>;
 	
 	loadComments();
 	
-	// Comment form submission
+    // Comment form submission: chặn submit mặc định và gọi submitComment()
 	const commentForm = document.getElementById('commentForm');
 	if (commentForm) {
 		commentForm.addEventListener('submit', function(e) {
@@ -255,7 +258,8 @@ document.addEventListener('DOMContentLoaded', function() {
 	}
 	
 	// Global functions for comment functionality
-	window.replyToComment = function(commentId) {
+// Hiển thị form trả lời ngay dưới bình luận được chọn
+window.replyToComment = function(commentId) {
 		// Check if user is logged in
 		<?php if (!Session::get('user_id')): ?>
 		// Show login required message
@@ -275,7 +279,7 @@ document.addEventListener('DOMContentLoaded', function() {
 			return;
 		}
 		
-		// Create new reply form
+    // Create new reply form: chèn HTML của form trả lời vào cuối phần tử bình luận
 		const commentElement = document.querySelector(`[data-comment-id="${commentId}"]`);
 		if (!commentElement) {
 			console.error('Comment element not found for ID:', commentId);
@@ -324,7 +328,8 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 	};
 	
-	window.submitReply = async function(event, commentId) {
+// Gửi trả lời qua AJAX, kèm CSRF token mới mỗi lần
+window.submitReply = async function(event, commentId) {
 		event.preventDefault();
 		
 		// Check if user is logged in
@@ -344,12 +349,12 @@ document.addEventListener('DOMContentLoaded', function() {
 		const submitBtn = form.querySelector('button[type="submit"]');
 		const originalText = submitBtn.innerHTML;
 		
-		// Disable button and show loading
+        // Disable button and show loading để tránh gửi trùng
 		submitBtn.disabled = true;
 		submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Đang gửi...';
 		
 		try {
-			// Fetch fresh CSRF token
+            // Fetch fresh CSRF token: lấy token mới để bảo vệ CSRF
 			const tokenResponse = await fetch('<?php echo Uri::base(); ?>comment/get_token');
 			const tokenData = await tokenResponse.json();
 			
@@ -357,14 +362,16 @@ document.addEventListener('DOMContentLoaded', function() {
 				throw new Error('Không thể lấy CSRF token');
 			}
 			
-			const formData = new FormData();
+            // Đóng gói dữ liệu gửi đi
+            const formData = new FormData();
 			formData.append('story_id', storyId);
 			formData.append('chapter_id', chapterId);
 			formData.append('parent_id', commentId);
 			formData.append('content', content);
 			formData.append('fuel_csrf_token', tokenData.token);
 			
-			const response = await fetch('<?php echo Uri::base(); ?>comment/add', {
+            // Gọi API thêm bình luận trả lời
+            const response = await fetch('<?php echo Uri::base(); ?>comment/add', {
 				method: 'POST',
 				body: formData
 			});
@@ -398,7 +405,8 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 	};
 	
-	function loadComments() {
+// Tải danh sách bình luận của chương hiện tại và render ra DOM
+function loadComments() {
 		
 		fetch(`<?php echo Uri::base(); ?>comment/get_comments?story_id=${storyId}&chapter_id=${chapterId}`)
 			.then(response => {
@@ -425,7 +433,8 @@ document.addEventListener('DOMContentLoaded', function() {
 			});
 	}
 	
-	function displayReply(reply, depth = 0) {
+    // Dựng HTML cho một trả lời; depth dùng để thụt lề và thu nhỏ UI dần
+    function displayReply(reply, depth = 0) {
 		const userName = reply.user_name || 'Anonymous';
 		const marginLeft = depth * 40;
 		const fontSize = Math.max(0.75, 0.9 - (depth * 0.05)) + 'rem';
@@ -464,7 +473,8 @@ document.addEventListener('DOMContentLoaded', function() {
 		return html;
 	}
 	
-	function displayComments(comments) {
+    // Render danh sách bình luận gốc và các trả lời con
+    function displayComments(comments) {
 		const commentsList = document.getElementById('commentsList');
 		
 		if (comments.length === 0) {
@@ -516,7 +526,8 @@ document.addEventListener('DOMContentLoaded', function() {
 		commentsList.innerHTML = html;
 	}
 	
-	async function submitComment() {
+// Gửi bình luận mới (không có parent) qua AJAX
+async function submitComment() {
 		// Check if user is logged in
 		<?php if (!Session::get('user_id')): ?>
 		showLoginRequired();
@@ -535,7 +546,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang đăng...';
 		
 		try {
-			// Fetch fresh CSRF token
+        // Fetch fresh CSRF token: tránh lỗi token hết hạn
 			const tokenResponse = await fetch('<?php echo Uri::base(); ?>comment/get_token');
 			const tokenData = await tokenResponse.json();
 			
@@ -543,14 +554,14 @@ document.addEventListener('DOMContentLoaded', function() {
 				throw new Error('Không thể lấy CSRF token');
 			}
 			
-			// Prepare form data with fresh token
+            // Prepare form data with fresh token
 			const formData = new FormData();
 			formData.append('story_id', <?php echo $story->id; ?>);
 			formData.append('chapter_id', <?php echo $chapter->id; ?>);
 			formData.append('content', content);
 			formData.append('fuel_csrf_token', tokenData.token);
 			
-			// Submit comment
+            // Submit comment: POST lên API comment/add
 			const response = await fetch('<?php echo Uri::base(); ?>comment/add', {
 				method: 'POST',
 				body: formData
@@ -576,7 +587,8 @@ document.addEventListener('DOMContentLoaded', function() {
 	}
 	
 	
-	window.editComment = function(commentId) {
+// Bật chế độ chỉnh sửa nội dung bình luận tại chỗ
+window.editComment = function(commentId) {
 		<?php if (!Session::get('user_id')): ?>
 		showLoginRequired();
 		return;
@@ -618,7 +630,8 @@ document.addEventListener('DOMContentLoaded', function() {
 		contentElement.insertAdjacentHTML('afterend', textareaHtml);
 	};
 	
-	window.cancelEdit = function(commentId) {
+// Hủy chỉnh sửa, khôi phục nội dung cũ
+window.cancelEdit = function(commentId) {
 		const editForm = document.querySelector(`#edit-content-${commentId}`).closest('.edit-form');
 		const contentElement = document.querySelector(`.comment-content-${commentId}`) || 
 							   document.querySelector(`.reply-content-${commentId}`);
@@ -628,7 +641,8 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 	};
 	
-	window.saveEdit = async function(commentId) {
+// Lưu nội dung sau khi chỉnh sửa qua AJAX
+window.saveEdit = async function(commentId) {
 		<?php if (!Session::get('user_id')): ?>
 		showLoginRequired();
 		return;
@@ -654,7 +668,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Đang lưu...';
 		
 		try {
-			// Get token
+            // Get token: lấy CSRF token mới cho yêu cầu chỉnh sửa
 			const tokenResponse = await fetch('<?php echo Uri::base(); ?>comment/get_token');
 			const tokenData = await tokenResponse.json();
 			
@@ -706,7 +720,8 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 	};
 	
-	window.deleteComment = async function(commentId) {
+// Xóa bình luận sau khi xác nhận; tải lại danh sách nếu thành công
+window.deleteComment = async function(commentId) {
 		<?php if (!Session::get('user_id')): ?>
 		showLoginRequired();
 		return;
@@ -747,7 +762,8 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 	};
 	
-	function showLoginRequired() {
+    // Hiển thị modal yêu cầu đăng nhập khi người dùng chưa đăng nhập
+    function showLoginRequired() {
 		// Create modal for login required
 		const modalHtml = `
 			<div class="modal fade" id="loginRequiredModal" tabindex="-1" aria-labelledby="loginRequiredModalLabel" aria-hidden="true">
@@ -799,7 +815,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		});
 	}
 	
-	// Keyboard navigation
+    // Keyboard navigation: xử lý phím trong/ngoài fullscreen
 	document.addEventListener('keydown', function(e) {
 		// If in fullscreen mode, handle image navigation
 		if (isFullscreen) {
@@ -846,7 +862,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 	});
 
-	// Navigation sticky behavior
+    // Navigation sticky behavior: bật sticky header và tự ẩn khi cuộn xuống
 	let lastScrollTop = 0;
 	let navBar = document.getElementById('navigation-header');
 	let chapterContent = document.getElementById('chapter-content');
@@ -884,7 +900,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		lastScrollTop = scrollTop;
 	});
 
-	// Lazy loading for images
+    // Lazy loading for images: dùng IntersectionObserver để trì hoãn tải ảnh
 	if ('IntersectionObserver' in window) {
 		const imageObserver = new IntersectionObserver((entries, observer) => {
 			entries.forEach(entry => {
@@ -902,14 +918,14 @@ document.addEventListener('DOMContentLoaded', function() {
 		});
 	}
 
-	// Fullscreen image navigation
+    // Fullscreen image navigation: quản lý trạng thái và điều hướng ảnh trong fullscreen
 	let currentImageIndex = 0;
 	let allImages = [];
 	let isFullscreen = false;
 	let currentFullscreenImage = null;
 	let originalImageSrcs = []; // Store original image sources
 
-	// Initialize image array and indices
+    // Initialize image array and indices: gán index cho từng ảnh để điều hướng
 	function initializeImages() {
 		allImages = Array.from(document.querySelectorAll('.chapter-image'));
 		allImages.forEach((img, index) => {
@@ -921,7 +937,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		});
 	}
 
-	// Double-click to fullscreen
+    // Double-click to fullscreen: nhấp đúp vào ảnh để vào fullscreen
 	document.querySelectorAll('.chapter-image').forEach(img => {
 		img.addEventListener('dblclick', function() {
 			currentImageIndex = parseInt(this.dataset.imageIndex);
@@ -930,7 +946,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		});
 	});
 
-	// Enter fullscreen mode
+    // Enter fullscreen mode: gọi API fullscreen tương thích trình duyệt
 	function enterFullscreen(img) {
 		if (img.requestFullscreen) {
 			img.requestFullscreen();
@@ -941,7 +957,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 	}
 
-	// Exit fullscreen mode
+    // Exit fullscreen mode: thoát khỏi fullscreen (đa trình duyệt)
 	function exitFullscreen() {
 		if (document.exitFullscreen) {
 			document.exitFullscreen();
@@ -952,7 +968,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 	}
 
-	// Navigate to next image in fullscreen
+    // Navigate to next image in fullscreen
 	function nextImage() {
 		if (!isFullscreen || allImages.length <= 1) return;
 		
@@ -963,7 +979,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 	}
 
-	// Navigate to previous image in fullscreen
+    // Navigate to previous image in fullscreen
 	function previousImage() {
 		if (!isFullscreen || allImages.length <= 1) return;
 		
@@ -974,7 +990,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 	}
 
-	// Update the fullscreen image
+    // Update the fullscreen image: thay src của phần tử đang fullscreen theo ảnh mục tiêu
 	function updateFullscreenImage() {
 		if (!isFullscreen || !currentFullscreenImage) return;
 		
@@ -986,7 +1002,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 	}
 
-	// Restore all images to their original sources
+    // Restore all images to their original sources: khôi phục src gốc của toàn bộ ảnh sau khi thoát fullscreen
 	function restoreOriginalImages() {
 		allImages.forEach((img, index) => {
 			if (originalImageSrcs[index]) {
@@ -1001,7 +1017,8 @@ document.addEventListener('DOMContentLoaded', function() {
 	document.addEventListener('mozfullscreenchange', handleFullscreenChange);
 	document.addEventListener('MSFullscreenChange', handleFullscreenChange);
 
-	function handleFullscreenChange() {
+    // Đồng bộ biến trạng thái khi vào/thoát fullscreen
+    function handleFullscreenChange() {
 		const isCurrentlyFullscreen = !!(document.fullscreenElement || 
 										document.webkitFullscreenElement || 
 										document.mozFullScreenElement || 
@@ -1016,7 +1033,7 @@ document.addEventListener('DOMContentLoaded', function() {
 			isFullscreen = false;
 			restoreOriginalImages();
 			
-			// Scroll to the current image position
+    // Scroll to the current image position: cuộn đến đúng ảnh đang xem khi thoát fullscreen
 			scrollToCurrentImage();
 			
 			currentFullscreenImage = null;
@@ -1037,7 +1054,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 	}
 
-	// Initialize images on page load
+    // Initialize images on page load
 	initializeImages();
 });
 </script>
