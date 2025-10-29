@@ -25,17 +25,17 @@
                         <p class="text-muted">Nhập địa chỉ email để nhận mã xác thực đặt lại mật khẩu</p>
                     </div>
 
-                    <form method="POST" action="<?php echo Uri::base(); ?>user/forgot-password">
+                    <form method="POST" action="<?php echo Uri::base(); ?>user/forgot-password" id="forgot-form">
                         <?php echo Form::csrf(); ?>
                         
                         <div class="mb-4">
                             <label for="email" class="form-label">
                                 <i class="fas fa-envelope me-2"></i>Địa chỉ email *
                             </label>
-                            <input type="email" class="form-control form-control-lg" id="email" name="email" 
+                            <input type="email" class="form-control form-control-lg placeholder-white" id="email" name="email" 
                                    value="<?php echo isset($form_data['email']) ? Security::htmlentities($form_data['email']) : ''; ?>" 
                                    placeholder="Nhập địa chỉ email của bạn" required>
-                            <div class="form-text">
+                            <div class="form-text text-light">
                                 <i class="fas fa-info-circle me-1"></i>
                                 Chúng tôi sẽ gửi mã xác thực đến email này
                             </div>
@@ -84,6 +84,16 @@
     </div>
 </div>
 
+<style>
+/* Make placeholders white for dark background */
+.placeholder-white::placeholder { color: #ffffff !important; opacity: 0.75; }
+input.form-control::placeholder { color: #ffffff !important; opacity: 0.75; }
+.placeholder-white:-ms-input-placeholder { color: #ffffff !important; }
+.placeholder-white::-ms-input-placeholder { color: #ffffff !important; }
+/* Helper text to white */
+.form-text.text-light { color: #ffffff !important; opacity: 0.8; }
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Focus vào input email
@@ -115,5 +125,29 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    // CSRF: làm mới token khi người dùng quay lại tab hoặc sau một thời gian dài không tương tác
+    const form = document.getElementById('forgot-form');
+    const tokenKey = '<?php echo \Config::get('security.csrf_token_key'); ?>';
+    function refreshCsrfToken() {
+        fetch('<?php echo Uri::base(); ?>user/csrf-token', {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            cache: 'no-store'
+        })
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(data => {
+            if (data && data.success && data.data && form) {
+                const hidden = form.querySelector('input[name="' + tokenKey + '"]');
+                if (hidden) hidden.value = data.data.csrf_token;
+            }
+        })
+        .catch(() => {});
+    }
+    // Khi tab lấy lại focus hoặc quay lại từ trang khác
+    window.addEventListener('focus', refreshCsrfToken);
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) refreshCsrfToken();
+    });
+    // Làm mới định kỳ để tránh hết hạn (mỗi 2 phút)
+    setInterval(refreshCsrfToken, 120000);
 });
 </script>

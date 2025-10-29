@@ -840,5 +840,29 @@ class Controller_User extends Controller
 		$data['content'] = View::forge('user/verify_token', $data, false);
 		return View::forge('layouts/client', $data);
 	}
+
+	/**
+	 * Trả về CSRF token hiện tại cho AJAX (dùng để làm mới form khi người dùng quay lại tab)
+	 * 
+	 * @return void
+	 */
+	public function action_csrf_token()
+	{
+		// Chỉ cho phép AJAX request
+		if (!Input::is_ajax()) {
+			Response::redirect('client');
+		}
+
+		$token_key = \Config::get('security.csrf_token_key');
+		$token = \Security::fetch_token();
+
+		Response::forge(json_encode(array(
+			'success' => true,
+			'data' => array(
+				'csrf_key' => $token_key,
+				'csrf_token' => $token
+			)
+		)), 200, array('Content-Type' => 'application/json'))->send();
+	}
 }
 

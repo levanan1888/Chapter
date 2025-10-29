@@ -187,6 +187,7 @@ return array(
 	'user/google_callback' => 'user/google_callback',
 	'user/check_status' => 'user/check_status',
 	'user/forgot-password' => 'user/forgot_password',
+	'user/csrf-token' => 'user/csrf_token',
 	'user/verify-token' => 'user/verify_token',
 	'user/reset-password' => 'user/reset_password',
 );

@@ -212,3 +212,4 @@ class Model_PasswordResetToken extends \Model
         return strtotime($this->expires_at) < time();
     }
 }
+

@@ -45,7 +45,7 @@
                         </div>
                     <?php elseif (isset($valid_token) && $valid_token): ?>
                         <!-- Hiển thị form đặt lại mật khẩu -->
-                        <form method="POST" action="<?php echo Uri::base(); ?>user/reset-password">
+                        <form method="POST" action="<?php echo Uri::base(); ?>user/reset-password" id="reset-form">
                             <?php echo Form::csrf(); ?>
                             
                             <div class="mb-3">
@@ -58,9 +58,9 @@
                                 <label for="password" class="form-label">
                                     <i class="fas fa-lock me-2"></i>Mật khẩu mới *
                                 </label>
-                                <input type="password" class="form-control form-control-lg" id="password" name="password" 
+                                <input type="password" class="form-control form-control-lg placeholder-white" id="password" name="password" 
                                        placeholder="Nhập mật khẩu mới" required>
-                                <div class="form-text">
+                                <div class="form-text text-light">
                                     <i class="fas fa-info-circle me-1"></i>
                                     Mật khẩu phải có ít nhất 6 ký tự
                                 </div>
@@ -70,7 +70,7 @@
                                 <label for="confirm_password" class="form-label">
                                     <i class="fas fa-lock me-2"></i>Xác nhận mật khẩu *
                                 </label>
-                                <input type="password" class="form-control form-control-lg" id="confirm_password" name="confirm_password" 
+                                <input type="password" class="form-control form-control-lg placeholder-white" id="confirm_password" name="confirm_password" 
                                        placeholder="Nhập lại mật khẩu mới" required>
                             </div>
                             
@@ -106,6 +106,15 @@
         </div>
     </div>
 </div>
+
+<style>
+/* White placeholders for dark backgrounds */
+.placeholder-white::placeholder { color: #ffffff !important; opacity: 0.75; }
+input.form-control::placeholder { color: #ffffff !important; opacity: 0.75; }
+.placeholder-white:-ms-input-placeholder { color: #ffffff !important; }
+.placeholder-white::-ms-input-placeholder { color: #ffffff !important; }
+.form-text.text-light { color: #ffffff !important; opacity: 0.8; }
+</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {

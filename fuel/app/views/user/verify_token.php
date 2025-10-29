@@ -25,7 +25,7 @@
                         <p class="text-muted">Mã xác thực đã được gửi đến email của bạn</p>
                     </div>
 
-                    <form method="POST" action="<?php echo Uri::base(); ?>user/verify-token">
+                    <form method="POST" action="<?php echo Uri::base(); ?>user/verify-token" id="verify-form">
                         <?php echo Form::csrf(); ?>
                         
                         <input type="hidden" name="email" value="<?php echo Security::htmlentities($email); ?>">
@@ -40,11 +40,11 @@
                             <label for="token" class="form-label">
                                 <i class="fas fa-key me-2"></i>Mã xác thực *
                             </label>
-                            <input type="text" class="form-control form-control-lg text-center" id="token" name="token" 
+                            <input type="text" class="form-control form-control-lg text-center placeholder-white" id="token" name="token" 
                                    placeholder="Nhập mã xác thực" required maxlength="64" 
                                    value="<?php echo isset($form_data['token']) ? Security::htmlentities($form_data['token']) : ''; ?>"
                                    style="font-size: 1.2rem; letter-spacing: 2px;">
-                            <div class="form-text text-center">
+                            <div class="form-text text-center text-light" id="countdownHelp">
                                 <i class="fas fa-info-circle me-1"></i>
                                 Kiểm tra email và nhập mã xác thực bạn nhận được
                             </div>
@@ -56,7 +56,7 @@
                         
                         <div class="text-center">
                             <small class="text-muted">
-                                Không nhận được email? <a href="<?php echo Uri::base(); ?>user/forgot-password">Gửi lại mã</a>
+                                Không nhận được email? <a href="<?php echo Uri::base(); ?>user/forgot-password" id="resend-link">Gửi lại mã</a>
                             </small>
                         </div>
                     </form>
@@ -93,6 +93,15 @@
     </div>
 </div>
 
+<style>
+/* Placeholder to white for dark backgrounds */
+.placeholder-white::placeholder { color: #ffffff !important; opacity: 0.75; }
+input.form-control::placeholder { color: #ffffff !important; opacity: 0.75; }
+/* For various browsers */
+.placeholder-white:-ms-input-placeholder { color: #ffffff !important; }
+.placeholder-white::-ms-input-placeholder { color: #ffffff !important; }
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Focus vào input token
@@ -114,5 +123,28 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    // Countdown timer for token validity (default 10 minutes unless configured)
+    const help = document.getElementById('countdownHelp');
+    const resendLink = document.getElementById('resend-link');
+    // You can adjust this if token expiry differs
+    const expirySeconds = 10 * 60; // 10 minutes
+    let remaining = expirySeconds;
+    function formatTime(s) {
+        const m = Math.floor(s / 60);
+        const ss = (s % 60).toString().padStart(2, '0');
+        return m + ':' + ss;
+    }
+    function tick() {
+        if (!help) return;
+        if (remaining <= 0) {
+            help.innerHTML = '<i class="fas fa-info-circle me-1"></i>Mã đã hết hạn. Vui lòng <a href="<?php echo Uri::base(); ?>user/forgot-password">gửi lại mã</a>.';
+            if (resendLink) resendLink.classList.remove('disabled');
+            return;
+        }
+        help.innerHTML = '<i class="fas fa-info-circle me-1"></i>Mã có hiệu lực trong ' + formatTime(remaining) + ' phút.';
+        remaining -= 1;
+        setTimeout(tick, 1000);
+    }
+    tick();
 });
 </script>
