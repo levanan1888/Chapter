@@ -100,6 +100,13 @@
 			transition: all 0.3s ease;
 		}
 
+		/* Circular brand/logo images */
+		.brand-logo {
+			border-radius: 50%;
+			object-fit: cover;
+			display: inline-block;
+		}
+
 		.navbar-brand {
 			font-weight: 700;
 			font-size: 1.4rem;

@@ -181,9 +181,16 @@
 
 		.navbar-brand img {
 			height: 50px;
-			width: auto;
 			max-height: 50px;
 			transition: all 0.3s ease;
+		}
+
+		/* Circular brand/logo */
+		.brand-logo {
+			border-radius: 50%;
+			object-fit: cover;
+			aspect-ratio: 1 / 1;
+			display: inline-block;
 		}
 
 		.navbar-brand span {
@@ -993,7 +1000,7 @@
 		<div class="container">
 		<!-- Brand -->
 		<a class="navbar-brand" href="<?php echo Uri::base(); ?>">
-			<img src="<?php echo Uri::base(); ?>assets/img/Gemini_Generated_Image_qp3mt7qp3mt7qp3m.png" alt="An - NetTruyen" style="height: 50px; width: auto;">
+			<img class="brand-logo" src="<?php echo Uri::base(); ?>assets/img/Gemini_Generated_Image_qp3mt7qp3mt7qp3m.png" alt="An - NetTruyen" style="height: 50px;">
 			<span class="ms-2">An - NetTruyen</span>
 		</a>
 			
@@ -1014,7 +1021,7 @@
 					</li>
 					<li class="nav-item">
 						<a class="nav-link" href="<?php echo Uri::base(); ?>client/stories">
-							<i class="fas fa-list"></i>
+							<i class="fas fa-layer-group"></i>
 							Danh sách
 						</a>
 					</li>
@@ -1058,15 +1065,15 @@
 					<?php else: ?>
 						<!-- User is not logged in -->
 						<li class="nav-item">
-							<a class="nav-link" href="<?php echo Uri::base(); ?>user/login">
+							<a class="nav-link" href="<?php echo Uri::base(); ?>user/login" title="Đăng nhập" aria-label="Đăng nhập">
 								<i class="fas fa-sign-in-alt"></i>
-								Đăng nhập
+								<span class="visually-hidden">Đăng nhập</span>
 							</a>
 						</li>
 						<li class="nav-item">
-							<a class="nav-link" href="<?php echo Uri::base(); ?>user/register">
+							<a class="nav-link" href="<?php echo Uri::base(); ?>user/register" title="Đăng ký" aria-label="Đăng ký">
 								<i class="fas fa-user-plus"></i>
-								Đăng ký
+								<span class="visually-hidden">Đăng ký</span>
 							</a>
 						</li>
 					<?php endif; ?>
@@ -1088,7 +1095,7 @@
 			<div class="row align-items-center">
 				<div class="col-md-6">
 					<div class="d-flex align-items-center">
-						<img src="<?php echo Uri::base(); ?>assets/img/Gemini_Generated_Image_qp3mt7qp3mt7qp3m.png" alt="An - NetTruyen" style="height: 40px; width: auto; margin-right: 15px;">
+						<img class="brand-logo" src="<?php echo Uri::base(); ?>assets/img/Gemini_Generated_Image_qp3mt7qp3mt7qp3m.png" alt="An - NetTruyen" style="height: 40px; margin-right: 15px;">
 						<div>
 							<h5 style="color: #fff; margin-bottom: 5px;">An - NetTruyen</h5>
 							<p style="color: #aaa; margin-bottom: 0;">Nền tảng đọc truyện tranh online miễn phí</p>
@@ -1096,7 +1103,7 @@
 					</div>
 				</div>
 				<div class="col-md-6 text-md-end">
-					<p style="color: #aaa;">&copy; 2024 An - NetTruyen. All rights reserved.</p>
+					<p style="color: #aaa;">&copy; 2025 An - NetTruyen. Tất cả được Văn An kiểm soát</p>
 				</div>
 			</div>
 		</div>

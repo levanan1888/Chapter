@@ -1,7 +1,7 @@
 <nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top">
 	<div class="container">
 		<a class="navbar-brand" href="<?php echo Uri::create('/'); ?>">
-			<img src="<?php echo Uri::base(); ?>assets/img/Gemini_Generated_Image_qp3mt7qp3mt7qp3m.png" alt="An - NetTruyen" style="height: 40px; width: auto; margin-right: 10px;">
+			<img class="brand-logo" src="<?php echo Uri::base(); ?>assets/img/Gemini_Generated_Image_qp3mt7qp3mt7qp3m.png" alt="An - NetTruyen" style="height: 50px; width: 50px; aspect-ratio: 1 / 1; border: 2px solid #fff;">
 			An - NetTruyen
 		</a>
 		
